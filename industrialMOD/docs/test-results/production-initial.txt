@@ -1,0 +1,62 @@
+PASS: Legacy slow defaults migrate and loader RF configuration is removed
+PASS: MK1 real Fortune harvest and energy cost
+PASS: MK2 real Fortune harvest and energy cost
+PASS: MK3 real Fortune harvest and energy cost
+PASS: Silk Touch stone and ore, mutually exclusive modes
+PASS: Inventory TileEntities below the quarry remain intact with all their contents
+PASS: Metadata preserved through supported Silk harvest
+PASS: Bedrock and unbreakable blocks are skipped without RF charge
+PASS: Forge BreakEvent protection prevents removal and drops
+PASS: Zero RF and one 200-RF packet cannot mine
+PASS: RF simulation is side-effect free and six sides share one tick cap
+PASS: 200 RF/t work progress is one hundred times slower than 20000 RF/t
+PASS: Full output pauses before removing another block
+PASS: Event-modified drops wait before world removal and commit once output space is available
+PASS: ISidedInventory extraction rejects insertion and handles partial extraction
+PASS: Sparse 15-chunk selection forces exactly those chunks
+PASS: Real mining visits exactly 15 selected chunks and preserves all 10 excluded chunks
+PASS: Quarries do not harvest themselves or other technology machines
+PASS: Full-buffer throttling retains measured supply and stops after the reserve drains
+PASS: Standalone loaders independently force 25 and 15 chunks; ticket failure is visible
+PASS: Region changes release deselected chunks; disabling releases all
+PASS: NBT round trip preserves RF, inventory, mode, cursor, and sparse area
+PASS: Area completion stops mining without resetting progress
+PASS: All four survival crafting recipes resolve
+PASS: Y10 quarry protects its entire placement layer and starts at Y9 in all 25 chunks
+PASS: Legacy cursor loading clamps every selected chunk below the original placement height
+PASS: Block exclusions use registry identity and protect non-inventory TileEntities
+PASS: Void filter defaults OFF, deletes selected normal drops, and preserves Fortune diamonds
+PASS: Void filtering follows real Silk drops and allows all-filtered harvests with full storage
+PASS: Filter exact and metadata-insensitive modes both preserve NBT identity
+PASS: Ghost filter clicks preserve real items, reject hidden/shift clicks, and reject oversized icons
+PASS: Filter enabled state, metadata, tags, and all 18 icons survive NBT without becoming output
+PASS: Public description packets contain sparse selections, legal mining height, and only actual loaded chunks
+PASS: An idle full buffer retains the real fill supply and can reach the configured maximum
+PASS: Old 200-RF defaults migrate to 20000 RF/t, 4000 RF/block and five operations
+PASS: RF balance migration preserves custom settings and is not repeated
+PASS: Generic modded ores without Forge tool declarations use the pickaxe fallback
+PASS: Quarry virtual tools support high harvest levels and custom Forge tool classes
+PASS: Registered ore TileEntities preserve their resource variant while machines remain protected
+PASS: Changing a blocked ore TileEntity invalidates the cached drop plan
+PASS: Self-replacing ore callbacks preserve the original block until storage fits and apply their effect once
+PASS: Actual HBM ore_uranium mines with Fortune and supported Silk Touch
+PASS: Actual HBM ore_thorium mines with Fortune and supported Silk Touch
+PASS: Actual HBM ore_copper mines with Fortune and supported Silk Touch
+PASS: Actual HBM ore_lead mines with Fortune and supported Silk Touch
+PASS: Actual HBM ore_titanium mines with Fortune and supported Silk Touch
+PASS: Actual HBM ore_fluorite mines with Fortune and supported Silk Touch
+PASS: Actual HBM ore_niter mines with Fortune and supported Silk Touch
+PASS: Actual HBM ore_sulfur mines with Fortune and supported Silk Touch
+PASS: Several quarries obey the shared removal budget fairly
+PASS: Sustained MK3 at 200 RF/t reaches 1 blocks/s
+PASS: Sustained MK3 at 2000 RF/t reaches 10 blocks/s
+PASS: Sustained MK3 at 5000 RF/t reaches 25 blocks/s
+PASS: Sustained MK3 at 10000 RF/t reaches 50 blocks/s
+PASS: Sustained MK3 at 15000 RF/t reaches 75 blocks/s
+PASS: Sustained MK3 at 20000 RF/t reaches 100 blocks/s
+PASS: Sustained MK1 at 20000 RF/t reaches 100 blocks/s
+PASS: Sustained MK2 at 20000 RF/t reaches 100 blocks/s
+PASS: STOP immediately releases tickets and preserves cursor/inventory while RF is connected
+PASS: START resumes existing mining cursors for multiple powered quarries
+PASS: Prepare real server-restart persistence fixtures
+Failed: 0

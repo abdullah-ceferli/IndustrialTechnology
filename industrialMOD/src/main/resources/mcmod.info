@@ -1,0 +1,12 @@
+[
+  {
+    "modid": "industrialtech",
+    "name": "Industrial Technology",
+    "description": "RF-powered tiered quarries and precise chunk loading for Minecraft 1.7.10.",
+    "version": "${version}",
+    "mcversion": "1.7.10",
+    "authorList": ["Industrial Technology"],
+    "credits": "CoFH Team: Redstone Flux API; MinecraftForge",
+    "dependencies": []
+  }
+]

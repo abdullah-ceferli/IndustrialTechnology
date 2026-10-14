@@ -1,0 +1,8 @@
+tile.industrialtech.quarry_mk1.name=Quarry MK1
+tile.industrialtech.quarry_mk2.name=Quarry MK2
+tile.industrialtech.quarry_mk3.name=Quarry MK3
+tile.industrialtech.chunk_loader.name=Chunk Loader
+item.industrialtech.drill.name=Diamond Industrial Drill
+item.industrialtech.circuit.name=Control Circuit
+item.industrialtech.steel_gear.name=Machine Gear
+itemGroup.industrialtech=Industrial Technology

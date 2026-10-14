@@ -1,0 +1,12 @@
+.toolchain/
+.gradle/
+.gradle-user/
+build/
+run/
+run-test*/
+*.iml
+.idea/
+.classpath
+.project
+.settings/
+vendor/cofh/branches.json
