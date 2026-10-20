@@ -10,7 +10,7 @@ import org.lwjgl.opengl.GL11;
 import dev.industrialtechnology.wireless.*;
 import dev.industrialtechnology.core.IndustrialTechnology;
 /** Compact industrial GUI. Server snapshots are read-only; only the player's own inventory has real Slots. */
-public final class GuiWirelessTerminal extends GuiContainer {
+public final class GuiWirelessTerminal extends GuiTooltips {
     public final TerminalContainer terminal;
     public NBTTagCompound state=new NBTTagCompound();
     private GuiTextField name,quantity;
@@ -182,7 +182,7 @@ public final class GuiWirelessTerminal extends GuiContainer {
             text(shorten(label,178),123,222,error.isEmpty()&&editor.notice.isEmpty()?0x9fb4b4:0xdd9a89);
             if(x>=122&&x<304&&y>=220&&y<232)tooltip(Arrays.asList(label,"Saved program: "+(state.getBoolean("ScriptEnabled")?"enabled":"disabled"),"Save validates; Enable runs the last valid saved code."),mx,my);
         }else{
-            text("Rule "+(state.getInteger("Rule")+1)+" / 8",164,77,0x9bbbd3);text(state.getBoolean("Latched")?"TRUE":"FALSE",245,60,state.getBoolean("Latched")?0x8ec793:0x9ca8ac);
+            text("Rule "+(state.getInteger("Rule")+1)+" / 8",164,77,0x9bbbd3);text(state.getBoolean("Latched")?"TRUE":"FALSE",240,77,state.getBoolean("Latched")?0x8ec793:0x9ca8ac);
 
             if(x>=128&&x<145&&y>=111&&y<128&&terminal.ghost.getStackInSlot(0)==null)tooltip(Arrays.asList("Ghost item: left-click to copy your carried item", "Right-click to clear; no item is consumed", "Minimum quantity is the adjacent number field"),mx,my);
             if(x>=213&&x<303&&y>=111&&y<126)tooltip(Arrays.asList(state.getString("TargetName"),"Uses the Yellow Stick's mode and "+state.getInteger("TargetSeconds")+"-second pulse"),mx,my);

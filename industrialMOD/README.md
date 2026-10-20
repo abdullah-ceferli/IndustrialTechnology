@@ -6,7 +6,7 @@ precise chunk loader. Both share an extensible machine and ticket framework.
 ## Install
 
 Use **Minecraft 1.7.10, Forge 10.13.4.1614, and Java 8**. Put
-`IndustrialTechnology-1.7.10-1.5.0.jar` from `build/libs` into `mods` on both
+`IndustrialTechnology-1.7.10-1.5.1.jar` from `build/libs` into `mods` on both
 the client and dedicated server. The sources JAR is for developers.
 No Thermal Expansion, HBM, BuildCraft, or CoFHCore installation is required.
 The small official CoFH RF API is bundled with its version annotation.
@@ -17,7 +17,7 @@ The standalone Chunk Loader always works without RF, HE, fuel, batteries, or any
 
 ## Wireless monitoring and automation
 
-Version **1.5.0** adds a left-click Wireless Terminal, Green Monitoring Sticks,
+Version **1.5.1** adds a left-click Wireless Terminal, Green Monitoring Sticks,
 Yellow Redstone Control Sticks, and Blue Automation Sticks. The three sticks
 use matching classic redstone-torch shapes, recolored green, yellow, and blue.
 They share an owner-bound, world-saved registry and work without RF.
@@ -49,7 +49,9 @@ END
 Rename a linked Yellow Stick to Pump in Controls first. A real water tank rising
 through 200 mB starts seven seconds of redstone, then turns OFF. Stable true
 conditions do not spam pulses. Item thresholds, inventory/tank empty/full, and
-ON/OFF are also supported. Invalid saves leave the working program unchanged.
+ON/OFF are also supported. Add `EVERY 20s` between WHEN and THEN to repeat while true;
+`20m` means twenty minutes and `20h` means twenty hours. The first trigger is immediate.
+False resets the timer; unchanged saves and restarts preserve its deadline. Invalid saves leave the working program unchanged.
 
 The real multiline editor supports selection, copy/cut/paste, scrolling, line
 numbers, syntax colors, and line errors. **Help** opens a classic cream-page
@@ -57,7 +59,7 @@ book while preserving the draft. Craft an **Automation Guide** with one Book,
 one Redstone, and one Paper in any arrangement. Right-click it to read.
 
 [AUTOMATION_CODES.md](AUTOMATION_CODES.md) is the complete beginner reference,
-with every command and twelve example projects. It is generated from the same
+with every command and fifteen example projects. It is generated from the same
 reference used by the book and Help. Rebuild it with
 `python tools/create_automation_docs.py` after editing the reference; the build
 checks its reference hash. The default script limit is 4096 characters, with
@@ -309,7 +311,7 @@ at most once every five ticks, plus immediate control acknowledgments.
 
 ## Updating from 1.0.0 through 1.3.0
 
-Replace the old mod JAR with 1.5.0; do not install both versions. Block and
+Replace the old mod JAR with 1.5.1; do not install both versions. Block and
 TileEntity registration IDs remain unchanged. Stored RF, inventories, selected
 areas, modes, and enabled state are preserved. Mining cursors below the
 placement height are preserved; cursors above it are clamped to the first
@@ -350,7 +352,7 @@ This workspace also has a downloaded portable, checksum-verified Temurin Java 8
 JDK under `.toolchain/jdk8`; the script uses it when present. The build cache is
 project-local at `.gradle-user`. On other platforms use `./gradlew` with Java 8.
 
-The reobfuscated installable JAR is `build/libs/IndustrialTechnology-1.7.10-1.5.0.jar`.
+The reobfuscated installable JAR is `build/libs/IndustrialTechnology-1.7.10-1.5.1.jar`.
 The `-sources.jar` contains the complete mod/API source and assets. **Run `build`
 after `runClient`/`runServer` before distributing**: a development run can replace
 the release archive with its unreobfuscated development input.

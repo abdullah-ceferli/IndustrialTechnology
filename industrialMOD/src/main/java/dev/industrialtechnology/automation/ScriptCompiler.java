@@ -15,6 +15,7 @@ public final class ScriptCompiler {
     private static final Pattern VALUE=pattern("WHEN\\s+(ITEM|FLUID)\\s+"+QUOTED+"\\s*(>=|<)\\s*(\\d+)\\s*(mb)?");
     private static final Pattern STATE=pattern("WHEN\\s+(INVENTORY|TANK)\\s+(EMPTY|FULL)");
     private static final Pattern ACTION=pattern("THEN\\s+(PULSE|ON|OFF)\\s+"+QUOTED+"(?:\\s+(\\d+)\\s*s)?");
+    private static final Pattern EVERY=pattern("EVERY\\s+(\\d+)\\s*([smh])");
     private static String unquote(String text){return text.replace("\\\"","\"").replace("\\\\","\\");}
     public static List<ScriptRule> compile(String text,int limit,Resolver resolver)throws Error {
         if(text==null||text.length()>Math.min(HARD_LENGTH,limit))throw new Error(1,"Script is too long.");
@@ -36,6 +37,15 @@ public final class ScriptCompiler {
                     else throw new Error(line,s.toUpperCase(Locale.ROOT).startsWith("WHEN")?"Expected ITEM, FLUID, INVENTORY EMPTY/FULL or TANK EMPTY/FULL.":"Expected WHEN.");
                     stage=1;
                 }else if(stage==1){
+                    if(s.toUpperCase(Locale.ROOT).startsWith("EVERY")){
+                        if(rule.intervalTicks!=0)throw new Error(line,"Use only one EVERY before THEN.");
+                        Matcher repeat=EVERY.matcher(s);if(!repeat.matches())throw new Error(line,"Expected EVERY and a whole duration, for example EVERY 20s, 20m or 20h.");
+                        long units;try{units=Long.parseLong(repeat.group(1));}catch(NumberFormatException invalid){throw new Error(line,"EVERY duration is too large.");}
+                        long factor=repeat.group(2).equalsIgnoreCase("h")?72000:repeat.group(2).equalsIgnoreCase("m")?1200:20;
+                        if(units<1)throw new Error(line,"EVERY duration must be at least one second.");
+                        if(units>ScriptRule.MAX_INTERVAL_TICKS/factor)throw new Error(line,"EVERY duration is too large.");
+                        rule.intervalTicks=units*factor;continue;
+                    }
                     Matcher a=ACTION.matcher(s);if(!a.matches())throw new Error(line,"Expected THEN PULSE, THEN ON or THEN OFF and a quoted control name.");
                     rule.action=ScriptRule.Action.valueOf(a.group(1).toUpperCase(Locale.ROOT));rule.target=resolver.control(unquote(a.group(2)));
                     if(rule.target==null)throw new Error(line,"Yellow Stick was not found.");

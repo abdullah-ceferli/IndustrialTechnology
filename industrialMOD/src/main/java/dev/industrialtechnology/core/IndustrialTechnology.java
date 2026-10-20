@@ -17,7 +17,7 @@ import net.minecraftforge.common.MinecraftForge;
 import cpw.mods.fml.common.FMLCommonHandler;
 import org.apache.logging.log4j.Logger;
 
-@Mod(modid = IndustrialTechnology.MODID, name = "Industrial Technology", version = "1.5.0",
+@Mod(modid = IndustrialTechnology.MODID, name = "Industrial Technology", version = "1.5.1",
      acceptedMinecraftVersions = "[1.7.10]", dependencies = "required-after:Forge@[10.13.4.1614,)")
 public final class IndustrialTechnology {
     public static final String MODID = "industrialtech";

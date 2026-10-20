@@ -2,7 +2,7 @@ package dev.industrialtechnology.automation;
 import java.util.*;
 import net.minecraft.item.Item;
 import dev.industrialtechnology.wireless.*;
-/** One bounded read per endpoint poll; the last rising action for a target wins within a script. */
+/** One bounded read per endpoint poll; the last due action for a target wins within a script. */
 public final class ScriptEngine {
     public static ScriptCompiler.Resolver resolver(final WirelessData data,final WirelessEndpoint source){return new ScriptCompiler.Resolver(){
         public String item(String id){if(id.length()>128||id.indexOf(':')<1||!Item.itemRegistry.containsKey(id))throw new IllegalArgumentException("Unknown item \""+id+"\".");return id;}
@@ -16,7 +16,7 @@ public final class ScriptEngine {
     };}
     public static boolean save(WirelessData data,WirelessEndpoint e,String text){
         try{List<ScriptRule> parsed=ScriptCompiler.compile(text,WirelessConfig.scriptLength,resolver(data,e));
-            for(int i=0;i<parsed.size();i++)if(i<e.scriptRules.size()&&parsed.get(i).same(e.scriptRules.get(i)))parsed.get(i).latched=e.scriptRules.get(i).latched;
+            for(int i=0;i<parsed.size();i++)if(i<e.scriptRules.size()&&parsed.get(i).same(e.scriptRules.get(i))){parsed.get(i).latched=e.scriptRules.get(i).latched;parsed.get(i).nextRun=e.scriptRules.get(i).nextRun;}
             e.script=text.replace("\r\n","\n").replace('\r','\n');e.scriptRules=parsed;e.scriptChecked=true;e.scriptRevision++;e.scriptError="";e.scriptErrorLine=0;e.lastPoll=Long.MIN_VALUE;data.markDirty();return true;
         }catch(ScriptCompiler.Error error){e.scriptError=error.display();e.scriptErrorLine=error.line;return false;}
     }
@@ -33,14 +33,16 @@ public final class ScriptEngine {
         if(reading.status!=WirelessAccess.Status.ONLINE){e.automationStatus=needsFluid&&(reading.status==WirelessAccess.Status.UNSUPPORTED||reading.status==WirelessAccess.Status.DATA_UNAVAILABLE)?"FLUID DATA UNAVAILABLE":reading.status.toString();return;}
         Boolean[] values=new Boolean[e.scriptRules.size()];LinkedHashMap<UUID,ScriptRule> actions=new LinkedHashMap<UUID,ScriptRule>();
         try{for(int i=0;i<values.length;i++)values[i]=e.scriptRules.get(i).evaluate(reading);}catch(RuntimeException|LinkageError badAPI){e.automationStatus="DATA UNAVAILABLE: machine predicate";return;}
+        long now=net.minecraftforge.common.DimensionManager.getWorld(e.dimension).getTotalWorldTime();
         int waiting=0,truth=0;boolean changed=false,fluidMissing=false;
         for(int i=0;i<values.length;i++){
             ScriptRule r=e.scriptRules.get(i);WirelessEndpoint target=data.devices.get(r.target);boolean authorized=target!=null&&target.kind==WirelessEndpoint.Kind.CONTROL&&target.owner.equals(e.owner)&&target.network.equals(e.network)&&target.dimension==e.dimension;
             if(values[i]==null){waiting++;if(r.kind==ScriptRule.Kind.FLUID||r.kind==ScriptRule.Kind.TANK_EMPTY||r.kind==ScriptRule.Kind.TANK_FULL)fluidMissing=true;continue;}
             if(!authorized||WirelessAccess.status(target,e.dimension)!=WirelessAccess.Status.ONLINE){waiting++;continue;}
             boolean value=values[i];if(value)truth++;
-            if(value&&!r.latched)actions.put(target.id,r);
-            if(value!=r.latched){r.latched=value;changed=true;}
+            boolean oldLatch=r.latched;long oldNext=r.nextRun;
+            if(r.due(value,now))actions.put(target.id,r);
+            if(oldLatch!=r.latched||oldNext!=r.nextRun)changed=true;
         }
         for(ScriptRule r:actions.values())WirelessAccess.command(data,data.devices.get(r.target),r.action.name(),r.seconds);
         if(changed)data.markDirty();e.automationStatus=fluidMissing?"FLUID DATA UNAVAILABLE":waiting>0?"WAITING: "+waiting+" rule(s); "+truth+" true":truth+" / "+values.length+" conditions true";

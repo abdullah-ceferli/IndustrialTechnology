@@ -7,6 +7,15 @@ import dev.industrialtechnology.wireless.MachineInspector;
 public final class ScriptRule {
     public enum Kind { ITEM, INVENTORY_EMPTY, INVENTORY_FULL, FLUID, TANK_EMPTY, TANK_FULL }
     public enum Action { PULSE, ON, OFF }
+    public static final long MAX_INTERVAL_TICKS=Long.MAX_VALUE/4;
+    public long intervalTicks,nextRun;
+    /** Called only for a known condition and an authorized loaded target. No catch-up bursts. */
+    public boolean due(boolean value,long now){
+        if(!value){latched=false;nextRun=0;return false;}
+        boolean fire=!latched||intervalTicks>0&&now>=nextRun;latched=true;
+        if(fire&&intervalTicks>0)nextRun=now>Long.MAX_VALUE-intervalTicks?Long.MAX_VALUE:now+intervalTicks;
+        return fire;
+    }
     public Kind kind;public Action action;public String identifier="";public long amount;public boolean less,latched;public int seconds,line;public UUID target;
     public Boolean evaluate(MachineInspector.Reading reading){
         if(reading.status!=dev.industrialtechnology.wireless.WirelessAccess.Status.ONLINE)return null;
@@ -26,10 +35,11 @@ public final class ScriptRule {
         if(kind==Kind.TANK_EMPTY)return total==0;if(kind==Kind.TANK_FULL)return full;
         return less?total<amount:total>=amount;
     }
-    public boolean same(ScriptRule r){return r!=null&&kind==r.kind&&action==r.action&&identifier.equals(r.identifier)&&amount==r.amount&&less==r.less&&seconds==r.seconds&&Objects.equals(target,r.target);}
-    public NBTTagCompound write(){NBTTagCompound n=new NBTTagCompound();n.setString("Kind",kind.name());n.setString("Action",action.name());n.setString("Id",identifier);n.setLong("Amount",amount);n.setBoolean("Less",less);n.setBoolean("Latched",latched);n.setInteger("Seconds",seconds);n.setInteger("Line",line);n.setString("Target",target.toString());return n;}
+    public boolean same(ScriptRule r){return r!=null&&kind==r.kind&&action==r.action&&identifier.equals(r.identifier)&&amount==r.amount&&less==r.less&&seconds==r.seconds&&intervalTicks==r.intervalTicks&&Objects.equals(target,r.target);}
+    public NBTTagCompound write(){NBTTagCompound n=new NBTTagCompound();n.setString("Kind",kind.name());n.setString("Action",action.name());n.setString("Id",identifier);n.setLong("Amount",amount);n.setBoolean("Less",less);n.setBoolean("Latched",latched);n.setLong("IntervalTicks",intervalTicks);n.setLong("NextRun",nextRun);n.setInteger("Seconds",seconds);n.setInteger("Line",line);n.setString("Target",target.toString());return n;}
     public static ScriptRule read(NBTTagCompound n){try{
-        ScriptRule r=new ScriptRule();r.kind=Kind.valueOf(n.getString("Kind"));r.action=Action.valueOf(n.getString("Action"));r.identifier=n.getString("Id");r.amount=n.getLong("Amount");r.less=n.getBoolean("Less");r.latched=n.getBoolean("Latched");r.seconds=n.getInteger("Seconds");r.line=n.getInteger("Line");r.target=UUID.fromString(n.getString("Target"));
+        ScriptRule r=new ScriptRule();r.kind=Kind.valueOf(n.getString("Kind"));r.action=Action.valueOf(n.getString("Action"));r.identifier=n.getString("Id");r.amount=n.getLong("Amount");r.less=n.getBoolean("Less");r.latched=n.getBoolean("Latched");r.intervalTicks=n.getLong("IntervalTicks");r.nextRun=n.getLong("NextRun");r.seconds=n.getInteger("Seconds");r.line=n.getInteger("Line");r.target=UUID.fromString(n.getString("Target"));
+        if(r.intervalTicks<0||r.intervalTicks>MAX_INTERVAL_TICKS||r.nextRun<0||r.intervalTicks==0&&r.nextRun!=0||!r.latched&&r.nextRun!=0)return null;
         if(r.identifier.length()>128||r.amount<0||r.amount>1000000000000L||r.line<1||r.line>8192||r.seconds!=0&&(r.seconds<5||r.seconds>10)||r.action!=Action.PULSE&&r.seconds!=0)return null;
         if((r.kind==Kind.ITEM||r.kind==Kind.FLUID)&&r.identifier.isEmpty())return null;return r;
     }catch(IllegalArgumentException invalid){return null;}}

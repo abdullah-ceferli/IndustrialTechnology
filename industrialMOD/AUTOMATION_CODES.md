@@ -1,6 +1,6 @@
-# Automation Codes — Industrial Technology 1.5.0
+# Automation Codes — Industrial Technology 1.5.1
 
-<!-- Reference SHA256: 574cff8ad4fce2c370f50407fe5e6ac4e8fef8f96d02eeb38d6b4b519e08e3d1 -->
+<!-- Reference SHA256: 36a0f15ec6d7bd47b84c10deebacd9be7b3f8b3a0bf24d6dec96a402417f9c51 -->
 
 This is the complete reference for the Wireless Terminal SIMPLE/CODE system.
 The in-game Automation Guide and editor Help use the same reference data.
@@ -49,11 +49,22 @@ Hover a tank in Monitors to see its Fluid ID. Forge water is water. HBM IDs are 
 
 ## A rule fires once
 
-Below 200mb: false. At 200mb: true, trigger once. At 300mb: still true, no repeat. Drop below 200mb, then reach it again to trigger a new pulse. A newly enabled true rule may fire once.
+Without EVERY, a rule fires once when false becomes true. Stable true does not repeat. Drop below the threshold and reach it again for another pulse. Add EVERY before THEN to repeat while true.
+
+## Repeat while true
+
+EVERY is optional. Put it between WHEN and THEN. The first true check triggers immediately; later true checks trigger once per interval. False stops and resets the timer. s means seconds, m minutes, h hours. Use whole positive amounts. Time uses server ticks at 20 TPS; stopped servers do not advance timers.
+
+```text
+WHEN FLUID "water" >= 200mb
+EVERY 20s
+THEN PULSE "WATER" 5s
+END
+```
 
 ## More than one rule
 
-Put up to eight WHEN/THEN/END blocks in one editor, separated by blank lines. Each rule remembers its own true/false edge. Two rising actions for the same target in one script use the last block in text order.
+Put up to eight WHEN/THEN/END blocks in one editor. Each keeps its own true/false memory and optional repeat timer. When several actions are due for one target in the same poll, the last block in text order wins.
 
 ## Pulses and manual power
 
@@ -61,11 +72,11 @@ PULSE lasts 5-10 seconds. ON stays on; OFF stops immediately. ON/OFF cancel a ru
 
 ## Saving and switching
 
-An invalid Save keeps your draft and leaves the saved working program unchanged. Save does not enable a disabled program. Switching SIMPLE/CODE preserves both sets of rules and their edge memories. Unchanged rules keep their latch on Save. Disable stops future checks; an active pulse finishes, and manual ON stays on until an OFF command.
+An invalid Save keeps the draft and last working program. Save does not enable disabled code. Switching SIMPLE/CODE keeps both programs. Unchanged rules retain their edge and EVERY deadline. Disable stops checks; active pulses finish, and manual ON stays on until OFF.
 
 ## Unloaded machines
 
-Devices must be loaded in the same dimension. Scripts do not load chunks. Unavailable reads never become zero items or zero liquid. Affected rules pause with their edge memory intact, then resume when data and target are available.
+Devices must be loaded in the same dimension. Scripts do not load chunks. Missing data never becomes zero. Affected rules keep their edge and repeat deadline. On return, an overdue true EVERY runs once and schedules from now, without a catch-up burst.
 
 ## What this cannot do
 
@@ -91,6 +102,9 @@ Commands only read supported storage and control your linked Yellow Sticks. They
 | `<` | Less than this amount. |
 | `mb` | Millibuckets: 1000 mB is a bucket. |
 | `s` | Seconds: 5s is five seconds at 20 TPS. |
+| `EVERY` | Repeat while true after the chosen interval. |
+| `m` | Minutes: 20m is twenty minutes at 20 TPS. |
+| `h` | Hours: 20h is twenty hours at 20 TPS. |
 
 ## Full command reference
 
@@ -227,6 +241,32 @@ END
 Expected result: A full tank set triggers once.
 
 Limits: Every exposed tank must be full. Zero-capacity tanks do not count; a set with no positive capacity is unavailable.
+
+### EVERY
+
+Syntax:
+
+```text
+WHEN condition
+EVERY 20s
+THEN action
+END
+```
+
+Repeat the action while the condition stays true. Use EVERY 5s, 10s, 20s, 20m or 20h. The first true check runs immediately, then the interval is measured from each due action. Use one EVERY line between WHEN and THEN.
+
+Working example:
+
+```text
+WHEN FLUID "water" >= 200mb
+EVERY 20s
+THEN PULSE "WATER" 5s
+END
+```
+
+Expected result: WATER pulses for five seconds immediately at 200 mB or more, then again every twenty seconds while water stays at least 200 mB.
+
+Limits: Whole positive s/m/h durations only, with overflow rejected. Pulse length remains 5-10s. An active pulse ignores another pulse, so choose an interval longer than the pulse to get a visible OFF gap. False resets the timer. Unavailable data/targets pause actions. Timers and unchanged saves survive restarts; overdue rules run once on resume, never a burst. Timings use server ticks, so lag may delay them.
 
 ### PULSE
 
@@ -420,6 +460,39 @@ END
 
 All exposed tanks reaching capacity starts the alarm.
 
+### 13. Repeat water every 20 seconds
+
+```text
+WHEN FLUID "water" >= 200mb
+EVERY 20s
+THEN PULSE "WATER" 5s
+END
+```
+
+Name your Yellow Stick WATER. At 200 mB or more, trigger immediately and every twenty seconds while true. Below 200 mB stops repeats.
+
+### 14. Repeat water every 20 minutes
+
+```text
+WHEN FLUID "water" >= 200mb
+EVERY 20m
+THEN PULSE "WATER" 5s
+END
+```
+
+Name your Yellow Stick WATER. At 200 mB or more, trigger immediately and every twenty minutes while true. Below 200 mB stops repeats.
+
+### 15. Repeat water every 20 hours
+
+```text
+WHEN FLUID "water" >= 200mb
+EVERY 20h
+THEN PULSE "WATER" 5s
+END
+```
+
+Name your Yellow Stick WATER. At 200 mB or more, trigger immediately and every twenty hours while true. Below 200 mB stops repeats.
+
 ## Combining rules
 
 ```text
@@ -439,8 +512,11 @@ END
 Each block runs independently, up to eight. Only the selected SIMPLE or CODE mode runs.
 A pulse can replace manual ON; it uses its own deadline without changing the saved mode.
 A later ON or OFF cancels the timer. An active pulse ignores another pulse.
-Within one poll, the last rising block for the same target wins. Stable true conditions
-do not repeatedly fire. Different Blue devices use deterministic server visit order.
+Within one poll, the last due block for the same target wins. Stable true conditions
+without EVERY do not repeatedly fire. Different Blue devices use deterministic visit order.
+EVERY repeats from each due check while true. False resets it; unavailable targets keep
+the saved deadline. Overdue resume runs once and schedules from now, without bursts.
+Unchanged saves and restarts preserve timers. Shutdown time does not advance game ticks.
 
 New or edited rules start unlatched. Existing unchanged rules, chunk reloads, and server
 restarts preserve latches. Offline/unknown affected rules keep their previous latch.
@@ -506,6 +582,10 @@ Mount Blue directly on a readable inventory or tank face. Plain ground has no st
 ### No permission
 
 Use your own bound terminal and linked sticks. A stolen terminal or a control from another network is rejected.
+
+### Repeat not firing
+
+Place EVERY 20s, 20m or 20h on its own line between WHEN and THEN. Save and enable CODE. Keep the tank and Yellow control loaded. Each active pulse ignores another pulse; use a longer interval than pulse duration for an OFF gap. Server shutdown time does not count.
 
 ## Machine compatibility
 

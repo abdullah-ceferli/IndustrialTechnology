@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.industrialtechnology.client.CodeEditorModelTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-20T14:56:36" hostname="DESKTOP-K160Q2I" time="0.002">
+  <properties/>
+  <testcase name="verticalMovementRetainsDesiredColumn" classname="dev.industrialtechnology.client.CodeEditorModelTest" time="0.001"/>
+  <testcase name="clipboardTextNormalizesNewlinesAndHonorsLimit" classname="dev.industrialtechnology.client.CodeEditorModelTest" time="0.0"/>
+  <testcase name="cursorAndSelectionStayInRange" classname="dev.industrialtechnology.client.CodeEditorModelTest" time="0.0"/>
+  <testcase name="undoRedoRestoresTextAndSelection" classname="dev.industrialtechnology.client.CodeEditorModelTest" time="0.0"/>
+  <testcase name="backspaceAndDeleteCrossLineBoundaries" classname="dev.industrialtechnology.client.CodeEditorModelTest" time="0.0"/>
+  <testcase name="multilineInsertionAndSelectionReplacement" classname="dev.industrialtechnology.client.CodeEditorModelTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

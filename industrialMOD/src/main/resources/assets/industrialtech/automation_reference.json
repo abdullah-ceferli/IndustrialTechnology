@@ -48,12 +48,17 @@
     },
     {
       "title": "A rule fires once",
-      "text": "Below 200mb: false. At 200mb: true, trigger once. At 300mb: still true, no repeat. Drop below 200mb, then reach it again to trigger a new pulse. A newly enabled true rule may fire once.",
+      "text": "Without EVERY, a rule fires once when false becomes true. Stable true does not repeat. Drop below the threshold and reach it again for another pulse. Add EVERY before THEN to repeat while true.",
       "example": ""
     },
     {
+      "title": "Repeat while true",
+      "text": "EVERY is optional. Put it between WHEN and THEN. The first true check triggers immediately; later true checks trigger once per interval. False stops and resets the timer. s means seconds, m minutes, h hours. Use whole positive amounts. Time uses server ticks at 20 TPS; stopped servers do not advance timers.",
+      "example": "WHEN FLUID \"water\" >= 200mb\nEVERY 20s\nTHEN PULSE \"WATER\" 5s\nEND"
+    },
+    {
       "title": "More than one rule",
-      "text": "Put up to eight WHEN/THEN/END blocks in one editor, separated by blank lines. Each rule remembers its own true/false edge. Two rising actions for the same target in one script use the last block in text order.",
+      "text": "Put up to eight WHEN/THEN/END blocks in one editor. Each keeps its own true/false memory and optional repeat timer. When several actions are due for one target in the same poll, the last block in text order wins.",
       "example": ""
     },
     {
@@ -63,12 +68,12 @@
     },
     {
       "title": "Saving and switching",
-      "text": "An invalid Save keeps your draft and leaves the saved working program unchanged. Save does not enable a disabled program. Switching SIMPLE/CODE preserves both sets of rules and their edge memories. Unchanged rules keep their latch on Save. Disable stops future checks; an active pulse finishes, and manual ON stays on until an OFF command.",
+      "text": "An invalid Save keeps the draft and last working program. Save does not enable disabled code. Switching SIMPLE/CODE keeps both programs. Unchanged rules retain their edge and EVERY deadline. Disable stops checks; active pulses finish, and manual ON stays on until OFF.",
       "example": ""
     },
     {
       "title": "Unloaded machines",
-      "text": "Devices must be loaded in the same dimension. Scripts do not load chunks. Unavailable reads never become zero items or zero liquid. Affected rules pause with their edge memory intact, then resume when data and target are available.",
+      "text": "Devices must be loaded in the same dimension. Scripts do not load chunks. Missing data never becomes zero. Affected rules keep their edge and repeat deadline. On return, an overdue true EVERY runs once and schedules from now, without a catch-up burst.",
       "example": ""
     },
     {
@@ -213,6 +218,21 @@
       "title": "Full tank alarm",
       "example": "WHEN TANK FULL\nTHEN PULSE \"Tank Full Alarm\" 5s\nEND",
       "text": "All exposed tanks reaching capacity starts the alarm."
+    },
+    {
+      "title": "Repeat water every 20 seconds",
+      "example": "WHEN FLUID \"water\" >= 200mb\nEVERY 20s\nTHEN PULSE \"WATER\" 5s\nEND",
+      "text": "Name your Yellow Stick WATER. At 200 mB or more, trigger immediately and every twenty seconds while true. Below 200 mB stops repeats."
+    },
+    {
+      "title": "Repeat water every 20 minutes",
+      "example": "WHEN FLUID \"water\" >= 200mb\nEVERY 20m\nTHEN PULSE \"WATER\" 5s\nEND",
+      "text": "Name your Yellow Stick WATER. At 200 mB or more, trigger immediately and every twenty minutes while true. Below 200 mB stops repeats."
+    },
+    {
+      "title": "Repeat water every 20 hours",
+      "example": "WHEN FLUID \"water\" >= 200mb\nEVERY 20h\nTHEN PULSE \"WATER\" 5s\nEND",
+      "text": "Name your Yellow Stick WATER. At 200 mB or more, trigger immediately and every twenty hours while true. Below 200 mB stops repeats."
     }
   ],
   "troubleshooting": [
@@ -254,6 +274,11 @@
     {
       "title": "No permission",
       "text": "Use your own bound terminal and linked sticks. A stolen terminal or a control from another network is rejected.",
+      "example": ""
+    },
+    {
+      "title": "Repeat not firing",
+      "text": "Place EVERY 20s, 20m or 20h on its own line between WHEN and THEN. Save and enable CODE. Keep the tank and Yellow control loaded. Each active pulse ignores another pulse; use a longer interval than pulse duration for an OFF gap. Server shutdown time does not count.",
       "example": ""
     }
   ],
@@ -321,6 +346,28 @@
     {
       "word": "s",
       "text": "Seconds: 5s is five seconds at 20 TPS."
+    },
+    {
+      "word": "EVERY",
+      "text": "Repeat while true after the chosen interval."
+    },
+    {
+      "word": "m",
+      "text": "Minutes: 20m is twenty minutes at 20 TPS."
+    },
+    {
+      "word": "h",
+      "text": "Hours: 20h is twenty hours at 20 TPS."
+    }
+  ],
+  "timing": [
+    {
+      "id": "EVERY",
+      "syntax": "WHEN condition\nEVERY 20s\nTHEN action\nEND",
+      "text": "Repeat the action while the condition stays true. Use EVERY 5s, 10s, 20s, 20m or 20h. The first true check runs immediately, then the interval is measured from each due action. Use one EVERY line between WHEN and THEN.",
+      "example": "WHEN FLUID \"water\" >= 200mb\nEVERY 20s\nTHEN PULSE \"WATER\" 5s\nEND",
+      "result": "WATER pulses for five seconds immediately at 200 mB or more, then again every twenty seconds while water stays at least 200 mB.",
+      "limits": "Whole positive s/m/h durations only, with overflow rejected. Pulse length remains 5-10s. An active pulse ignores another pulse, so choose an interval longer than the pulse to get a visible OFF gap. False resets the timer. Unavailable data/targets pause actions. Timers and unchanged saves survive restarts; overdue rules run once on resume, never a burst. Timings use server ticks, so lag may delay them."
     }
   ]
 }

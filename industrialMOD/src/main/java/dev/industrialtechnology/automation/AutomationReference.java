@@ -13,7 +13,7 @@ public final class AutomationReference {
     }
     private static String text(JsonObject row,String key){return row.has(key)?row.get(key).getAsString():"";}
     public static List<Section> sections(){List<Section> list=new ArrayList<Section>();JsonObject data=data();
-        for(String group:new String[]{"intro","conditions","actions","examples","troubleshooting"})for(JsonElement element:data.getAsJsonArray(group)){
+        for(String group:new String[]{"intro","conditions","timing","actions","examples","troubleshooting"})for(JsonElement element:data.getAsJsonArray(group)){
             JsonObject row=element.getAsJsonObject();String title=text(row,"title");if(title.isEmpty())title=text(row,"id").replace('_',' ');
             String body=text(row,"text");if(row.has("syntax"))body+="\n\n"+text(row,"syntax");if(row.has("example")&&!text(row,"example").isEmpty())body+="\n\n"+text(row,"example");
             if(row.has("result"))body+="\n\n"+text(row,"result");if(row.has("limits"))body+="\n\n"+text(row,"limits");list.add(new Section(title,body,text(row,"example")));

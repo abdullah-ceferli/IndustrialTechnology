@@ -1,0 +1,8 @@
+PASS: Final archive entries exactly match both native Forge production-tested release copies
+PASS: 121 Java 8 classes; no test harness, Minecraft/Forge/HBM/NEI classes or nested mod JARs
+PASS: Version 1.5.1; existing 24 block, 5 GUI and 8 item textures preserved
+PASS: Shared book/Help/Markdown reference includes EVERY and agrees with its source hash
+PASS: 337 recorded unit, native server, restart, editor and actual NEI rendering checks
+SHA256: da60da20db7ce3abea5a121fb3c3831cc7b73ec2f97094866cfa09c8755a106c
+Size: 268286 bytes
+Failed: 0

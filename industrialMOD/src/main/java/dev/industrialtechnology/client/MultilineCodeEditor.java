@@ -10,7 +10,7 @@ public final class MultilineCodeEditor extends Gui {
     public final CodeEditorModel model=new CodeEditorModel();
     public int x,y,width,height,scroll,errorLine;public boolean focused,dirty,dragging;public String notice="";
     private final Minecraft mc;private int horizontal,blink;
-    private static final Pattern TOKENS=Pattern.compile("\"(?:[^\"\\\\]|\\\\.)*\"|\\b(?:WHEN|THEN|END|ITEM|FLUID|INVENTORY|TANK|EMPTY|FULL|PULSE|ON|OFF)\\b|\\b[0-9]+(?:mb|s)?\\b",Pattern.CASE_INSENSITIVE);
+    private static final Pattern TOKENS=Pattern.compile("\"(?:[^\"\\\\]|\\\\.)*\"|\\b(?:WHEN|EVERY|THEN|END|ITEM|FLUID|INVENTORY|TANK|EMPTY|FULL|PULSE|ON|OFF)\\b|\\b[0-9]+(?:mb|s|m|h)?\\b",Pattern.CASE_INSENSITIVE);
     public MultilineCodeEditor(Minecraft mc){this.mc=mc;}
     public void bounds(int x,int y,int width,int height){this.x=x;this.y=y;this.width=width;this.height=height;}
     public int visible(){return Math.max(1,(height-6)/10);}

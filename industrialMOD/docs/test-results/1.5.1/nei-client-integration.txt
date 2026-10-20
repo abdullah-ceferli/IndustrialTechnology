@@ -1,0 +1,7 @@
+PASS: Terminal tooltips restore both GUI light positions before NEI draws in the same frame
+PASS: Actual NEI icons retain identical colors while hovering a SIMPLE automation button
+PASS: SIMPLE TRUE and FALSE occupy their own rule row clear of CODE and navigation buttons
+PASS: Actual NEI icon colors stay stable while hovering CODE Save beside EVERY syntax
+PASS: Quarry tooltips preserve GUI lights during the foreground pass
+PASS: Actual NEI icon colors stay identical while hovering the quarry Start button
+Failed: 0

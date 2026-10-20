@@ -4,7 +4,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 source=ROOT/'src/main/resources/assets/industrialtech/automation_reference.json'
 data=json.loads(source.read_text(encoding='utf-8'))
-lines=['# Automation Codes — Industrial Technology 1.5.0','',
+lines=['# Automation Codes — Industrial Technology 1.5.1','',
        '<!-- Reference SHA256: '+hashlib.sha256(source.read_bytes()).hexdigest()+' -->','',
        'This is the complete reference for the Wireless Terminal SIMPLE/CODE system.',
        'The in-game Automation Guide and editor Help use the same reference data.','']
@@ -14,7 +14,7 @@ for row in data['intro']:
 lines+=['## Code words','', '| Word | Meaning |','| --- | --- |']
 for row in data['glossary']:lines+=['| `'+row['word']+'` | '+row['text']+' |']
 lines+=['','## Full command reference','']
-for group in ['conditions','actions']:
+for group in ['conditions','timing','actions']:
     for row in data[group]:
         lines+=['### '+row['id'].replace('_',' '),'','Syntax:','', '```text',row['syntax'],'```','',row['text'],'','Working example:','','```text',row['example'],'```','','Expected result: '+row['result'],'','Limits: '+row['limits'],'']
 lines+=['## Example projects','','Before using an example, give your Yellow Stick the quoted name in Controls.','For oil and other mod fluids, the named fluid must actually be installed.','']
@@ -23,8 +23,11 @@ lines+=['## Combining rules','','```text','\n\n'.join(row['example'] for row in 
         'Each block runs independently, up to eight. Only the selected SIMPLE or CODE mode runs.',
         'A pulse can replace manual ON; it uses its own deadline without changing the saved mode.',
         'A later ON or OFF cancels the timer. An active pulse ignores another pulse.',
-        'Within one poll, the last rising block for the same target wins. Stable true conditions',
-        'do not repeatedly fire. Different Blue devices use deterministic server visit order.','',
+        'Within one poll, the last due block for the same target wins. Stable true conditions',
+        'without EVERY do not repeatedly fire. Different Blue devices use deterministic visit order.',
+        'EVERY repeats from each due check while true. False resets it; unavailable targets keep',
+        'the saved deadline. Overdue resume runs once and schedules from now, without bursts.',
+        'Unchanged saves and restarts preserve timers. Shutdown time does not advance game ticks.','',
         'New or edited rules start unlatched. Existing unchanged rules, chunk reloads, and server',
         'restarts preserve latches. Offline/unknown affected rules keep their previous latch.',
         'A condition that first becomes true while its target is offline can fire once on resume;',

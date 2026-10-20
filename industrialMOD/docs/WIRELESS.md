@@ -1,4 +1,4 @@
-# Wireless monitoring and automation — 1.5.0
+# Wireless monitoring and automation — 1.5.1
 
 Use the same Minecraft 1.7.10 / Forge 10.13.4.1614 / Java 8 setup as the existing
 mod. Replace the old mod JAR on both client and server. Existing quarry IDs,
@@ -215,3 +215,18 @@ Recipes use a 3×3 grid; rows are written top to bottom. A space is empty.
 | Blue Automation Stick | `" L " / " R " / " I "` | L lapis lazuli, R redstone, I iron |
 
 These are ordinary shaped recipes and appear in NEI without an AE2/HBM dependency.
+
+## Repeat while true
+
+```text
+WHEN FLUID "water" >= 200mb
+EVERY 20s
+THEN PULSE "WATER" 5s
+END
+```
+
+Name the linked Yellow Stick `WATER`. This fires immediately when true, then every
+twenty seconds while true. Use `20m` for minutes or `20h` for hours. False resets
+the timer. Timers use server ticks; shutdown time does not count. Saves/restarts
+preserve pending deadlines; overdue loaded rules run once, without catch-up bursts.
+Choose an interval longer than the pulse to get a visible OFF gap.

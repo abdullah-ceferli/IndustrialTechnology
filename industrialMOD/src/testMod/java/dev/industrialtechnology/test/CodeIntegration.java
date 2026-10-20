@@ -14,7 +14,8 @@ import dev.industrialtechnology.core.*;
 import dev.industrialtechnology.wireless.*;
 import dev.industrialtechnology.automation.*;
 public final class CodeIntegration {
-    private static WorldServer world;private static WirelessData data;private static WirelessEndpoint blue,items,pump,machine;private static WirelessTestFixtures.Tanks tank;private static TileEntityChest chest;
+    private static WorldServer world;private static WirelessData data;private static WirelessEndpoint blue,items,pump,machine;private static WirelessEndpoint repeatBlue,repeatYellow;private static WirelessTestFixtures.Tanks repeatTank;private static int repeatCount;private static long repeatRise=-1;
+    private static WirelessTestFixtures.Tanks tank;private static TileEntityChest chest;
     private static long start,rise=-1,itemRise=-1;private static boolean held=true,itemHeld=true,done,itemDone;private static int x,z;
     private static void check(boolean b,String message){if(!b)throw new AssertionError(message);}
     private static String code(String condition,String action){return "WHEN "+condition+"\nTHEN "+action+"\nEND";}
@@ -83,10 +84,34 @@ public final class CodeIntegration {
         test.accept("Script persistence retains mode enabled source compiled target and trigger memory",()->{
             blue.scriptEnabled=true;blue.codeMode=true;blue.scriptRules.get(0).latched=true;NBTTagCompound n=blue.write();WirelessEndpoint copy=WirelessEndpoint.read(n);check(copy.codeMode&&copy.scriptEnabled&&copy.script.equals(blue.script)&&copy.scriptRules.get(0).latched&&copy.scriptRules.get(0).target.equals(pump.id)&&copy.rules.length==8,"script NBT lost state");
         });
+        test.accept("EVERY preserves a pending deadline on unchanged Save and endpoint NBT roundtrip",()->{
+            String text="WHEN FLUID \"water\" >= 200mb\nEVERY 20m\nTHEN PULSE \"Pump\" 5s\nEND";
+            tank.water.setFluid(new FluidStack(FluidRegistry.WATER,200));WirelessAccess.off(data,pump);check(ScriptEngine.save(data,blue,text),blue.scriptError);ScriptEngine.poll(data,blue);long next=blue.scriptRules.get(0).nextRun;
+            check(next-w.getTotalWorldTime()==24000&&ScriptEngine.save(data,blue,text)&&blue.scriptRules.get(0).nextRun==next,"Save reset the interval");
+            WirelessEndpoint copy=WirelessEndpoint.read(blue.write());check(copy.scriptRules.get(0).intervalTicks==24000&&copy.scriptRules.get(0).nextRun==next,"NBT lost repeat deadline");WirelessAccess.off(data,pump);ScriptEngine.poll(data,copy);check(!pump.powered&&copy.scriptRules.get(0).nextRun==next,"loading a timer created an early repeat");
+        });
+        test.accept("EVERY false resets timing while unavailable fluid and offline controls preserve it",()->{
+            long next=blue.scriptRules.get(0).nextRun;tank.unavailable=true;ScriptEngine.poll(data,blue);check(blue.scriptRules.get(0).nextRun==next,"unavailable reset repeat");tank.unavailable=false;
+            pump.enabled=false;ScriptEngine.poll(data,blue);check(blue.scriptRules.get(0).nextRun==next,"offline control reset repeat");pump.enabled=true;
+            tank.water.setFluid(new FluidStack(FluidRegistry.WATER,100));ScriptEngine.poll(data,blue);check(blue.scriptRules.get(0).nextRun==0&&!blue.scriptRules.get(0).latched,"false did not reset");tank.water.setFluid(new FluidStack(FluidRegistry.WATER,200));ScriptEngine.poll(data,blue);check(pump.powered,"new true did not fire");
+        });
+        test.accept("Overdue EVERY runs once without burst and invalid repeat Save leaves timer intact",()->{
+            WirelessAccess.off(data,pump);blue.scriptRules.get(0).nextRun=Math.max(0,w.getTotalWorldTime()-1);ScriptEngine.poll(data,blue);long next=blue.scriptRules.get(0).nextRun,deadline=pump.pulseEnd;
+            ScriptEngine.poll(data,blue);check(next==w.getTotalWorldTime()+24000&&pump.pulseEnd==deadline,"overdue repeat burst");check(!ScriptEngine.save(data,blue,"WHEN TANK FULL\nEVERY 0s\nTHEN ON \"Pump\"\nEND")&&blue.scriptRules.get(0).nextRun==next&&blue.scriptErrorLine==2,"invalid EVERY replaced timer");
+        });
+        test.accept("Legacy NBT remains once-per-edge and corrupt saved repeat fields disable the program",()->{
+            NBTTagCompound n=blue.scriptRules.get(0).write();n.removeTag("IntervalTicks");n.removeTag("NextRun");check(ScriptRule.read(n)!=null&&ScriptRule.read(n).intervalTicks==0,"legacy NBT rejected");
+            n=blue.scriptRules.get(0).write();n.setLong("IntervalTicks",-1);check(ScriptRule.read(n)==null,"negative interval accepted");n=blue.scriptRules.get(0).write();n.setLong("NextRun",-1);check(ScriptRule.read(n)==null,"negative deadline accepted");
+            NBTTagCompound endpoint=blue.write();endpoint.getTagList("ScriptRules",10).getCompoundTagAt(0).setLong("IntervalTicks",Long.MAX_VALUE);check(!WirelessEndpoint.read(endpoint).scriptEnabled,"overflow saved repeat remained enabled");
+        });
+        // A separate real tank/control pair exercises three timed pulses under the server scheduler.
+        w.setBlock(x,90,z+8,WirelessTestFixtures.tanks,0,3);repeatTank=(WirelessTestFixtures.Tanks)w.getTileEntity(x,90,z+8);repeatTank.water.setFluid(new FluidStack(FluidRegistry.WATER,200));repeatTank.lava.setFluid(null);w.setBlock(x+4,90,z+8,Blocks.redstone_lamp,0,3);
+        repeatBlue=stick(p,ModRegistry.blueStick,x,90,z+8,5);repeatYellow=stick(p,ModRegistry.yellowStick,x+4,90,z+8,2);repeatYellow.name="WATER";repeatBlue.codeMode=repeatBlue.scriptEnabled=true;
+        check(ScriptEngine.save(data,repeatBlue,"WHEN FLUID \"water\" >= 200mb\nEVERY 6s\nTHEN PULSE \"WATER\" 5s\nEND"),repeatBlue.scriptError);
         if(cpw.mods.fml.common.Loader.isModLoaded("hbm"))hbm(test);
         tank.water.setFluid(new FluidStack(FluidRegistry.WATER,100));tank.lava.setFluid(null);pump.pulseSeconds=5;pump.pulseMode=false;machine.pulseMode=false;WirelessAccess.off(data,pump);WirelessAccess.off(data,machine);
         check(ScriptEngine.save(data,blue,code("FLUID \"water\" >= 200mb","PULSE \"Pump\" 7s")),blue.scriptError);check(ScriptEngine.save(data,items,code("ITEM \"minecraft:stone\" >= 1","PULSE \"Machine\" 5s")),items.scriptError);blue.scriptRules.get(0).latched=false;items.scriptRules.get(0).latched=false;blue.scriptEnabled=items.scriptEnabled=true;start=w.getTotalWorldTime();data.markDirty();
-        try{NBTTagCompound n=new NBTTagCompound();n.setString("Blue",blue.id.toString());n.setString("Items",items.id.toString());n.setString("Pump",pump.id.toString());n.setString("Machine",machine.id.toString());n.setInteger("X",x);n.setInteger("Z",z);CompressedStreamTools.writeCompressed(n,new FileOutputStream("code-fixtures.nbt"));}catch(IOException e){throw new RuntimeException(e);}
+        try{NBTTagCompound n=new NBTTagCompound();n.setString("RepeatBlue",repeatBlue.id.toString());n.setString("RepeatYellow",repeatYellow.id.toString());n.setString("Blue",blue.id.toString());n.setString("Items",items.id.toString());n.setString("Pump",pump.id.toString());n.setString("Machine",machine.id.toString());n.setInteger("X",x);n.setInteger("Z",z);CompressedStreamTools.writeCompressed(n,new FileOutputStream("code-fixtures.nbt"));}catch(IOException e){throw new RuntimeException(e);}
     }
     private static void hbm(BiConsumer<String,Runnable> test){for(String name:new String[]{"com.hbm.tileentity.machine.TileEntityMachineChemicalPlant","com.hbm.tileentity.machine.storage.TileEntityMachineFluidTank","com.hbm.tileentity.machine.storage.TileEntityMachineBigAssTank"})test.accept("Actual HBM fluid code threshold reads "+name.substring(name.lastIndexOf('.')+1),()->{
         try{int tx=x+10,tz=z+8;world.setBlock(tx,90,tz,OreCompatibilityFixtures.tileOre,0,3);TileEntity tile=(TileEntity)Class.forName(name).newInstance();world.setTileEntity(tx,90,tz,tile);Object all=tile.getClass().getMethod("getAllTanks").invoke(tile),tank=java.lang.reflect.Array.get(all,0),water=Class.forName("com.hbm.inventory.fluid.Fluids").getField("WATER").get(null);tank.getClass().getMethod("setTankType",water.getClass()).invoke(tank,water);tank.getClass().getMethod("setFill",int.class).invoke(tank,100);
@@ -101,9 +126,20 @@ public final class CodeIntegration {
         if(itemRise>=0&&now<itemRise+100&&!WirelessAccess.relay(machine).signal())itemHeld=false;
         if(rise>=0&&now>=rise+140&&!done){done=true;test.accept("Real water rising through 200mb produces exactly 140 ticks of redstone then OFF",()->check(held&&!pump.powered&&blue.scriptRules.get(0).latched,"fluid timed signal incorrect"));}
         if(itemRise>=0&&now>=itemRise+100&&!itemDone){itemDone=true;test.accept("Real stone code insertion produces exactly 100 ticks and stable truth never retriggers",()->check(itemHeld&&!machine.powered&&items.scriptRules.get(0).latched,"item timed signal incorrect"));}
+        if(repeatYellow.powered&&repeatYellow.pulseEnd-100!=repeatRise){
+            long previous=repeatRise;repeatRise=repeatYellow.pulseEnd-100;repeatCount++;
+            if(repeatCount==2)test.accept("EVERY 6s emits a second actual five-second pulse after 120 ticks of stable 200mb water",()->check(repeatRise-previous==120&&WirelessAccess.relay(repeatYellow).signal(),"real repeat timing incorrect"));
+        }
+        if(age==275)test.accept("EVERY keeps repeating with the GUI closed and saves a pending future deadline",()->check(repeatCount==3&&repeatBlue.scriptRules.get(0).latched&&repeatBlue.scriptRules.get(0).nextRun>now,"three actual repeating pulses missing"));
         if(age==275)test.accept("CODE automation runs without GUI players or duplicate SIMPLE actions",()->check(done&&itemDone&&!pump.powered&&!machine.powered,"code runtime scenario incomplete"));
     }
-    public static void restore(WorldServer w,BiConsumer<String,Runnable> test){test.accept("Actual restart restores enabled code programs compiled bindings and latched truth without duplicate pulses",()->{
+    public static void restore(WorldServer w,BiConsumer<String,Runnable> test){
+        test.accept("Actual restart preserves EVERY interval and future deadline without an early repeat",()->{
+            try{NBTTagCompound n=CompressedStreamTools.readCompressed(new FileInputStream("code-fixtures.nbt"));int x=n.getInteger("X"),z=n.getInteger("Z");w.getChunkFromChunkCoords(x>>4,z>>4);WirelessData data=WirelessData.get(w);WirelessEndpoint source=data.devices.get(UUID.fromString(n.getString("RepeatBlue"))),target=data.devices.get(UUID.fromString(n.getString("RepeatYellow")));ScriptRule r=source.scriptRules.get(0);long next=r.nextRun;
+                check(source.scriptEnabled&&source.codeMode&&r.intervalTicks==120&&r.latched&&next>w.getTotalWorldTime(),"repeat restart data wrong");WirelessAccess.off(data,target);ScriptEngine.poll(data,source);check(!target.powered&&r.nextRun==next,"restart reset pending repeat");
+            }catch(IOException e){throw new RuntimeException(e);}
+        });
+        test.accept("Actual restart restores enabled code programs compiled bindings and latched truth without duplicate pulses",()->{
         try{NBTTagCompound n=CompressedStreamTools.readCompressed(new FileInputStream("code-fixtures.nbt"));int x=n.getInteger("X"),z=n.getInteger("Z");w.getChunkFromChunkCoords(x>>4,z>>4);WirelessData data=WirelessData.get(w);WirelessEndpoint source=data.devices.get(UUID.fromString(n.getString("Blue"))),target=data.devices.get(UUID.fromString(n.getString("Pump")));check(source.codeMode&&source.scriptEnabled&&source.script.contains("200mb")&&source.scriptRules.get(0).target.equals(target.id)&&source.scriptRules.get(0).latched,"code not restored");
             // The fixture tank keeps its starting water in world NBT below; polling a saved true edge must remain quiet.
             WirelessAccess.off(data,target);ScriptEngine.poll(data,source);check(!target.powered&&source.scriptRules.get(0).latched,"restart duplicated a saved true edge");

@@ -16,7 +16,7 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.ResourceLocation;
 import org.lwjgl.opengl.GL11;
 
-public class GuiMachine extends GuiContainer {
+public class GuiMachine extends GuiTooltips {
     public final MachineContainer container;
     protected NBTTagCompound state;
     protected int draft, gridX = 129, gridY = 49, cellSize = 12;
