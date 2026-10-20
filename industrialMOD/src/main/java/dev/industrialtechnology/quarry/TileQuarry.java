@@ -97,7 +97,10 @@ public class TileQuarry extends TilePoweredMachine {
     }
     @Override public NBTTagCompound snapshot() {
         NBTTagCompound n = super.snapshot();
-        n.setInteger("MiningCeiling", Math.max(0, miningCeiling)); filter.write(n);
+        n.setInteger("MiningCeiling", Math.max(0, miningCeiling));
+        // Icons synchronize through individual vanilla ghost slots, avoiding the legacy 32-KiB NBT packet limit.
+        n.setBoolean("VoidEnabled",filter.enabled); n.setBoolean("VoidIgnoreMetadata",filter.ignoreMetadata);
+        n.setInteger("VoidCapacity",filter.getSizeInventory()); n.setInteger("VoidConfigured",filter.configured());
         n.setInteger("Tier", tier); n.setBoolean("Silk", silkMode); n.setInteger("Fortune", fortuneLevel());
         n.setInteger("Cost", cost()); n.setInteger("MaxBlocksPerTick", ModConfig.maxBlocksPerTick[tier]);
         n.setDouble("SpeedMultiplier", ModConfig.speedMultiplier[tier]); n.setInteger("OperationLimit", ModConfig.removalsPerTick);

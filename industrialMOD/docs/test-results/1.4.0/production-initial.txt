@@ -1,0 +1,75 @@
+PASS: Legacy slow defaults migrate and loader RF configuration is removed
+PASS: MK1 real Fortune harvest and energy cost
+PASS: MK2 real Fortune harvest and energy cost
+PASS: MK3 real Fortune harvest and energy cost
+PASS: Silk Touch stone and ore, mutually exclusive modes
+PASS: Inventory TileEntities below the quarry remain intact with all their contents
+PASS: Metadata preserved through supported Silk harvest
+PASS: Bedrock and unbreakable blocks are skipped without RF charge
+PASS: Forge BreakEvent protection prevents removal and drops
+PASS: Zero RF and one 200-RF packet cannot mine
+PASS: RF simulation is side-effect free and six sides share one tick cap
+PASS: 200 RF/t work progress is one hundred times slower than 20000 RF/t
+PASS: Full output pauses before removing another block
+PASS: Event-modified drops wait before world removal and commit once output space is available
+PASS: ISidedInventory extraction rejects insertion and handles partial extraction
+PASS: Sparse 15-chunk selection forces exactly those chunks
+PASS: Real mining visits exactly 15 selected chunks and preserves all 10 excluded chunks
+PASS: Quarries do not harvest themselves or other technology machines
+PASS: Full-buffer throttling retains measured supply and stops after the reserve drains
+PASS: Standalone loaders independently force 25 and 15 chunks; ticket failure is visible
+PASS: Region changes release deselected chunks; disabling releases all
+PASS: NBT round trip preserves RF, inventory, mode, cursor, and sparse area
+PASS: Area completion stops mining without resetting progress
+PASS: All four survival crafting recipes resolve
+PASS: Y10 quarry protects its entire placement layer and starts at Y9 in all 25 chunks
+PASS: Legacy cursor loading clamps every selected chunk below the original placement height
+PASS: Block exclusions use registry identity and protect non-inventory TileEntities
+PASS: Void filter defaults OFF, deletes selected normal drops, and preserves Fortune diamonds
+PASS: Void filtering follows real Silk drops and allows all-filtered harvests with full storage
+PASS: Filter exact and metadata-insensitive modes both preserve NBT identity
+PASS: Ghost filter clicks preserve real items, reject hidden/shift clicks, and reject oversized icons
+PASS: Filter enabled state, metadata, tags, and all 18 icons survive NBT without becoming output
+PASS: Public description packets contain sparse selections, legal mining height, and only actual loaded chunks
+PASS: An idle full buffer retains the real fill supply and can reach the configured maximum
+PASS: Old 200-RF defaults migrate to 20000 RF/t, 4000 RF/block and five operations
+PASS: RF balance migration preserves custom settings and is not repeated
+PASS: Generic modded ores without Forge tool declarations use the pickaxe fallback
+PASS: Quarry virtual tools support high harvest levels and custom Forge tool classes
+PASS: Registered ore TileEntities preserve their resource variant while machines remain protected
+PASS: Changing a blocked ore TileEntity invalidates the cached drop plan
+PASS: Self-replacing ore callbacks preserve the original block until storage fits and apply their effect once
+PASS: Wireless terminal binds a persistent owner network; independent terminals remain separate
+PASS: All four wireless survival recipes produce the registered terminal and colored sticks
+PASS: Tiered VOID filters retain legacy entries, have exactly 18/36/50 slots, and preserve the final slot
+PASS: VOID page validation prevents hidden edits and ghost icons never consume carried items
+PASS: Green, Yellow and Blue sticks register real targets on their selected face
+PASS: Green monitoring reads real chest contents without transferring items
+PASS: Forge monitoring reports both real tanks, quantities and capacities
+PASS: Unknown machine APIs show UNSUPPORTED instead of fabricated inventory values
+PASS: Offline and cross-dimension links never load chunks or initialize dimensions
+PASS: Replacing a target TileEntity invalidates its old monitoring identity
+PASS: Terminal ownership rejects stolen terminal copies and foreign endpoint selection
+PASS: Terminal rules use a validated ghost slot and linked Yellow targets only
+PASS: Yellow relays emit real weak power 15 and face-directed strong power, and light a lamp
+PASS: Every Yellow pulse setting uses its own server deadline from 100 through 200 ticks
+PASS: Automation conditions read item amounts, empty/full capacity, and missing items
+PASS: One Blue summary evaluates multiple independent rules and multiple Yellow targets
+PASS: Wireless NBT round trip preserves identities, owners, names, pulse settings and all eight rules
+PASS: Several quarries obey the shared removal budget fairly
+PASS: Real Blue chest insertion produces a seven-second pulse lasting exactly 140 server ticks
+PASS: Keeping stone in the real chest does not continuously retrigger the relay
+PASS: Removing stone and adding it again produces a new false-to-true activation
+PASS: Sustained MK3 at 200 RF/t reaches 1 blocks/s
+PASS: Sustained MK3 at 2000 RF/t reaches 10 blocks/s
+PASS: Sustained MK3 at 5000 RF/t reaches 25 blocks/s
+PASS: Sustained MK3 at 10000 RF/t reaches 50 blocks/s
+PASS: Sustained MK3 at 15000 RF/t reaches 75 blocks/s
+PASS: Sustained MK3 at 20000 RF/t reaches 100 blocks/s
+PASS: Sustained MK1 at 20000 RF/t reaches 100 blocks/s
+PASS: Sustained MK2 at 20000 RF/t reaches 100 blocks/s
+PASS: STOP immediately releases tickets and preserves cursor/inventory while RF is connected
+PASS: Asynchronous automation completed during real server ticks without a GUI or online player
+PASS: START resumes existing mining cursors for multiple powered quarries
+PASS: Prepare real server-restart persistence fixtures
+Failed: 0

@@ -7,7 +7,7 @@ buildscript {
 }
 apply plugin: 'forge'
 apply plugin: 'java'
-version = '1.3.0'
+version = '1.5.0'
 group = 'dev.industrialtechnology'
 archivesBaseName = 'IndustrialTechnology-1.7.10'
 sourceCompatibility = targetCompatibility = '1.8'
@@ -29,7 +29,7 @@ jar {
 task sourcesJar(type: Jar, dependsOn: classes) {
     archiveClassifier.set('sources')
     from sourceSets.main.allSource
-    from 'LICENSE', 'THIRD_PARTY.md', 'README.md'
+    from 'LICENSE', 'THIRD_PARTY.md', 'README.md', 'AUTOMATION_CODES.md'
 }
 artifacts { archives sourcesJar }
 
@@ -50,6 +50,8 @@ if (project.hasProperty('testServer')) {
     runServer.dependsOn testModJar
     runServer.standardInput = System.in
 }
+if (project.hasProperty('codeClient')) { runClient.jvmArgs '-Dindustrialtech.codeTest=true' }
+if (project.hasProperty('wirelessClient')) { runClient.jvmArgs '-Dindustrialtech.wirelessTest=true' }
 if (project.hasProperty('testClient')) {
     runClient.dependsOn testModJar
     runClient.args '--width', '960', '--height', '720'
@@ -58,6 +60,14 @@ runServer.args 'nogui'
 if (project.hasProperty('productionTest')) {
     tasks.reobf.reobf(tasks.testModJar) { spec -> spec.classpath = sourceSets.testMod.compileClasspath }
 }
+task verifyAutomationReference {
+    doLast {
+        def source = file('src/main/resources/assets/industrialtech/automation_reference.json')
+        def digest = java.security.MessageDigest.getInstance('SHA-256').digest(source.bytes).encodeHex().toString()
+        if (!file('AUTOMATION_CODES.md').text.contains('Reference SHA256: ' + digest)) throw new GradleException('Run tools/create_automation_docs.py after updating the command reference.')
+    }
+}
+check.dependsOn verifyAutomationReference
 task writeRuntimeClasspath {
     doLast {
         file('.toolchain').mkdirs()

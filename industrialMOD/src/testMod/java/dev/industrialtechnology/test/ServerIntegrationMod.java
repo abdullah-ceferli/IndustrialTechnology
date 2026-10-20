@@ -65,7 +65,7 @@ public final class ServerIntegrationMod {
     private static final int RESTORE_QX = 1800, RESTORE_LX = 1820, RESTORE_Z = 1800;
 
     @Mod.EventHandler public void init(FMLInitializationEvent event) {
-        OreCompatibilityFixtures.register();
+        OreCompatibilityFixtures.register();WirelessTestFixtures.register();
         FMLCommonHandler.instance().bus().register(this); MinecraftForge.EVENT_BUS.register(this);
         proxy.init();
     }
@@ -273,6 +273,7 @@ public final class ServerIntegrationMod {
         });
         updateTests();
         compatibilityTests();
+        WirelessIntegration.run(world,this::test);
         test("Several quarries obey the shared removal budget fairly", () -> {
             TileQuarry[] qs={quarry(0),quarry(1),quarry(2)};
             for(TileQuarry q:qs){target(q,Blocks.stone,0);q.enabled=true;MiningScheduler.submit(q);}
@@ -483,6 +484,7 @@ public final class ServerIntegrationMod {
         speedStage=1;speedTicks=0;
     }
     private void runSpeedTick() {
+        WirelessIntegration.tick(world,this::test);
         speedTicks++;
         if(speedStage==1){
             for(int i=0;i<speedQuarries.length;i++){
@@ -525,6 +527,7 @@ public final class ServerIntegrationMod {
     }
     private void finish(){finished=true;writeReport();MinecraftServer.getServer().initiateShutdown();}
     private void restoreTests() {
+        WirelessIntegration.restore(world,this::test);
         test("Actual restart callback restores enabled Quarry and its exact 15 forced chunks", () -> {
             assertTrue(world.getChunkProvider().chunkExists(RESTORE_QX>>4,RESTORE_Z>>4),"owner chunk was not restored without a player");
             TileQuarry q=(TileQuarry)world.getTileEntity(RESTORE_QX,70,RESTORE_Z);

@@ -13,9 +13,9 @@ public final class SnapshotPacket implements IMessage {
     private int x, y, z, window;
     private NBTTagCompound state;
     public SnapshotPacket() {}
-    public SnapshotPacket(TileMachine tile, int window, int tab) {
+    public SnapshotPacket(TileMachine tile, int window, int tab, int filterPage) {
         x = tile.xCoord; y = tile.yCoord; z = tile.zCoord; this.window = window;
-        state = tile.snapshot(); state.setInteger("Tab", tab);
+        state = tile.snapshot(); state.setInteger("Tab", tab); state.setInteger("FilterPage", filterPage);
     }
     @Override public void toBytes(ByteBuf b) { b.writeInt(x); b.writeInt(y); b.writeInt(z); b.writeInt(window); ByteBufUtils.writeTag(b, state); }
     @Override public void fromBytes(ByteBuf b) { x = b.readInt(); y = b.readInt(); z = b.readInt(); window = b.readInt(); state = ByteBufUtils.readTag(b); }

@@ -1,0 +1,8 @@
+PASS: Actual restart restores terminal networks, endpoint identities and renamed devices
+PASS: Actual restart restores target anchor identities without changing foreign machine NBT
+PASS: Actual restart preserves eight automation rules, edge latch and seven-second pulse configuration
+PASS: Actual restart callback restores enabled Quarry and its exact 15 forced chunks
+PASS: Actual restart restores standalone loader without online players
+PASS: Disabled loader and stopped quarry remain disabled after server restart
+PASS: Breaking restored machines releases every owned ticket
+Failed: 0

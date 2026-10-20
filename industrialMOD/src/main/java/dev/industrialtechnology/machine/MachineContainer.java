@@ -19,7 +19,7 @@ import net.minecraftforge.common.ForgeHooks;
 public final class MachineContainer extends Container {
     public final TileMachine machine;
     private final TilePoweredMachine inventory;
-    public int tab;
+    public int tab, filterPage;
     private long lastActionTick = Long.MIN_VALUE;
     private int actionsThisTick;
     private NBTTagCompound lastSnapshot;
@@ -32,8 +32,8 @@ public final class MachineContainer extends Container {
         for (int row = 0; row < 3; row++) for (int col = 0; col < 9; col++)
             addSlotToContainer(new Slot(player, 9 + row * 9 + col, 78 + col * 18, 151 + row * 18));
         for (int col = 0; col < 9; col++) addSlotToContainer(new Slot(player, col, 78 + col * 18, 209));
-        if (machine instanceof TileQuarry) for (int i = 0; i < VoidFilter.SIZE; i++)
-            addSlotToContainer(new GhostSlot(((TileQuarry) machine).filter, i, 78 + i % 9 * 18, 73 + i / 9 * 18));
+        if (machine instanceof TileQuarry) for (int i = 0; i < ((TileQuarry) machine).filter.getSizeInventory(); i++)
+            addSlotToContainer(new GhostSlot(((TileQuarry) machine).filter, i, 78 + (i % VoidFilter.PAGE_SIZE) % 9 * 18, 73 + (i % VoidFilter.PAGE_SIZE) / 9 * 18));
         setTab(0);
     }
     public void setTab(int value) {
@@ -42,9 +42,14 @@ public final class MachineContainer extends Container {
             Slot slot = (Slot) inventorySlots.get(i);
             slot.yDisplayPosition = tab == 1 ? 33 + (i / 9) * 18 : -10000;
         }
-        for (int i = machineSlots() + 36; i < inventorySlots.size(); i++)
-            ((Slot) inventorySlots.get(i)).yDisplayPosition = tab == 2 ? 73 + (i - machineSlots() - 36) / 9 * 18 : -10000;
+        for (int i = machineSlots() + 36; i < inventorySlots.size(); i++) {
+            int index=i-machineSlots()-36;
+            ((Slot) inventorySlots.get(i)).yDisplayPosition = tab == 2 && index / VoidFilter.PAGE_SIZE == filterPage
+                ? 73 + (index % VoidFilter.PAGE_SIZE) / 9 * 18 : -10000;
+        }
     }
+    public int filterPages() { return machine instanceof TileQuarry ? (((TileQuarry) machine).filter.getSizeInventory()+24)/25 : 1; }
+    public void setFilterPage(int page) { if(page>=0 && page<filterPages()){filterPage=page;setTab(tab);} }
     private int machineSlots() { return inventory == null ? 0 : inventory.getSizeInventory(); }
     public boolean allowAction() {
         long tick = machine.getWorldObj().getTotalWorldTime();
@@ -57,21 +62,21 @@ public final class MachineContainer extends Container {
         if (crafter instanceof EntityPlayerMP) send((EntityPlayerMP) crafter);
     }
     public void send(EntityPlayerMP player) {
-        IndustrialTechnology.network.sendTo(new SnapshotPacket(machine, windowId, tab), player);
+        IndustrialTechnology.network.sendTo(new SnapshotPacket(machine, windowId, tab, filterPage), player);
     }
     @Override public void detectAndSendChanges() {
         super.detectAndSendChanges();
         if (machine.getWorldObj().isRemote || ++syncTicks < 5) return;
         syncTicks = 0;
-        NBTTagCompound state = machine.snapshot(); state.setInteger("Tab", tab);
+        NBTTagCompound state = machine.snapshot(); state.setInteger("Tab", tab); state.setInteger("FilterPage", filterPage);
         if (state.equals(lastSnapshot)) return;
         lastSnapshot = state;
         for (Object listener : crafters) if (listener instanceof EntityPlayerMP) send((EntityPlayerMP) listener);
     }
     @Override public ItemStack slotClick(int slot, int button, int mode, EntityPlayer player) {
         int ghosts = machineSlots() + 36;
-        if (machine instanceof TileQuarry && slot >= ghosts && slot < ghosts + VoidFilter.SIZE) {
-            if (tab != 2 || mode != 0 || button < 0 || button > 1 || !canInteractWith(player)
+        if (machine instanceof TileQuarry && slot >= ghosts && slot < ghosts + ((TileQuarry) machine).filter.getSizeInventory()) {
+            if (tab != 2 || (slot-ghosts)/VoidFilter.PAGE_SIZE != filterPage || mode != 0 || button < 0 || button > 1 || !canInteractWith(player)
                 || !ForgeHooks.canInteractWith(player, this) || !allowAction()) return null;
             VoidFilter filter = ((TileQuarry) machine).filter;
             // Use the authoritative carried stack. No item/NBT data is accepted in a custom packet.

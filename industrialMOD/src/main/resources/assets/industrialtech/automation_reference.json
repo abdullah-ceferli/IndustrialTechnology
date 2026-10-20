@@ -1,0 +1,326 @@
+{
+  "title": "Automation Guide",
+  "intro": [
+    {
+      "title": "Welcome to Automation",
+      "text": "The Wireless Terminal lets you see and control your linked devices. Blue watches a machine. Yellow sends redstone. Green shows its contents. You can use SIMPLE buttons or write CODE.",
+      "example": ""
+    },
+    {
+      "title": "Link your devices",
+      "text": "Carry your own Wireless Terminal. Normally right-click a machine face with Blue and a receiving machine face with Yellow. Each torch needs an empty adjacent block. Existing torches can be linked by right-clicking them with your terminal.",
+      "example": ""
+    },
+    {
+      "title": "Name your controls",
+      "text": "Open Controls and rename the Yellow Stick to Pump, or another clear name. Code uses that exact name inside quotes. Names are case-sensitive. Two controls with the same name are an error, not a random choice.",
+      "example": ""
+    },
+    {
+      "title": "Open Code Mode",
+      "text": "Open the terminal, choose Automation, select a Blue device, then CODE. Type your program, click Save, then Enable. SIMPLE rules stay saved. Only the selected mode runs.",
+      "example": ""
+    },
+    {
+      "title": "Your first program",
+      "text": "Put Blue on a chest and name a Yellow control Pump. Save this program. Adding stone makes Pump send five seconds of redstone.",
+      "example": "WHEN ITEM \"minecraft:stone\" >= 1\nTHEN PULSE \"Pump\" 5s\nEND"
+    },
+    {
+      "title": "WHEN, THEN, END",
+      "text": "WHEN checks something. THEN chooses an action. END finishes one rule. Put each on its own line. Blank lines and lines starting with # are allowed. Keywords can use upper or lower case.",
+      "example": ""
+    },
+    {
+      "title": "Reading amounts",
+      "text": ">= means greater than or equal to: at least that amount. < means less than. Amounts are whole numbers from 0 through 1000000000000. Item IDs look like minecraft:stone.",
+      "example": ""
+    },
+    {
+      "title": "Understanding mB",
+      "text": "mb means millibuckets. One normal bucket is 1000 mB. 200mb is one fifth of a bucket. Fluid data comes from real exposed tanks; the script never estimates a fill level.",
+      "example": ""
+    },
+    {
+      "title": "Which fluid name?",
+      "text": "Hover a tank in Monitors to see its Fluid ID. Forge water is water. HBM IDs are shown as hbm: followed by its actual registry name. A common unqualified name also matches the same HBM name. Display names are not IDs.",
+      "example": ""
+    },
+    {
+      "title": "A rule fires once",
+      "text": "Below 200mb: false. At 200mb: true, trigger once. At 300mb: still true, no repeat. Drop below 200mb, then reach it again to trigger a new pulse. A newly enabled true rule may fire once.",
+      "example": ""
+    },
+    {
+      "title": "More than one rule",
+      "text": "Put up to eight WHEN/THEN/END blocks in one editor, separated by blank lines. Each rule remembers its own true/false edge. Two rising actions for the same target in one script use the last block in text order.",
+      "example": ""
+    },
+    {
+      "title": "Pulses and manual power",
+      "text": "PULSE lasts 5-10 seconds. ON stays on; OFF stops immediately. ON/OFF cancel a running timer. A pulse already running ignores another pulse. Across separate Blue devices, server processing order decides the latest accepted command.",
+      "example": ""
+    },
+    {
+      "title": "Saving and switching",
+      "text": "An invalid Save keeps your draft and leaves the saved working program unchanged. Save does not enable a disabled program. Switching SIMPLE/CODE preserves both sets of rules and their edge memories. Unchanged rules keep their latch on Save. Disable stops future checks; an active pulse finishes, and manual ON stays on until an OFF command.",
+      "example": ""
+    },
+    {
+      "title": "Unloaded machines",
+      "text": "Devices must be loaded in the same dimension. Scripts do not load chunks. Unavailable reads never become zero items or zero liquid. Affected rules pause with their edge memory intact, then resume when data and target are available.",
+      "example": ""
+    },
+    {
+      "title": "What this cannot do",
+      "text": "Commands only read supported storage and control your linked Yellow Sticks. They cannot transfer items, create RF/HE, run Java, or control a machine that ignores vanilla redstone. Other HBM forks and unverified multiblocks may show FLUID DATA UNAVAILABLE.",
+      "example": ""
+    }
+  ],
+  "conditions": [
+    {
+      "id": "ITEM",
+      "syntax": "WHEN ITEM \"item_id\" >= amount\nWHEN ITEM \"item_id\" < amount",
+      "text": "Count a real item. >= means at least; < means fewer than.",
+      "example": "WHEN ITEM \"minecraft:stone\" >= 1\nTHEN PULSE \"Pump\" 5s\nEND",
+      "result": "Adding one stone triggers once.",
+      "limits": "Use registered item IDs. CODE counts all metadata/NBT variants of that item; use SIMPLE ghost rules for exact variants."
+    },
+    {
+      "id": "INVENTORY_EMPTY",
+      "syntax": "WHEN INVENTORY EMPTY",
+      "text": "Check whether all accessible inventory slots are empty.",
+      "example": "WHEN INVENTORY EMPTY\nTHEN PULSE \"Pump\" 5s\nEND",
+      "result": "The empty chest triggers once.",
+      "limits": "A missing or unsupported inventory is unavailable, not empty."
+    },
+    {
+      "id": "INVENTORY_FULL",
+      "syntax": "WHEN INVENTORY FULL",
+      "text": "Check whether accessible slots have no known spare stack space.",
+      "example": "WHEN INVENTORY FULL\nTHEN PULSE \"Pump\" 5s\nEND",
+      "result": "A full chest triggers a storage warning once.",
+      "limits": "Empty opaque slots count as available. Hidden custom slot limits cannot be inferred. SIMPLE can test fullness for one ghost item."
+    },
+    {
+      "id": "FLUID",
+      "syntax": "WHEN FLUID \"fluid_id\" >= amountmb\nWHEN FLUID \"fluid_id\" < amountmb",
+      "text": "Count actual millibuckets of the named fluid across the exposed tanks.",
+      "example": "WHEN FLUID \"water\" >= 200mb\nTHEN PULSE \"Pump\" 7s\nEND",
+      "result": "100 mB is false. Reaching 200 mB triggers seven seconds of redstone.",
+      "limits": "Matching amounts are summed across the selected Forge face. HBM uses its public supported tank set; fluid-enabled proxies resolve the loaded controller. Hover a Green monitor tank to copy its ID. Unknown names are rejected; unavailable reads pause the rule."
+    },
+    {
+      "id": "TANK_EMPTY",
+      "syntax": "WHEN TANK EMPTY",
+      "text": "Check whether every exposed supported tank contains no liquid.",
+      "example": "WHEN TANK EMPTY\nTHEN PULSE \"Pump\" 5s\nEND",
+      "result": "The empty tank set triggers once.",
+      "limits": "All exposed tanks are considered, not only water. No supported tanks means unavailable."
+    },
+    {
+      "id": "TANK_FULL",
+      "syntax": "WHEN TANK FULL",
+      "text": "Check whether every exposed positive-capacity tank has reached capacity.",
+      "example": "WHEN TANK FULL\nTHEN PULSE \"Pump\" 5s\nEND",
+      "result": "A full tank set triggers once.",
+      "limits": "Every exposed tank must be full. Zero-capacity tanks do not count; a set with no positive capacity is unavailable."
+    }
+  ],
+  "actions": [
+    {
+      "id": "PULSE",
+      "syntax": "THEN PULSE \"Control Name\" 5s\nTHEN PULSE \"Control Name\"",
+      "text": "Send redstone power 15 for five through ten seconds, then return to zero.",
+      "example": "WHEN FLUID \"water\" >= 200mb\nTHEN PULSE \"Pump\" 7s\nEND",
+      "result": "Pump turns on for 140 server ticks at 20 TPS.",
+      "limits": "Without a duration, use the Yellow Stick's configured duration. An already active timed pulse ignores another pulse and keeps its original deadline. This command works even if the target is configured Manual."
+    },
+    {
+      "id": "ON",
+      "syntax": "THEN ON \"Control Name\"",
+      "text": "Set redstone output to 15 until an OFF command or a later pulse changes it.",
+      "example": "WHEN ITEM \"minecraft:iron_ingot\" >= 64\nTHEN ON \"Machine Power\"\nEND",
+      "result": "Machine Power stays on.",
+      "limits": "ON cancels an existing pulse timer. It does not change the target's saved mode/duration settings."
+    },
+    {
+      "id": "OFF",
+      "syntax": "THEN OFF \"Control Name\"",
+      "text": "Set redstone output to zero now.",
+      "example": "WHEN ITEM \"minecraft:coal\" < 16\nTHEN OFF \"Machine Power\"\nEND",
+      "result": "Machine Power turns off and its pulse timer is canceled.",
+      "limits": "The receiving machine must accept vanilla redstone on that face."
+    }
+  ],
+  "examples": [
+    {
+      "title": "Stone starter",
+      "example": "WHEN ITEM \"minecraft:stone\" >= 1\nTHEN PULSE \"Stone Processor\" 5s\nEND",
+      "text": "Add stone to the attached chest. Stone Processor pulses once."
+    },
+    {
+      "title": "Stack of iron",
+      "example": "WHEN ITEM \"minecraft:iron_ingot\" >= 64\nTHEN PULSE \"Factory Machine\" 10s\nEND",
+      "text": "Store at least 64 iron ingots. Factory Machine pulses for ten seconds."
+    },
+    {
+      "title": "Low coal warning",
+      "example": "WHEN ITEM \"minecraft:coal\" < 16\nTHEN PULSE \"Coal Warning\" 7s\nEND",
+      "text": "Fewer than 16 coal triggers the warning. Refill before another low edge."
+    },
+    {
+      "title": "Empty chest",
+      "example": "WHEN INVENTORY EMPTY\nTHEN PULSE \"Refill System\" 5s\nEND",
+      "text": "Remove the last item from the chest to trigger Refill System."
+    },
+    {
+      "title": "Full chest",
+      "example": "WHEN INVENTORY FULL\nTHEN PULSE \"Storage Alarm\" 5s\nEND",
+      "text": "Fill all accessible slots to trigger Storage Alarm."
+    },
+    {
+      "title": "Water at 200 mB",
+      "example": "WHEN FLUID \"water\" >= 200mb\nTHEN PULSE \"Arc Furnace\" 7s\nEND",
+      "text": "Start below 200 mB, then add water. Arc Furnace pulses once for seven seconds."
+    },
+    {
+      "title": "Oil at 1000 mB",
+      "example": "WHEN FLUID \"oil\" >= 1000mb\nTHEN PULSE \"Oil Pump\" 5s\nEND",
+      "text": "Needs an installed fluid registered as oil. Hover its tank for the actual ID if different."
+    },
+    {
+      "title": "Empty tank",
+      "example": "WHEN TANK EMPTY\nTHEN PULSE \"Empty Tank Alarm\" 5s\nEND",
+      "text": "An exposed empty tank set triggers the alarm."
+    },
+    {
+      "title": "Turn power on",
+      "example": "WHEN ITEM \"minecraft:stone\" >= 64\nTHEN ON \"Machine Power\"\nEND",
+      "text": "At 64 stone, redstone stays on."
+    },
+    {
+      "title": "Turn power off",
+      "example": "WHEN ITEM \"minecraft:stone\" < 16\nTHEN OFF \"Machine Power\"\nEND",
+      "text": "Below 16 stone, redstone switches off."
+    },
+    {
+      "title": "Refill water",
+      "example": "WHEN FLUID \"water\" < 500mb\nTHEN PULSE \"Water Refill\" 10s\nEND",
+      "text": "Low water starts Water Refill for ten seconds."
+    },
+    {
+      "title": "Full tank alarm",
+      "example": "WHEN TANK FULL\nTHEN PULSE \"Tank Full Alarm\" 5s\nEND",
+      "text": "All exposed tanks reaching capacity starts the alarm."
+    }
+  ],
+  "troubleshooting": [
+    {
+      "title": "Unknown item",
+      "text": "Check the full registered ID, such as minecraft:iron_ingot. CODE item checks count all variants of that item. If removing a mod makes a saved ID unknown, the program disables until you fix and save it.",
+      "example": ""
+    },
+    {
+      "title": "Unknown fluid",
+      "text": "Copy the Fluid ID shown when hovering a tank in Monitors. A fluid that is not installed cannot be used. Unknown fluid is a Save error, not zero mB. If removing a mod makes a saved ID unknown, the program disables until you fix and save it.",
+      "example": ""
+    },
+    {
+      "title": "Unknown control",
+      "text": "Rename a Yellow Stick in Controls, then use its exact name inside quotes. If names are duplicated, rename one or use \"id:UUID\" from the control tooltip. Controls must belong to this terminal and dimension.",
+      "example": ""
+    },
+    {
+      "title": "Invalid command",
+      "text": "Use only documented WHEN conditions and THEN PULSE/ON/OFF actions. Check quotes, whole numbers, mb, and s. The error tells you which line to fix.",
+      "example": ""
+    },
+    {
+      "title": "Missing END",
+      "text": "Add END on its own line after each THEN action.",
+      "example": ""
+    },
+    {
+      "title": "Target offline",
+      "text": "Load the machine and Yellow Stick chunks with your existing chunk loader if needed. Scripts wait and never force-load them.",
+      "example": ""
+    },
+    {
+      "title": "Unsupported machine",
+      "text": "Mount Blue directly on a readable inventory or tank face. Plain ground has no storage. Unknown APIs report unavailable instead of triggering low-resource rules.",
+      "example": ""
+    },
+    {
+      "title": "No permission",
+      "text": "Use your own bound terminal and linked sticks. A stolen terminal or a control from another network is rejected.",
+      "example": ""
+    }
+  ],
+  "glossary": [
+    {
+      "word": "WHEN",
+      "text": "Start a condition."
+    },
+    {
+      "word": "THEN",
+      "text": "Choose the action."
+    },
+    {
+      "word": "END",
+      "text": "Finish the rule."
+    },
+    {
+      "word": "ITEM",
+      "text": "Count stored items."
+    },
+    {
+      "word": "FLUID",
+      "text": "Count stored liquid."
+    },
+    {
+      "word": "INVENTORY",
+      "text": "Check accessible item slots."
+    },
+    {
+      "word": "TANK",
+      "text": "Check exposed liquid tanks."
+    },
+    {
+      "word": "EMPTY",
+      "text": "Contains nothing."
+    },
+    {
+      "word": "FULL",
+      "text": "Has no known spare capacity."
+    },
+    {
+      "word": "PULSE",
+      "text": "Send temporary redstone."
+    },
+    {
+      "word": "ON",
+      "text": "Keep redstone at 15."
+    },
+    {
+      "word": "OFF",
+      "text": "Set redstone to 0."
+    },
+    {
+      "word": ">=",
+      "text": "At least this amount."
+    },
+    {
+      "word": "<",
+      "text": "Less than this amount."
+    },
+    {
+      "word": "mb",
+      "text": "Millibuckets: 1000 mB is a bucket."
+    },
+    {
+      "word": "s",
+      "text": "Seconds: 5s is five seconds at 20 TPS."
+    }
+  ]
+}

@@ -29,7 +29,11 @@ public class GuiMachine extends GuiContainer {
     public void receive(NBTTagCompound update) {
         state = update;
         if (container.machine instanceof dev.industrialtechnology.quarry.TileQuarry)
-            ((dev.industrialtechnology.quarry.TileQuarry) container.machine).filter.read(update);
+        {
+            dev.industrialtechnology.quarry.VoidFilter filter=((dev.industrialtechnology.quarry.TileQuarry)container.machine).filter;
+            filter.enabled=update.getBoolean("VoidEnabled"); filter.ignoreMetadata=update.getBoolean("VoidIgnoreMetadata");
+        }
+        container.setFilterPage(state.getInteger("FilterPage"));
         if (waitingApply && state.getInteger("Selected") == draft) { waitingApply = dirtySelection = false; }
         if (!dirtySelection) draft = state.getInteger("Selected");
         container.setTab(state.getInteger("Tab")); updateButtons();
@@ -43,10 +47,12 @@ public class GuiMachine extends GuiContainer {
         button(10, 117, 7, 58, 15, "Control", "Machine controls and chunk selection");
         if (container.machine.isQuarry()) {
             button(11, 178, 7, 58, 15, "Output", "All 54 output slots; shift-click to extract");
-            button(12, 239, 7, 68, 15, "Void Filter", "Configure 18 ghost icons; matching mined drops can be permanently deleted");
+            button(12, 239, 7, 68, 15, "Void Filter", "Configure tier-specific ghost icons; matching mined drops can be permanently deleted");
             button(5, 16, 49, 125, 14, "Auto Delete: OFF", "Matching mined drops will be permanently deleted instead of entering Quarry storage");
             button(6, 146, 49, 155, 14, "Exact Match", "Exact matches item, metadata, and NBT; Ignore Metadata still matches item and NBT");
-            button(7, 16, 118, 80, 13, "Clear All", "Clear all 18 filter entries; does not change real items");
+            button(7, 16, 118, 58, 13, "Clear All", "Clear all filter entries; does not change real items");
+            button(8, 250, 79, 51, 13, "Previous", "Previous filter page");
+            button(9, 250, 98, 51, 13, "Next", "Next filter page");
             button(25, 12, 163, 58, 14, "Area: ON", "Show / Hide Mining Area locally; does not change mining or chunk loading");
         }
         if (container.machine.isQuarry()) {
@@ -67,7 +73,7 @@ public class GuiMachine extends GuiContainer {
     }
     protected void updateButtons() {
         for (MetalButton b : controls) {
-            b.visible = b.id >= 10 && b.id <= 12 || (b.id >= 5 && b.id <= 7 ? container.tab == 2 : b.id == 25 || container.tab == 0);
+            b.visible = b.id >= 10 && b.id <= 12 || (b.id >= 5 && b.id <= 9 ? container.tab == 2 : b.id == 25 || container.tab == 0);
             b.enabled = true; b.selected = false;
             if (b.id == 0) { b.displayString = state.getBoolean("Enabled") ? "Stop" : "Start"; b.enabled = state.getInteger("Status") != MachineStatus.COMPLETED.ordinal(); }
             if (b.id == 1) { b.selected = dirtySelection; b.enabled = dirtySelection && !waitingApply; }
@@ -78,6 +84,8 @@ public class GuiMachine extends GuiContainer {
             if (b.id == 12) b.selected = container.tab == 2;
             if (b.id == 5) { b.displayString = "Auto Delete: " + (state.getBoolean("VoidEnabled") ? "ON" : "OFF"); b.selected = state.getBoolean("VoidEnabled"); }
             if (b.id == 6) b.displayString = state.getBoolean("VoidIgnoreMetadata") ? "Ignore Metadata" : "Exact Match";
+            if (b.id == 8) b.enabled=container.filterPage>0;
+            if (b.id == 9) b.enabled=container.filterPage+1<container.filterPages();
             if (b.id == 25) b.displayString = "Area: " + (OverlaySettings.quarries ? "ON" : "OFF");
             if (b.id == 24) { b.enabled = state.getBoolean("PreviewAllowed"); b.selected = AreaPreview.isActive(container.machine); }
         }
@@ -96,6 +104,9 @@ public class GuiMachine extends GuiContainer {
             case 5: send(ControlPacket.VOID_TOGGLE, 0); break;
             case 6: send(ControlPacket.VOID_MODE, 0); break;
             case 7: send(ControlPacket.VOID_CLEAR, 0); break;
+            case 8: case 9:
+                container.setFilterPage(container.filterPage+(b.id==9?1:-1));
+                send(ControlPacket.FILTER_PAGE,container.filterPage);break;
             case 25: OverlaySettings.toggle(container.machine.isQuarry()); break;
             case 20: case 23: setDraft(ChunkArea.CENTER); break;
             case 21: setDraft(ChunkArea.square3()); break;
@@ -148,6 +159,16 @@ public class GuiMachine extends GuiContainer {
     }
     @Override protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
         drawPanel(container.tab == 1 ? "storage" : container.tab == 2 ? "void_filter" : "controls", 512);
+        if(container.tab==2){
+            drawRect(guiLeft+77,guiTop+72,guiLeft+241,guiTop+128,0xff272e33);
+            int size=((dev.industrialtechnology.quarry.TileQuarry)container.machine).filter.getSizeInventory();
+            for(int i=0;i<Math.min(25,size-container.filterPage*25);i++){
+                int px=guiLeft+78+i%9*18,py=guiTop+73+i/9*18;
+                drawRect(px-1,py-1,px+17,py+17,0xff171e22);
+                drawRect(px,py,px+16,py+16,0xff414c52);
+                drawRect(px+1,py+1,px+16,py+16,0xff303a40);
+            }
+        }
         if (container.tab == 0) {
             int cap = Math.max(1, state.getInteger("Capacity"));
             int bar = (int) (43L * state.getInteger("Energy") / cap);
@@ -168,9 +189,9 @@ public class GuiMachine extends GuiContainer {
         } else if (container.tab == 2) {
             text("VOID FILTER", 16, 36, 0xe0b975);
             text("Ghost", 16, 76, 0xa1aaa9); text("icons", 16, 88, 0xa1aaa9);
-            text("Left: set icon; Right: clear", 78, 110, 0xa1aaa9);
-            int configured = state.getTagList("VoidEntries", 10).tagCount();
-            text("Configured: " + configured + " / 18", 111, 120, 0xb4bdbc);
+            text("Left: set icon; Right: clear", 78, 64, 0xa1aaa9);
+            text("Page "+(container.filterPage+1)+"/"+container.filterPages(),250,66,0xb4bdbc);
+            text("Configured: " + state.getInteger("VoidConfigured") + " / " + state.getInteger("VoidCapacity"),111,132,0xb4bdbc);
         } else {
             int ordinal = Math.max(0, Math.min(MachineStatus.values().length - 1, state.getInteger("Status")));
             String label = MachineStatus.values()[ordinal].label();
@@ -209,9 +230,9 @@ public class GuiMachine extends GuiContainer {
     }
     protected List<String> tooltip(int x, int y) {
         if (container.tab == 2) {
-            if (y >= 70 && y < 104 && x >= 78 && x < 240) {
+            if (y >= 70 && y < 127 && x >= 78 && x < 240) {
                 int slot = (y - 73) / 18 * 9 + (x - 78) / 18;
-                if (slot >= 0 && slot < 18 && ((dev.industrialtechnology.quarry.TileQuarry) container.machine).filter.getStackInSlot(slot) == null)
+                if (slot >= 0 && slot < 25 && slot+container.filterPage*25 < ((dev.industrialtechnology.quarry.TileQuarry)container.machine).filter.getSizeInventory() && ((dev.industrialtechnology.quarry.TileQuarry) container.machine).filter.getStackInSlot(slot+container.filterPage*25) == null)
                     return Arrays.asList("Ghost filter icon", "Pick up an item from your inventory, then left-click here", "No item is consumed; right-click clears an entry");
             }
             if (y >= 29 && y < 48) return Arrays.asList("Matching mined drops will be permanently deleted instead of entering Quarry storage.", "Existing output items are never deleted.");

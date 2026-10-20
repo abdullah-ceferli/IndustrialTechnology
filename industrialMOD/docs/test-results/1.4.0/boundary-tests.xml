@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.industrialtechnology.quarry.BoundaryGeometryTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-20T12:37:05" hostname="DESKTOP-K160Q2I" time="0.001">
+  <properties/>
+  <testcase name="oldAndMalformedCursorsAreClampedBelowThePlacementLayer" classname="dev.industrialtechnology.quarry.BoundaryGeometryTest" time="0.0"/>
+  <testcase name="quarryPerimetersExcludeSharedEdgesAndKeepInteriorHoles" classname="dev.industrialtechnology.quarry.BoundaryGeometryTest" time="0.0"/>
+  <testcase name="quarryFramesRespectSparseAreasAndNeverExtendAbovePlacement" classname="dev.industrialtechnology.quarry.BoundaryGeometryTest" time="0.0"/>
+  <testcase name="loaderGridsHaveExactUniqueEdgesForOneFifteenAndTwentyFiveChunks" classname="dev.industrialtechnology.quarry.BoundaryGeometryTest" time="0.0"/>
+  <testcase name="boundarySegmentIdentityIsDirectionIndependent" classname="dev.industrialtechnology.quarry.BoundaryGeometryTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

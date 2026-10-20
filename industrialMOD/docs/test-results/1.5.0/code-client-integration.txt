@@ -1,0 +1,24 @@
+PASS: Physical Blue tank and chest torches and Yellow control link before Code use
+PASS: CODE replaces old rule widgets with a real large multiline editor
+PASS: Actual editor typing Enter arrows Backspace and Delete preserves three code lines
+PASS: Ctrl selection copy paste uses the system clipboard without activating game hotkeys
+PASS: Save sends the real bounded upload and acknowledges a compiled program
+PASS: Editor panels syntax colors and caller OpenGL tint stay stable
+PASS: 100mb water remains false before the actual fluid threshold
+PASS: GUI-saved fluid script starts real power 15 and a seven-second deadline at 200mb
+PASS: Saving unchanged working code preserves its latch and active pulse deadline
+PASS: Invalid GUI save keeps the prior working script
+PASS: Line errors preserve the player's invalid draft and last working program
+PASS: Help uses classic cream book pages and every page fits the actual Minecraft font
+PASS: Book page arrows navigate real pages
+PASS: Closing Help preserves the code draft and live terminal container
+PASS: Seven-second fluid pulse expires even while editing invalid drafts or viewing Help
+PASS: SIMPLE returns without erasing saved code
+PASS: Previously saved SIMPLE coal rules and ghost items remain usable
+PASS: GUI item code uses real chest insertion and starts a five-second Yellow pulse
+PASS: Changing Blue devices restores each independent saved program and mode
+PASS: Five-second item code turns OFF and does not repeat while stone stays present
+PASS: Multiline scrolling and line numbers handle programs longer than the visible editor
+PASS: Craftable leather guide item opens an ordinary Minecraft-style book on right-click
+PASS: Editor and book rendering restore vanilla GUI colors and player items
+Failed: 0

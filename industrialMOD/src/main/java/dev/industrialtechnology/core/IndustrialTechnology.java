@@ -17,7 +17,7 @@ import net.minecraftforge.common.MinecraftForge;
 import cpw.mods.fml.common.FMLCommonHandler;
 import org.apache.logging.log4j.Logger;
 
-@Mod(modid = IndustrialTechnology.MODID, name = "Industrial Technology", version = "1.3.0",
+@Mod(modid = IndustrialTechnology.MODID, name = "Industrial Technology", version = "1.5.0",
      acceptedMinecraftVersions = "[1.7.10]", dependencies = "required-after:Forge@[10.13.4.1614,)")
 public final class IndustrialTechnology {
     public static final String MODID = "industrialtech";
@@ -36,6 +36,10 @@ public final class IndustrialTechnology {
         network.registerMessage(ControlPacket.Handler.class, ControlPacket.class, 0, Side.SERVER);
         // The common handler delegates to the client proxy: no client class is linked on a server.
         network.registerMessage(SnapshotPacket.Handler.class, SnapshotPacket.class, 1, Side.CLIENT);
+        network.registerMessage(dev.industrialtechnology.automation.ScriptUpload.Handler.class,dev.industrialtechnology.automation.ScriptUpload.class,4,Side.SERVER);
+        network.registerMessage(dev.industrialtechnology.automation.ScriptDocument.Handler.class,dev.industrialtechnology.automation.ScriptDocument.class,5,Side.CLIENT);
+        network.registerMessage(dev.industrialtechnology.wireless.WirelessCommand.Handler.class,dev.industrialtechnology.wireless.WirelessCommand.class,2,Side.SERVER);
+        network.registerMessage(dev.industrialtechnology.wireless.WirelessSnapshot.Handler.class,dev.industrialtechnology.wireless.WirelessSnapshot.class,3,Side.CLIENT);
         ForgeChunkManager.setForcedChunkLoadingCallback(instance, new ChunkTickets.Callback());
     }
     @Mod.EventHandler public void init(FMLInitializationEvent event) {
@@ -45,6 +49,9 @@ public final class IndustrialTechnology {
         FMLCommonHandler.instance().bus().register(new MiningScheduler());
         MinecraftForge.EVENT_BUS.register(new ChunkTickets.WorldEvents());
         MinecraftForge.EVENT_BUS.register(new dev.industrialtechnology.quarry.OreRecognition());
+        MinecraftForge.EVENT_BUS.register(new dev.industrialtechnology.wireless.TerminalSafety());
+        MinecraftForge.EVENT_BUS.register(new dev.industrialtechnology.wireless.TargetAnchors());
+        FMLCommonHandler.instance().bus().register(new dev.industrialtechnology.wireless.WirelessScheduler());
         proxy.init();
     }
     @Mod.EventHandler public void serverStarting(FMLServerStartingEvent event) {

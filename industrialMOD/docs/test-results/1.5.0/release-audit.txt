@@ -1,0 +1,9 @@
+PASS: All final archive entries match both native Forge production-tested release JARs byte for byte
+PASS: 120 Java 8 classes; no test harness or bundled Minecraft/Forge/HBM implementation
+PASS: Version 1.5.0; 24 block, 5 GUI, 8 item textures; original 16px leather guide icon
+PASS: Shared book/Help reference and complete Markdown source hash agree
+PASS: Project and CoFH notices included; no nested mod JARs or external script engine
+PASS: 382 successful recorded unit/native-server/restart/real-client checks
+SHA256: 21796fb12189f1c94d1cd6465d4702f67ce9077c67e0251d42ede88fd704a425
+Size: 265684 bytes
+Failed: 0

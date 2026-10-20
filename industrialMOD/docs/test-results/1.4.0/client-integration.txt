@@ -1,0 +1,57 @@
+PASS: MK1 GUI opens and renders at GUI scale 3
+PASS: MK1 GUI resets incoming tint and preserves panel/slot colors
+PASS: MK1 Silk button server synchronization
+PASS: MK1 Fortune button mutual exclusion
+PASS: MK1 individual 15-chunk grid and Apply
+PASS: MK1 public quarry boundaries follow real description packets
+PASS: MK1 Start button and exact chunk loading
+PASS: MK1 Stop, invalid packets, hidden-slot protection
+PASS: MK1 output tab and shift-click extraction
+PASS: MK1 Void Filter tab preserves the industrial palette
+PASS: MK1 real ghost-slot packets synchronize without consuming the carried item
+PASS: MK1 Auto Delete and metadata controls synchronize
+PASS: MK1 right-click and Clear All preserve real inventory
+PASS: MK2 GUI opens and renders at GUI scale 3
+PASS: MK2 GUI resets incoming tint and preserves panel/slot colors
+PASS: MK2 Silk button server synchronization
+PASS: MK2 Fortune button mutual exclusion
+PASS: MK2 individual 15-chunk grid and Apply
+PASS: MK2 public quarry boundaries follow real description packets
+PASS: MK2 Start button and exact chunk loading
+PASS: MK2 Stop, invalid packets, hidden-slot protection
+PASS: MK2 output tab and shift-click extraction
+PASS: MK2 Void Filter tab preserves the industrial palette
+PASS: MK2 real ghost-slot packets synchronize without consuming the carried item
+PASS: MK2 Auto Delete and metadata controls synchronize
+PASS: MK2 right-click and Clear All preserve real inventory
+PASS: MK2 final tier filter slot synchronizes on page two without consuming items
+PASS: MK2 Previous/Next filter pages and cross-page Clear All work in the real GUI
+PASS: MK3 GUI opens and renders at GUI scale 3
+PASS: MK3 GUI resets incoming tint and preserves panel/slot colors
+PASS: MK3 Silk button server synchronization
+PASS: MK3 Fortune button mutual exclusion
+PASS: MK3 individual 15-chunk grid and Apply
+PASS: MK3 public quarry boundaries follow real description packets
+PASS: MK3 Start button and exact chunk loading
+PASS: MK3 Stop, invalid packets, hidden-slot protection
+PASS: MK3 output tab and shift-click extraction
+PASS: MK3 Void Filter tab preserves the industrial palette
+PASS: MK3 real ghost-slot packets synchronize without consuming the carried item
+PASS: MK3 Auto Delete and metadata controls synchronize
+PASS: MK3 right-click and Clear All preserve real inventory
+PASS: MK3 final tier filter slot synchronizes on page two without consuming items
+PASS: MK3 Previous/Next filter pages and cross-page Clear All work in the real GUI
+PASS: Compact zero-energy loader screen and stable OpenGL colors
+PASS: Chunk Loader GUI Apply/Enable and exact 15 chunks
+PASS: Public loader borders match fifteen actual loaded chunks
+PASS: Local border toggle preserves active loader tickets
+PASS: Public loader borders update for one, twenty-five, and irregular chunk selections
+PASS: Crystal uses a stationary OFF pose and five-second interpolated ON rotation
+PASS: Area preview ON/OFF toggle
+PASS: Chunk Loader OFF immediately releases its own tickets
+PASS: Closing machine screens preserves vanilla inventory colors
+PASS: Crystal facets render cyan in the actual world framebuffer
+PASS: Public red boundaries render without any GUI open
+PASS: Leaving and returning to watched chunks restores public overlays without opening a GUI
+PASS: Stopping every machine hides red frames and world renderers preserve vanilla GUI colors
+Failed: 0

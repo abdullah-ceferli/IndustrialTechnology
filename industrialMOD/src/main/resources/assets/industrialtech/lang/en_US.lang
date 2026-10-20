@@ -6,3 +6,12 @@ item.industrialtech.drill.name=Diamond Industrial Drill
 item.industrialtech.circuit.name=Control Circuit
 item.industrialtech.steel_gear.name=Machine Gear
 itemGroup.industrialtech=Industrial Technology
+
+item.industrialtech.wireless_terminal.name=Wireless Terminal
+item.industrialtech.green_stick.name=Green Monitoring Stick
+item.industrialtech.yellow_stick.name=Yellow Redstone Control Stick
+item.industrialtech.blue_stick.name=Blue Automation Stick
+tile.industrialtech.redstone_relay.name=Wireless Redstone Relay
+tile.industrialtech.monitoring_stick.name=Green Monitoring Stick
+tile.industrialtech.automation_stick.name=Blue Automation Stick
+item.industrialtech.automation_guide.name=Automation Guide

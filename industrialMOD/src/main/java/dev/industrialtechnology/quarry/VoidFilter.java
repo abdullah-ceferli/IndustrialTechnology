@@ -11,10 +11,10 @@ import net.minecraft.nbt.CompressedStreamTools;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 
-/** Eighteen configuration icons. Never exposes real item extraction or consumes a player's items. */
+/** Tier-sized configuration icons. Never stores or consumes real player items. */
 public final class VoidFilter implements IInventory {
-    // Eighteen 1-KiB icons also keep the complete legacy GUI NBT packet below its signed-short limit.
-    public static final int SIZE = 18, MAX_ENTRY_BYTES = 1024;
+    public static final int SIZE = 50, PAGE_SIZE = 25, MAX_ENTRY_BYTES = 1024;
+    public static int capacity(int tier) { return new int[]{18,36,50}[Math.max(0,Math.min(2,tier))]; }
     private final TileQuarry owner;
     private final ItemStack[] entries = new ItemStack[SIZE];
     public boolean enabled, ignoreMetadata;
@@ -27,7 +27,7 @@ public final class VoidFilter implements IInventory {
         return false;
     }
     public int configured() { int n = 0; for (ItemStack entry : entries) if (entry != null) n++; return n; }
-    public void clear() { for (int i = 0; i < SIZE; i++) entries[i] = null; markDirty(); }
+    public void clear() { for (int i = 0; i < getSizeInventory(); i++) entries[i] = null; markDirty(); }
     public static boolean valid(ItemStack stack) {
         if (stack == null) return true;
         if (stack.getItem() == null || Item.itemRegistry.getNameForObject(stack.getItem()) == null
@@ -47,28 +47,28 @@ public final class VoidFilter implements IInventory {
     public void write(NBTTagCompound tag) {
         tag.setBoolean("VoidEnabled", enabled); tag.setBoolean("VoidIgnoreMetadata", ignoreMetadata);
         NBTTagList list = new NBTTagList();
-        for (int i = 0; i < SIZE; i++) if (entries[i] != null) {
+        for (int i = 0; i < getSizeInventory(); i++) if (entries[i] != null) {
             NBTTagCompound item = new NBTTagCompound(); entries[i].writeToNBT(item); item.setInteger("FilterSlot", i); list.appendTag(item);
         }
         tag.setTag("VoidEntries", list);
     }
     public void read(NBTTagCompound tag) {
         enabled = tag.getBoolean("VoidEnabled"); ignoreMetadata = tag.getBoolean("VoidIgnoreMetadata");
-        for (int i = 0; i < SIZE; i++) entries[i] = null;
+        for (int i = 0; i < getSizeInventory(); i++) entries[i] = null;
         NBTTagList list = tag.getTagList("VoidEntries", 10);
         for (int i = 0; i < Math.min(SIZE, list.tagCount()); i++) {
             NBTTagCompound item = list.getCompoundTagAt(i); int slot = item.getInteger("FilterSlot");
-            if (slot < 0 || slot >= SIZE) continue;
+            if (slot < 0 || slot >= getSizeInventory()) continue;
             ItemStack stack = ItemStack.loadItemStackFromNBT(item);
             if (stack != null && valid(stack)) { stack.stackSize = 1; entries[slot] = stack; }
         }
     }
-    @Override public int getSizeInventory() { return SIZE; }
-    @Override public ItemStack getStackInSlot(int slot) { return slot >= 0 && slot < SIZE ? entries[slot] : null; }
+    @Override public int getSizeInventory() { return capacity(owner.tier()); }
+    @Override public ItemStack getStackInSlot(int slot) { return slot >= 0 && slot < getSizeInventory() ? entries[slot] : null; }
     @Override public ItemStack decrStackSize(int slot, int count) { return null; }
     @Override public ItemStack getStackInSlotOnClosing(int slot) { return null; }
     @Override public void setInventorySlotContents(int slot, ItemStack stack) {
-        if (slot < 0 || slot >= SIZE || !valid(stack)) return;
+        if (slot < 0 || slot >= getSizeInventory() || !valid(stack)) return;
         entries[slot] = stack == null ? null : stack.copy(); if (entries[slot] != null) entries[slot].stackSize = 1; markDirty();
     }
     @Override public String getInventoryName() { return "Void Filter"; }

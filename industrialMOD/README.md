@@ -6,7 +6,7 @@ precise chunk loader. Both share an extensible machine and ticket framework.
 ## Install
 
 Use **Minecraft 1.7.10, Forge 10.13.4.1614, and Java 8**. Put
-`IndustrialTechnology-1.7.10-1.3.0.jar` from `build/libs` into `mods` on both
+`IndustrialTechnology-1.7.10-1.5.0.jar` from `build/libs` into `mods` on both
 the client and dedicated server. The sources JAR is for developers.
 No Thermal Expansion, HBM, BuildCraft, or CoFHCore installation is required.
 The small official CoFH RF API is bundled with its version annotation.
@@ -14,6 +14,60 @@ The small official CoFH RF API is bundled with its version annotation.
 Quarries need an RF power source in survival. This mod does not yet add a
 generator: connect an existing RF network, or a compatible HE-to-RF converter.
 The standalone Chunk Loader always works without RF, HE, fuel, batteries, or any energy storage.
+
+## Wireless monitoring and automation
+
+Version **1.5.0** adds a left-click Wireless Terminal, Green Monitoring Sticks,
+Yellow Redstone Control Sticks, and Blue Automation Sticks. The three sticks
+use matching classic redstone-torch shapes, recolored green, yellow, and blue.
+They share an owner-bound, world-saved registry and work without RF.
+
+All three sticks place actual torches with a **normal right-click** on the
+ground or a machine face; sneaking is optional. Carry your terminal to link
+them automatically, or right-click an existing torch with the terminal later.
+Green reads inventories/tanks behind its attached face, Yellow emits real
+0/15 redstone, and Blue evaluates up to eight inventory rules. For
+example, inserting stone into a linked chest can trigger a Yellow Stick's
+seven-second pulse. Remote targets must already be loaded in the same dimension.
+
+See [the wireless guide](docs/WIRELESS.md) for linking, controls, recipes,
+compatibility, and automation behavior. The quarry speed remains **20,000 RF/t
+for 100 blocks/s at 20 TPS**, with its existing ore/protection behavior.
+
+## Automation Code Mode and guide book
+
+In Automation, select a Blue Stick, choose **CODE**, write a program, **Save**,
+then **Enable**. SIMPLE keeps the existing eight button-based rules. Only the
+selected mode runs; both sets stay saved.
+
+```text
+WHEN FLUID "water" >= 200mb
+THEN PULSE "Pump" 7s
+END
+```
+
+Rename a linked Yellow Stick to Pump in Controls first. A real water tank rising
+through 200 mB starts seven seconds of redstone, then turns OFF. Stable true
+conditions do not spam pulses. Item thresholds, inventory/tank empty/full, and
+ON/OFF are also supported. Invalid saves leave the working program unchanged.
+
+The real multiline editor supports selection, copy/cut/paste, scrolling, line
+numbers, syntax colors, and line errors. **Help** opens a classic cream-page
+book while preserving the draft. Craft an **Automation Guide** with one Book,
+one Redstone, and one Paper in any arrangement. Right-click it to read.
+
+[AUTOMATION_CODES.md](AUTOMATION_CODES.md) is the complete beginner reference,
+with every command and twelve example projects. It is generated from the same
+reference used by the book and Help. Rebuild it with
+`python tools/create_automation_docs.py` after editing the reference; the build
+checks its reference hash. The default script limit is 4096 characters, with
+at most eight finite rules and no external scripting engine.
+
+The verified optional HBM adapter reads actual Chemical Plant, Fluid Tank,
+Big Ass Tank, and supported proxy data in X5808. Full assembled structures,
+dynamic factory delegates, other HBM forks, and each machine's redstone response
+remain unverified. Unsupported fluid data pauses rules rather than becoming
+zero. Scripts cannot add redstone support to a machine that does not accept it.
 
 ## Machines and controls
 
@@ -33,7 +87,7 @@ and harvesting/loading information. The **Output** tab exposes all 54 output
 slots plus the full player inventory and hotbar. Shift-click extracts outputs.
 Output slots accept no player or pipe insertion. Every side exposes all slots
 for extraction through `IInventory`/`ISidedInventory`, including vanilla hoppers.
-The **Void Filter** tab adds 18 ghost configuration icons and Auto Delete controls.
+The **Void Filter** tab provides 18/36/50 ghost icons for MK1/MK2/MK3, with 25 icons per page and Auto Delete controls.
 The Chunk Loader opens a separate smaller controls-only screen: no RF bar and no inventory.
 
 Click cells in the 5 × 5 map to draft a selection. The center remains selected.
@@ -146,7 +200,7 @@ Auto Delete starts **OFF**. Open **Void Filter**, pick up an item from your
 player inventory, then left-click a ghost slot to copy its icon. Place the
 real stack back into your inventory. The icon has a count of one and never
 consumes, duplicates, or stores a real item. Right-click clears an entry;
-**Clear All** clears all 18 entries.
+**Clear All** clears every entry on both pages. MK1 has 18 entries, MK2 has 36, and MK3 has exactly 50. Previous/Next navigates pages; Configured reports the total across all pages. Existing saved entries keep their indices.
 
 Enable **Auto Delete** to permanently delete matching newly mined drops.
 **Exact Match** compares the item, metadata/damage, and NBT. **Ignore Metadata**
@@ -236,7 +290,7 @@ Industrial Technology creative tab. Tier upgrade recipes use the prior block.
 
 ## Configuration
 
-The first launch writes `config/industrialtech.cfg`. Restart after editing.
+The first launch writes `config/industrialtech.cfg`. Restart after editing. The `wireless` category controls endpoint/network limits and bounded automation polling; see `docs/WIRELESS.md`.
 
 | Category | Settings |
 | --- | --- |
@@ -253,13 +307,13 @@ the chunk-selection upper bound is always 25. Inventory networking uses vanilla
 changed-slot synchronization, and compact status snapshots go only to GUI viewers
 at most once every five ticks, plus immediate control acknowledgments.
 
-## Updating from 1.0.0, 1.1.0, or 1.2.0
+## Updating from 1.0.0 through 1.3.0
 
-Replace the old mod JAR with 1.3.0; do not install both versions. Block and
+Replace the old mod JAR with 1.5.0; do not install both versions. Block and
 TileEntity registration IDs remain unchanged. Stored RF, inventories, selected
 areas, modes, and enabled state are preserved. Mining cursors below the
 placement height are preserved; cursors above it are clamped to the first
-legal layer. Older quarries receive an empty, disabled Void Filter. Partial legacy
+legal layer. Quarries predating filters receive an empty, disabled Void Filter. Existing 1.2/1.3 entries remain in their original slots; the extra MK2/MK3 entries start empty. Partial legacy
 work credit is normalized to the new block-credit format.
 
 Previous default settings migrate automatically to 20,000 RF/t, 4,000 RF/block,
@@ -296,17 +350,18 @@ This workspace also has a downloaded portable, checksum-verified Temurin Java 8
 JDK under `.toolchain/jdk8`; the script uses it when present. The build cache is
 project-local at `.gradle-user`. On other platforms use `./gradlew` with Java 8.
 
-The reobfuscated installable JAR is `build/libs/IndustrialTechnology-1.7.10-1.3.0.jar`.
+The reobfuscated installable JAR is `build/libs/IndustrialTechnology-1.7.10-1.5.0.jar`.
 The `-sources.jar` contains the complete mod/API source and assets. **Run `build`
 after `runClient`/`runServer` before distributing**: a development run can replace
 the release archive with its unreobfuscated development input.
 
-To regenerate original artwork, install Pillow and run `python tools/create_assets.py`.
+To regenerate original artwork, install Pillow and run `python tools/create_assets.py`
+and `python tools/create_wireless_assets.py`.
 Committed/generated PNG assets are sufficient for a normal Gradle build.
 
 ## Verification
 
-`gradlew test` runs geometry/cursor, sparse boundary, and fractional mining-rate unit tests. `tools/verify-server.ps1` creates
+`gradlew test` runs geometry/cursor, sparse boundary, fractional mining-rate, and wireless packet-bound tests. `tools/verify-server.ps1` creates
 a fresh disposable server folder, runs the real world tests, restarts that world
 to test persisted tickets, and checks both reports. It binds only to loopback,
 uses port 25579, and accepts the Minecraft EULA for that disposable test server.
@@ -343,7 +398,10 @@ and `BlockMachine` without copying the quarry engine or ticket lifecycle.
 HE is not RF. Direct HBM HE support is deliberately not included without a
 verified optional API. Use a compatible HE-to-RF converter. Eight actual HBM
 1.0.27_X5808 ores were tested with Fortune and Silk Touch in an ordinary Forge
-server. Thermal Expansion/Dynamics, BuildCraft, NEI, and other modpacks remain
+server. Actual X5808 inventory/tank controllers and two multiblock proxy types
+also pass monitoring tests; full assembled structures remain unverified. See
+`docs/WIRELESS.md` and `docs/TESTING.md`. Thermal Expansion/Dynamics, BuildCraft,
+NEI, and other modpacks remain
 unverified; the Forge RF and inventory contracts themselves are tested.
 
 Harvest staging is verified with vanilla blocks, Forge drop events, ore

@@ -1,0 +1,10 @@
+PASS: Final release code and runtime assets match both native Forge production-tested JARs byte for byte
+PASS: Only permitted non-runtime difference is the original-artwork script attribution notice
+PASS: Production tests include actual HBM X5808 and a separate installation without HBM
+PASS: 97 Java 8 class files; no HBM/Minecraft/Forge/test harness classes bundled
+PASS: 1.4.0 metadata; 22 block, 5 GUI, and 7 item textures; three 16x16 colored torch icons
+PASS: Project and CoFH RF API license notices included; no nested mod JARs
+PASS: 265 successful recorded checks across unit, native server, restart, and real client runs
+SHA256: fe3f6bacaaa59401cd095a85e3e49f7754e37c72a7a955ab58e20ca4d0942724
+Size: 211632 bytes
+Failed: 0

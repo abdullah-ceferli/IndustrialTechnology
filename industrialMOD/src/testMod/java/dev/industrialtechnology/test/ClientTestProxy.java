@@ -50,7 +50,8 @@ public final class ClientTestProxy extends TestProxy {
     private volatile boolean failed;
     private boolean finished;
     private volatile TileQuarry powered;
-    @Override public void init(){FMLCommonHandler.instance().bus().register(this);}
+    @Override public void init(){if(Boolean.getBoolean("industrialtech.codeTest")){new CodeClientTest().init();return;}
+        if(Boolean.getBoolean("industrialtech.wirelessTest")){new WirelessClientTest().init();return;}FMLCommonHandler.instance().bus().register(this);}
     @SubscribeEvent public void supply(TickEvent.ServerTickEvent event) {
         TileQuarry q=powered;
         if(event.phase==TickEvent.Phase.START&&q!=null&&!q.isInvalid())q.receiveEnergy(net.minecraftforge.common.util.ForgeDirection.NORTH,20000,false);
@@ -127,7 +128,7 @@ public final class ClientTestProxy extends TestProxy {
                 ServerWork.enqueue(()->{movePlayer(x);powered=(TileQuarry)machine(x);});break;
             case 1:mc.thePlayer.sendQueue.addToSendQueue(new C08PacketPlayerBlockPlacement(x,72,24,2,null,.5f,.5f,.5f));break;
             case 2:{
-                GuiMachine gui=gui(mc);assertTrue(gui.container.inventorySlots.size()==108,"incorrect output/player/ghost slot count");
+                GuiMachine gui=gui(mc);assertTrue(gui.container.inventorySlots.size()==90+new int[]{18,36,50}[tier],"incorrect output/player/ghost slot count");
                 assertTrue(gui.width>=316&&gui.height>=236,"GUI exceeds minimum scaled display");
                 pass("MK"+(tier+1)+" GUI opens and renders at GUI scale 3");shot(mc,"quarry-mk"+(tier+1)+"-control.png");click(gui,3);break;
             }
@@ -213,12 +214,27 @@ public final class ClientTestProxy extends TestProxy {
                 pass("MK"+(tier+1)+" Auto Delete and metadata controls synchronize");
                 mc.playerController.windowClick(gui(mc).container.windowId,filterSourceSlot,0,0,mc.thePlayer);click(gui(mc),7);break;
             case 17:
-                assertTrue(mc.thePlayer.inventory.getItemStack()==null&&playerDiamonds(mc)==filterDiamondTotal&&state(gui(mc)).getTagList("VoidEntries",10).tagCount()==0,"Clear All changed real items or retained icons");
+                assertTrue(mc.thePlayer.inventory.getItemStack()==null&&playerDiamonds(mc)==filterDiamondTotal&&state(gui(mc)).getInteger("VoidConfigured")==0,"Clear All changed real items or retained icons");
                 pass("MK"+(tier+1)+" right-click and Clear All preserve real inventory");click(gui(mc),5);break;
-            case 18:{
+            case 18:
                 assertTrue(!state(gui(mc)).getBoolean("VoidEnabled"),"filter remained enabled");
-                mc.thePlayer.closeScreen();tier++;step=-1;if(tier==3){phase=3;step=-1;}break;
+                if(tier==0){step=23;break;}click(gui(mc),9);break;
+            case 19:
+                assertTrue(gui(mc).container.filterPage==1,"Next did not select page two");
+                mc.playerController.windowClick(gui(mc).container.windowId,filterSourceSlot,0,0,mc.thePlayer);break;
+            case 20:
+                mc.playerController.windowClick(gui(mc).container.windowId,90+new int[]{18,36,50}[tier]-1,0,0,mc.thePlayer);break;
+            case 21:{
+                int last=new int[]{18,36,50}[tier]-1;ItemStack icon=((TileQuarry)gui(mc).container.machine).filter.getStackInSlot(last);
+                assertTrue(icon!=null&&icon.stackSize==1&&mc.thePlayer.inventory.getItemStack().stackSize==carriedBefore,"page-two ghost changed real items");
+                serverCheck("MK"+(tier+1)+" final tier filter slot synchronizes on page two without consuming items",()->assertTrue(((TileQuarry)machine(x)).filter.getStackInSlot(last)!=null,"final server entry missing"));
+                shot(mc,"quarry-mk"+(tier+1)+"-void-filter-page2.png");mc.playerController.windowClick(gui(mc).container.windowId,filterSourceSlot,0,0,mc.thePlayer);break;
             }
+            case 22:click(gui(mc),8);click(gui(mc),7);break;
+            case 23:
+                assertTrue(gui(mc).container.filterPage==0&&state(gui(mc)).getInteger("VoidConfigured")==0&&mc.thePlayer.inventory.getItemStack()==null&&playerDiamonds(mc)==filterDiamondTotal,"pagination clear/return corrupted filter or items");
+                pass("MK"+(tier+1)+" Previous/Next filter pages and cross-page Clear All work in the real GUI");break;
+            case 24:{mc.thePlayer.closeScreen();tier++;step=-1;if(tier==3){phase=3;step=-1;}break;}
         }
         step++;wait=25;
     }

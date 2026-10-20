@@ -13,7 +13,7 @@ import net.minecraftforge.common.ForgeHooks;
 import io.netty.buffer.ByteBuf;
 
 public final class ControlPacket implements IMessage {
-    public static final int TOGGLE = 0, APPLY = 1, FORTUNE = 2, SILK = 3, TAB = 4, VOID_TOGGLE = 5, VOID_MODE = 6, VOID_CLEAR = 7;
+    public static final int TOGGLE = 0, APPLY = 1, FORTUNE = 2, SILK = 3, TAB = 4, VOID_TOGGLE = 5, VOID_MODE = 6, VOID_CLEAR = 7, FILTER_PAGE = 8;
     private int window, action, value;
     public ControlPacket() {}
     public ControlPacket(int window, int action, int value) { this.window = window; this.action = action; this.value = value; }
@@ -37,6 +37,7 @@ public final class ControlPacket implements IMessage {
                     case SILK:
                         if (container.machine instanceof TileQuarry) ((TileQuarry) container.machine).setMode(true); break;
                     case TAB: if (message.value < 0 || message.value > 2) return; container.setTab(message.value); break;
+                    case FILTER_PAGE: if(container.tab != 2) return; container.setFilterPage(message.value); break;
                     case VOID_TOGGLE: case VOID_MODE: case VOID_CLEAR:
                         if (!(container.machine instanceof TileQuarry) || container.tab != 2) return;
                         TileQuarry quarry = (TileQuarry) container.machine;

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.industrialtechnology.wireless.WirelessCommandTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-20T12:37:05" hostname="DESKTOP-K160Q2I" time="0.02">
+  <properties/>
+  <testcase name="boundedCommandRoundTripsExactly" classname="dev.industrialtechnology.wireless.WirelessCommandTest" time="0.019"/>
+  <testcase name="rejectsOversizedIncomingCommand" classname="dev.industrialtechnology.wireless.WirelessCommandTest" time="0.0"/>
+  <testcase name="rejectsTruncatedCommand" classname="dev.industrialtechnology.wireless.WirelessCommandTest" time="0.0"/>
+  <testcase name="rejectsOversizedTextBeforeEncoding" classname="dev.industrialtechnology.wireless.WirelessCommandTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

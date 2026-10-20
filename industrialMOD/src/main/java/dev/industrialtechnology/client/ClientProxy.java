@@ -17,12 +17,16 @@ import net.minecraftforge.common.MinecraftForge;
 public final class ClientProxy extends CommonProxy {
     private final ConcurrentLinkedQueue<Runnable> queue = new ConcurrentLinkedQueue<Runnable>();
     public static WorldBoundaries boundaries;
+    @Override public void openAutomationGuide(){net.minecraft.client.Minecraft.getMinecraft().displayGuiScreen(new GuiAutomationGuide(null));}
     @Override public void init() {
+        WirelessInput input=new WirelessInput();MinecraftForge.EVENT_BUS.register(input);FMLCommonHandler.instance().bus().register(input);
+        cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(dev.industrialtechnology.wireless.TileRedstoneRelay.class,new RedstoneRelayRenderer());
         OverlaySettings.load(); FMLCommonHandler.instance().bus().register(this); MinecraftForge.EVENT_BUS.register(new AreaPreview());
         boundaries = new WorldBoundaries(); FMLCommonHandler.instance().bus().register(boundaries); MinecraftForge.EVENT_BUS.register(boundaries);
         cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(dev.industrialtechnology.chunkloading.TileChunkLoader.class, new ChunkLoaderRenderer());
     }
     @Override public Object getClientGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
+        if(id==1)return new GuiWirelessTerminal(new dev.industrialtechnology.wireless.TerminalContainer(player));
         TileEntity tile = world.getTileEntity(x, y, z);
         if (id != 0 || !(tile instanceof TileMachine)) return null;
         MachineContainer container = new MachineContainer(player.inventory, (TileMachine) tile);
@@ -36,6 +40,12 @@ public final class ClientProxy extends CommonProxy {
             if (gui.container.windowId == window && gui.container.machine.xCoord == x && gui.container.machine.yCoord == y && gui.container.machine.zCoord == z)
                 gui.receive(state);
         }});
+    }
+    @Override public void acceptScript(final int window,final java.util.UUID device,final int revision,final String text){
+        queue.add(()->{Minecraft mc=Minecraft.getMinecraft();if(mc.currentScreen instanceof GuiWirelessTerminal){GuiWirelessTerminal gui=(GuiWirelessTerminal)mc.currentScreen;if(gui.terminal.windowId==window)gui.receiveScript(device,revision,text);}});
+    }
+    @Override public void acceptWireless(final int window,final NBTTagCompound state){
+        queue.add(()->{Minecraft mc=Minecraft.getMinecraft();if(mc.currentScreen instanceof GuiWirelessTerminal&&mc.thePlayer!=null){GuiWirelessTerminal gui=(GuiWirelessTerminal)mc.currentScreen;if(gui.terminal.windowId==window)gui.receive(state);}});
     }
     @SubscribeEvent public void tick(TickEvent.ClientTickEvent e) {
         if (e.phase != TickEvent.Phase.START) return;

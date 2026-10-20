@@ -1,0 +1,17 @@
+PASS: Left mouse input is canceled before attack/break processing and opens the actual terminal via a server message
+PASS: Right-click fallback opens the terminal and vanilla placement packets link Green, Yellow and Blue devices
+PASS: Real chest item icons and counts are read-only, with incoming OpenGL tint restored
+PASS: Device renaming synchronizes from the authoritative server registry
+PASS: Multiple actual Forge tanks display their own amounts and capacities without tinting the player inventory
+PASS: Terminal ON sends real redstone power 15 and lights a real lamp
+PASS: Yellow settings select pulse mode and a separate seven-second duration
+PASS: Automation ghost selection copies an icon without consuming or duplicating the real carried stack
+PASS: GUI saves a real enabled contains-stone rule and preserves all player items
+PASS: Real chest insertion activates the GUI-linked Yellow relay using its configured pulse timer
+PASS: The placed Yellow relay renders with the classic colored redstone-torch mesh
+PASS: Pulse turns OFF automatically and a permanently true condition does not retrigger
+PASS: Actual unloaded device stays OFFLINE and opening its page does not load the chunk
+PASS: Renamed links reopen and monitor a loaded machine from outside normal interaction range
+PASS: Rule navigation keeps independent settings and restores the saved ghost item
+PASS: Closing terminal tabs and rendering colored torches preserves vanilla inventory colors
+Failed: 0

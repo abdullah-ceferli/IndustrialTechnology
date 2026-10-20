@@ -17,5 +17,5 @@ Forge 10.13.4.1614 and Minecraft are development dependencies, never included
 inside the mod JAR. JUnit 4.13.2 is test-only.
 
 All machine faces, icons, and GUI panels are original code-drawn pixel artwork
-authored in `tools/create_assets.py`. No Thermal Expansion, Ender IO, BuildCraft,
+authored in `tools/create_assets.py` and `tools/create_wireless_assets.py`. No Thermal Expansion, Ender IO, BuildCraft,
 or HBM artwork or code is copied into this mod.
