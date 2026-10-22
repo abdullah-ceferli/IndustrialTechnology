@@ -11,10 +11,12 @@ public final class TerminalContainer extends Container {
     public final EntityPlayer player;
     public final int lockedSlot;
     public final UUID network;
+    public final ReactorTerminal reactors=new ReactorTerminal(this);
     public final InventoryBasic ghost=new InventoryBasic("Rule icon",true,1);
     public int tab,page,detailPage,ruleIndex;
     public UUID selected,draftTarget;
     private NBTTagCompound last;private String lastDocument="";public boolean codeLayout;
+    private NBTTagList lastCatalog;private int catalogRevision;
     private int ticks,actions;private long actionTick=Long.MIN_VALUE;
     public TerminalContainer(EntityPlayer player){
         this.player=player;lockedSlot=player.inventory.currentItem;ItemStack terminal=player.getHeldItem();
@@ -34,13 +36,16 @@ public final class TerminalContainer extends Container {
     private WirelessEndpoint endpoint(){WirelessEndpoint e=data().devices.get(selected);return owns(e)?e:null;}
     public boolean owns(WirelessEndpoint e){return e!=null&&e.network.equals(network)&&e.owner.equals(player.getUniqueID());}
     private List<WirelessEndpoint> listed(){List<WirelessEndpoint> list=new ArrayList<WirelessEndpoint>();for(WirelessEndpoint e:data().linked(network))if(e.kind.ordinal()==tab)list.add(e);return list;}
-    private void select(WirelessEndpoint e){selected=e==null?null:e.id;detailPage=ruleIndex=0;loadRule();}
+    private void select(WirelessEndpoint e){selected=e==null?null:e.id;detailPage=ruleIndex=0;loadRule();reactors.select(e);if(reactors.view&&reactors.type==HbmReactors.ZIRNOX&&tab==2)reactors.refreshGhost();}
+    public void restoreRuleGhost(){loadRule();}
     private void loadRule(){WirelessEndpoint e=endpoint();AutomationRule r=e!=null&&e.kind==WirelessEndpoint.Kind.AUTOMATION?e.rules[ruleIndex]:null;
         ghost.setInventorySlotContents(0,r==null||r.item==null?null:r.item.copy());draftTarget=r==null?null:r.target;
     }
     public void layout(boolean code){
-        codeLayout=code;for(int i=0;i<36;i++)((Slot)inventorySlots.get(i)).yDisplayPosition=code?-10000:i<27?151+i/9*18:209;
-        ((Slot)inventorySlots.get(36)).yDisplayPosition=!code&&tab==2&&selected!=null?111:-10000;
+        code=code&&!reactors.view;codeLayout=code;for(int i=0;i<36;i++)((Slot)inventorySlots.get(i)).yDisplayPosition=code?-10000:i<27?151+i/9*18:209;
+        Slot ghostSlot=(Slot)inventorySlots.get(36);
+        ghostSlot.xDisplayPosition=reactors.view?245:128;
+        ghostSlot.yDisplayPosition=reactors.view?(tab==2&&reactors.type==HbmReactors.ZIRNOX?176:-10000):!code&&tab==2&&selected!=null?111:-10000;
     }
     public void saveScript(UUID id,String text){
         WirelessEndpoint e=endpoint();if(e==null||!e.id.equals(id)||!e.codeMode||e.kind!=WirelessEndpoint.Kind.AUTOMATION||e.dimension!=player.dimension||tab!=2)return;
@@ -54,6 +59,7 @@ public final class TerminalContainer extends Container {
     }
     public void action(int action,int a,int b,String text){
         WirelessData data=data();WirelessEndpoint e=endpoint();
+        if(reactors.action(action,a,b,text,e)){layout(tab==2&&e!=null&&e.codeMode);return;}
         switch(action){
             case WirelessCommand.TAB:if(a<0||a>2)return;tab=a;page=0;select(null);break;
             case WirelessCommand.PAGE:if(a<0||a>21)return;page=a;break;
@@ -79,7 +85,7 @@ public final class TerminalContainer extends Container {
                 e.rules[ruleIndex]=r;e.lastPoll=Long.MIN_VALUE;data.markDirty();break;
             }
             case WirelessCommand.CODE_MODE:
-                if(e==null||e.kind!=WirelessEndpoint.Kind.AUTOMATION||e.dimension!=player.dimension||a<0||a>1)return;e.codeMode=a==1;e.lastPoll=Long.MIN_VALUE;data.markDirty();break;
+                if(e==null||e.kind!=WirelessEndpoint.Kind.AUTOMATION||e.dimension!=player.dimension||a<0||a>1)return;reactors.view=false;loadRule();e.codeMode=a==1;e.lastPoll=Long.MIN_VALUE;data.markDirty();break;
             case WirelessCommand.SCRIPT_ENABLE:
                 if(e==null||!e.codeMode||e.kind!=WirelessEndpoint.Kind.AUTOMATION||e.dimension!=player.dimension)return;
                 if(e.scriptRules.isEmpty()){e.scriptError="Save a valid script before enabling it.";e.scriptErrorLine=0;return;}
@@ -92,6 +98,10 @@ public final class TerminalContainer extends Container {
     @Override public ItemStack slotClick(int slot,int button,int mode,EntityPlayer p){
         if(!canInteractWith(p)||codeLayout||!ForgeHooks.canInteractWith(p,this))return null;
         if(slot==27+lockedSlot||mode==2&&(button==lockedSlot||slot==27+lockedSlot))return null;
+        if(slot==36&&reactors.view){
+            if(tab==2&&mode==0&&button>=0&&button<=1&&allowAction()&&dev.industrialtechnology.quarry.VoidFilter.valid(p.inventory.getItemStack()))reactors.ghost(p.worldObj.isRemote?null:endpoint(),p.inventory.getItemStack(),button==1);
+            return null;
+        }
         if(slot==36){if(tab==2&&(p.worldObj.isRemote||endpoint()!=null)&&mode==0&&button>=0&&button<=1&&allowAction()){
             ItemStack icon=button==1?null:p.inventory.getItemStack();if(dev.industrialtechnology.quarry.VoidFilter.valid(icon)){icon=icon==null?null:icon.copy();if(icon!=null)icon.stackSize=1;ghost.setInventorySlotContents(0,icon);}}
             return null;
@@ -104,10 +114,16 @@ public final class TerminalContainer extends Container {
         if(item.stackSize==0)slot.putStack(null);else slot.onSlotChanged();return before;
     }
     @Override public void addCraftingToCrafters(ICrafting crafter){super.addCraftingToCrafters(crafter);if(crafter instanceof EntityPlayerMP)send((EntityPlayerMP)crafter);}
-    @Override public void detectAndSendChanges(){super.detectAndSendChanges();if(player.worldObj.isRemote||++ticks<10)return;ticks=0;NBTTagCompound n=snapshot();if(n.equals(last))return;last=n;
+    @Override public void detectAndSendChanges(){super.detectAndSendChanges();if(player.worldObj.isRemote||++ticks<10)return;ticks=0;for(Object listener:crafters)if(listener instanceof EntityPlayerMP)sendCatalog((EntityPlayerMP)listener);NBTTagCompound n=snapshot();if(n.equals(last))return;last=n;
         for(Object listener:crafters)if(listener instanceof EntityPlayerMP){IndustrialTechnology.network.sendTo(new WirelessSnapshot(windowId,n),(EntityPlayerMP)listener);sendDocument((EntityPlayerMP)listener);}
     }
-    public void send(EntityPlayerMP player){IndustrialTechnology.network.sendTo(new WirelessSnapshot(windowId,snapshot()),player);sendDocument(player);}
+    private void sendCatalog(EntityPlayerMP player){
+        NBTTagList all=new NBTTagList();for(WirelessEndpoint e:data().linked(network))if(e.owner.equals(player.getUniqueID())){
+            NBTTagCompound row=new NBTTagCompound();row.setString("Id",e.id.toString());row.setString("Name",e.name);row.setString("Machine",e.machine);row.setInteger("Kind",e.kind.ordinal());row.setInteger("Dimension",e.dimension);row.setInteger("X",e.x);row.setInteger("Y",e.y);row.setInteger("Z",e.z);row.setString("Status",WirelessAccess.status(e,player.dimension).name());row.setBoolean("Signal",e.kind==WirelessEndpoint.Kind.CONTROL&&e.dimension==player.dimension&&WirelessAccess.signal(e,player.worldObj.getTotalWorldTime()));all.appendTag(row);
+        }if(all.equals(lastCatalog))return;lastCatalog=(NBTTagList)all.copy();catalogRevision=catalogRevision==Integer.MAX_VALUE?1:catalogRevision+1;int parts=Math.max(1,(all.tagCount()+63)/64);
+        for(int part=0;part<parts;part++){NBTTagList chunk=new NBTTagList();for(int i=part*64;i<Math.min(all.tagCount(),part*64+64);i++)chunk.appendTag(all.getCompoundTagAt(i).copy());IndustrialTechnology.network.sendTo(new WirelessCatalog(windowId,catalogRevision,part,parts,chunk),player);}
+    }
+    public void send(EntityPlayerMP player){sendCatalog(player);IndustrialTechnology.network.sendTo(new WirelessSnapshot(windowId,snapshot()),player);sendDocument(player);}
     public NBTTagCompound snapshot(){
         NBTTagCompound n=new NBTTagCompound();n.setInteger("Tab",tab);n.setInteger("Page",page);List<WirelessEndpoint> all=listed();int pages=Math.max(1,(all.size()+5)/6);page=Math.min(page,pages-1);n.setInteger("Page",page);n.setInteger("Pages",pages);n.setInteger("Total",data().linked(network).size());
         if(endpoint()==null||endpoint().kind.ordinal()!=tab)select(all.isEmpty()?null:all.get(Math.min(all.size()-1,page*6)));
@@ -132,6 +148,8 @@ public final class TerminalContainer extends Container {
                 NBTTagList targets=new NBTTagList();for(WirelessEndpoint t:data().linked(network))if(t.kind==WirelessEndpoint.Kind.CONTROL&&t.dimension==e.dimension){NBTTagCompound row=new NBTTagCompound();row.setString("Id",t.id.toString());row.setString("Name",t.name);targets.appendTag(row);}n.setTag("Targets",targets);
             }
         }
+        NBTTagCompound reactor=reactors.snapshot(e);n.setTag("Reactor",reactor);n.setBoolean("ReactorView",reactors.view);
+        if(reactors.view){n.setString("Status",reactor.getString("Status"));n.setString("Message",reactor.getString("Message"));}
         layout(tab==2&&e.codeMode);return n;
     }
 }

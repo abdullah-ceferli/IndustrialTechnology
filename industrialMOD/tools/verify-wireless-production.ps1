@@ -1,4 +1,4 @@
-param([string]$TestName='run-test-production-1.5.0-hbm-verified',[switch]$WithHBM,[int]$Port=25579,[string]$ReleaseJar)
+param([string]$TestName='run-test-production-1.5.0-hbm-verified',[switch]$WithHBM,[int]$Port=25579,[string]$ReleaseJar,[switch]$DisableIdlePolicy)
 $ErrorActionPreference='Stop'
 $projectPath=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 if($TestName -notmatch '^run-test-[a-zA-Z0-9.-]+$'){throw 'Use a simple run-test-* directory name.'}
@@ -8,13 +8,18 @@ $buildText=Get-Content (Join-Path $projectPath 'build.gradle') -Raw
 if($buildText -notmatch "(?m)^version = '([^']+)'"){throw 'Project version missing.'}
 $testVersion=$Matches[1]
 $harnessSource=Join-Path $projectPath "run-test-production-1.5.0-hbm-verified/mods/industrialtech-test-harness-$testVersion.jar"
-if(-not(Test-Path -LiteralPath $harnessSource)){throw 'First build testModJar with -PproductionTest and -PtestRunDir=run-test-production-1.5.0-hbm-verified.'}
+if(-not(Test-Path -LiteralPath $harnessSource)){throw 'First build with testModJar and reobf (or build), -PproductionTest and -PtestRunDir=run-test-production-1.5.0-hbm-verified.'}
 New-Item -ItemType Directory -Path (Join-Path $testPath 'mods'),(Join-Path $testPath 'config') -Force | Out-Null
 $harnessDestination=Join-Path $testPath "mods/industrialtech-test-harness-$testVersion.jar"
 if([IO.Path]::GetFullPath($harnessSource) -ne [IO.Path]::GetFullPath($harnessDestination)){Copy-Item -LiteralPath $harnessSource -Destination $harnessDestination -Force}
 if(-not $ReleaseJar){$ReleaseJar=Join-Path $projectPath "build/libs/IndustrialTechnology-1.7.10-$testVersion.jar"}
 Copy-Item -LiteralPath $ReleaseJar -Destination (Join-Path $testPath 'mods') -Force
 if($WithHBM){Copy-Item -LiteralPath (Join-Path $projectPath 'run-test-production-1.3.0-hbm-verified/mods/HBM-NTM-.1.0.27_X5808.jar') -Destination (Join-Path $testPath 'mods') -Force}
+if($DisableIdlePolicy){@'
+performance {
+ B:pauseOwnedChunkLoadingInUnoccupiedDimensions=false
+}
+'@ | Set-Content -LiteralPath (Join-Path $testPath 'config/industrialtech-space.cfg')}
 'eula=true' | Set-Content -LiteralPath (Join-Path $testPath 'eula.txt')
 @"
 level-name=integration-world

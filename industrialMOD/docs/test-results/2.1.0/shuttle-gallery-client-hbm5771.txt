@@ -1,0 +1,10 @@
+PASS: Craftable launch fixture, researched HDD and finite propellant initialize
+PASS: LC39 kit finishes server-side deployment
+PASS: Full-size Shuttle and LC39 structure render without OpenGL errors
+PASS: New mineral blocks are visible beside the facility
+PASS: Real facility container opens at the deployed root
+PASS: Client received actual facility root, ready state and Shuttle marker
+PASS: New assembly station opens its real server container
+PASS: Client receives assembly block before its container opens
+PASS: Assembly type and component checklist render with NEI enabled
+Failed: 0

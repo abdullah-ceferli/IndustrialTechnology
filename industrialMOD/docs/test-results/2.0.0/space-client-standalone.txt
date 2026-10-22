@@ -1,0 +1,22 @@
+PASS: Craftable launch fixture, researched HDD and finite propellant initialize
+PASS: Client has loaded the launchpad before opening its GUI
+PASS: Real launch planner displays synced tanks and restores OpenGL color
+PASS: Forged stale-window launch packet cannot spend fuel or create a vehicle
+PASS: Passenger boards before server countdown / ignition
+PASS: Animated leg 0 preserves inventory/XP and burns exactly one mission leg
+PASS: Lunar client physics produces elevated jump: 5.36 blocks
+PASS: Sealed planetary base and finite pressurizer build on the server
+PASS: Pressurized room permits helmet removal without using suit air
+PASS: Helmet-off pressure holds health and suit air; wall removal starts a real leak
+PASS: Breach removes breathable pressure and suit protection can be restored
+PASS: Passenger boards before server countdown / ignition
+PASS: Animated leg 1 preserves inventory/XP and burns exactly one mission leg
+PASS: Mars refuelling adds a finite 48 L kerosene / 96 L oxidizer round trip
+PASS: Passenger boards before server countdown / ignition
+PASS: Animated leg 2 preserves inventory/XP and burns exactly one mission leg
+PASS: Martian client physics produces elevated jump: 2.76 blocks
+PASS: Owned landed vehicle opens its actual server container
+PASS: Passenger boards before server countdown / ignition
+PASS: Animated leg 3 preserves inventory/XP and burns exactly one mission leg
+PASS: Earth return retains survival inventory, XP, armor and reusable craft
+Failed: 0

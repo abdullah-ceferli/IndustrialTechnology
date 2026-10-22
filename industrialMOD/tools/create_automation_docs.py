@@ -1,10 +1,11 @@
 """Generate the complete player guide from the same reference used by editor Help/book."""
-import hashlib,json
+import hashlib,json,re
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 source=ROOT/'src/main/resources/assets/industrialtech/automation_reference.json'
 data=json.loads(source.read_text(encoding='utf-8'))
-lines=['# Automation Codes — Industrial Technology 1.5.1','',
+version=re.search(r"(?m)^version = '([^']+)'",(ROOT/'build.gradle').read_text()).group(1)
+lines=['# Automation Codes — Industrial Technology '+version,'',
        '<!-- Reference SHA256: '+hashlib.sha256(source.read_bytes()).hexdigest()+' -->','',
        'This is the complete reference for the Wireless Terminal SIMPLE/CODE system.',
        'The in-game Automation Guide and editor Help use the same reference data.','']
@@ -61,7 +62,7 @@ lines+=['## Machine compatibility','',
         'The optional HBM adapter targets inspected 1.0.27_X5808 public APIs: Chemical Plant, Fluid Tank,',
         'Big Ass Tank and supported fluid-enabled multiblock proxies. Its public getAllTanks set is',
         'identified as such; only API-exposed tanks are included. Arc Furnace molten-material lists',
-        'are not these fluid tanks. Full assembled structures, dynamic Chemical Factory delegates,',
+        'are not these fluid tanks. Other assembled structures and dynamic Chemical Factory delegates,',
         'other HBM forks, and individual machines\' redstone behavior require modpack verification.',
         'No direct HE conversion or general machine-control API is added.',
         'See docs/TESTING.md for the actual tested release and remaining coverage.','']

@@ -1,0 +1,5 @@
+PASS: Custom lunar sky renderer is active at three-chunk view distance
+PASS: Recognizable blue Earth is visible above the near-side horizon
+PASS: Earth is absent from the lunar far-side sky
+PASS: Mars has its own reddish dusty sky
+Failed: 0

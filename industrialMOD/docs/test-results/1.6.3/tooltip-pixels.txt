@@ -1,0 +1,2 @@
+PASS: NEI icon region (45000 pixels) unchanged during source tooltip hover
+PASS: NEI icon region (45000 pixels) unchanged during fuel tooltip hover

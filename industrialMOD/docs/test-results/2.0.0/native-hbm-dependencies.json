@@ -1,0 +1,10 @@
+{
+  "HBM-X5771": {
+    "file": "HBM-NTM-.1.0.27_X5771.jar",
+    "sha256": "5c17ab050042c6e9dd22d281de2cebef5dbe0fa495a8b34bbfee05c5d64168a4"
+  },
+  "HBM-X5808": {
+    "file": "HBM-NTM-.1.0.27_X5808.jar",
+    "sha256": "e295ad89cdd1876a1e169ed21c1fc826c340f5980c6254f40b90dcfc158e6561"
+  }
+}

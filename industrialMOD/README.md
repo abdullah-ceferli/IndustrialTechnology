@@ -1,13 +1,18 @@
 # Industrial Technology — Minecraft 1.7.10
 
+Version **2.1.0** adds a full-scale Space Shuttle, a deployable LC-39 facility kit, native HBM pipe refuelling and geological resources that produce HBM-compatible metals. See [the current space handoff](SPACE_HANDOFF.md) and [Shuttle/resource notes](docs/SHUTTLE_LC39_RESOURCES.md). It also includes the [space visual rework](docs/SPACE_VISUAL_REWORK.md), rocket assembly and animated Moon/Mars travel, research HDDs,
+fuel and air manufacturing, spacesuits, sealed bases, two-door airlocks and a green
+redstone lamp. Read [the space guide](SPACE_EXPLORATION_GUIDE.md) and
+[technical notes and verification](SPACE_TECHNICAL_NOTES.md).
+
 A Forge technology mod with three RF-powered quarry tiers and a separate,
 precise chunk loader. Both share an extensible machine and ticket framework.
 
 ## Install
 
 Use **Minecraft 1.7.10, Forge 10.13.4.1614, and Java 8**. Put
-`IndustrialTechnology-1.7.10-1.5.1.jar` from `build/libs` into `mods` on both
-the client and dedicated server. The sources JAR is for developers.
+`IndustrialTechnology-1.7.10-2.1.0.jar` from `build/libs` into `mods` on both
+the client and dedicated server. Replace the older Industrial Technology JAR; keep only one version in `mods`. The sources JAR is for developers.
 No Thermal Expansion, HBM, BuildCraft, or CoFHCore installation is required.
 The small official CoFH RF API is bundled with its version annotation.
 
@@ -17,7 +22,7 @@ The standalone Chunk Loader always works without RF, HE, fuel, batteries, or any
 
 ## Wireless monitoring and automation
 
-Version **1.5.1** adds a left-click Wireless Terminal, Green Monitoring Sticks,
+The mod includes a left-click Wireless Terminal, Green Monitoring Sticks,
 Yellow Redstone Control Sticks, and Blue Automation Sticks. The three sticks
 use matching classic redstone-torch shapes, recolored green, yellow, and blue.
 They share an owner-bound, world-saved registry and work without RF.
@@ -33,6 +38,20 @@ seven-second pulse. Remote targets must already be loaded in the same dimension.
 See [the wireless guide](docs/WIRELESS.md) for linking, controls, recipes,
 compatibility, and automation behavior. The quarry speed remains **20,000 RF/t
 for 100 blocks/s at 20 TPS**, with its existing ore/protection behavior.
+
+## HBM reactor monitoring and automation
+
+Version **1.6.0** adds real RBMK fuel depletion and core/skin temperatures in °C,
+all 24 native ZIRNOX fuel positions with depletion and reactor temperature in °C,
+local slot-specific ZIRNOX fuel loading, and manual RBMK rod group controls.
+Every Wireless Terminal tab has local device search, clear, and filtered pages.
+Version **1.6.2** removes the device-count label and shows the complete 24-position
+ZIRNOX grid on one screen. Blue fuel selection uses the **Inventory** button.
+Version **1.6.3** distinguishes planned and installed rods, shows source diagnostics,
+and fixes Auto selecting an empty inventory before a stocked fuel chest.
+The optional reactor adapter targets the installed HBM 1.0.27_X5808 implementation.
+See [the reactor guide](docs/REACTORS.md) for setup, actual data meanings, local
+supply placement, controller attachment, permissions and supported limits.
 
 ## Automation Code Mode and guide book
 
@@ -66,7 +85,7 @@ checks its reference hash. The default script limit is 4096 characters, with
 at most eight finite rules and no external scripting engine.
 
 The verified optional HBM adapter reads actual Chemical Plant, Fluid Tank,
-Big Ass Tank, and supported proxy data in X5808. Full assembled structures,
+Big Ass Tank, and supported proxy data in X5808. Other assembled structures,
 dynamic factory delegates, other HBM forks, and each machine's redstone response
 remain unverified. Unsupported fluid data pauses rules rather than becoming
 zero. Scripts cannot add redstone support to a machine that does not accept it.
@@ -80,7 +99,7 @@ zero. Scripts cannot add redstone support to a machine that does not accept it.
 | Quarry MK3 | III | 6,400,000 | 4,000 | 5 |
 | Chunk Loader | - | None | Always zero energy | Does not mine |
 
-Right-click a machine to open its GUI. Machines start inactive, with only their
+Right-click a machine to open its GUI. Newly crafted machines start inactive, with only their
 own chunk selected. Placement preserves the horizontal facing and records the
 placing player's identity for protection checks.
 
@@ -91,6 +110,14 @@ Output slots accept no player or pipe insertion. Every side exposes all slots
 for extraction through `IInventory`/`ISidedInventory`, including vanilla hoppers.
 The **Void Filter** tab provides 18/36/50 ghost icons for MK1/MK2/MK3, with 25 icons per page and Auto Delete controls.
 The Chunk Loader opens a separate smaller controls-only screen: no RF bar and no inventory.
+
+As of **1.6.1**, breaking a quarry with a suitable tool keeps its VOID filter
+selections, VOID on/off, metadata matching, Silk/Fortune choice and selected
+chunk area on the dropped quarry item. Place it again to restore those settings.
+All 18/36/50 filter entries retain item metadata and NBT. Mined output still drops
+separately. The moved quarry starts stopped with a fresh scan at its new location;
+RF, output items, progress and the previous owner/identity are not copied into it.
+See [the patch notes](docs/CHANGES-1.6.1.md) for large-NBT filter handling.
 
 Click cells in the 5 × 5 map to draft a selection. The center remains selected.
 **1**, **3x3**, **All**, and **R** select the center, central nine chunks, all
@@ -352,7 +379,7 @@ This workspace also has a downloaded portable, checksum-verified Temurin Java 8
 JDK under `.toolchain/jdk8`; the script uses it when present. The build cache is
 project-local at `.gradle-user`. On other platforms use `./gradlew` with Java 8.
 
-The reobfuscated installable JAR is `build/libs/IndustrialTechnology-1.7.10-1.5.1.jar`.
+The reobfuscated installable JAR is `build/libs/IndustrialTechnology-1.7.10-2.1.0.jar`.
 The `-sources.jar` contains the complete mod/API source and assets. **Run `build`
 after `runClient`/`runServer` before distributing**: a development run can replace
 the release archive with its unreobfuscated development input.

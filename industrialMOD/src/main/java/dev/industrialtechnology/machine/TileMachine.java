@@ -52,7 +52,7 @@ public abstract class TileMachine extends TileEntity {
         else { tickets.tick(wantsChunks()); status = ticketError.isEmpty() ? MachineStatus.IDLE : MachineStatus.CHUNK_LOADING_ERROR; }
         markDirty(); worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
     }
-    public void destroyed() { enabled = false; tickets.release(); }
+    public void destroyed() { enabled = false; tickets.release(); dev.industrialtechnology.space.DimensionActivity.unregister(this); }
     public void syncVisual() { if (worldObj != null && !worldObj.isRemote) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord); }
     public void setLoadedMask(int mask) {
         if (loadedMask == mask) return;

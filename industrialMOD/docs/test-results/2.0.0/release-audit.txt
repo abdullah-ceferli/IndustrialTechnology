@@ -1,0 +1,8 @@
+PASS: 191 Java 8 classes; no bundled test/Minecraft/Forge/HBM/NEI classes or nested mod JARs
+PASS: All 38 baseline textures and shared automation reference preserved byte-for-byte
+PASS: Final archive bytes match all 6 native dedicated-server runtime copies
+PASS: 543 recorded successful checks, including repeated compatibility runs; 66 unit tests
+PASS: Current space guide and technical notes are included in the source archive
+SHA256: f29f73d2c37fa91da4609077a528b3058e15524bf5f5a6f52e3d616fd1ce8fc0
+Size: 479602 bytes
+Failed: 0

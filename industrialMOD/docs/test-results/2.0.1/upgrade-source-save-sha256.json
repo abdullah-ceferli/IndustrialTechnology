@@ -1,0 +1,114 @@
+[
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\forcedchunks.dat",
+    "SHA256": "8A1FF1D28CC89BEFE2B93AEC31A800604D46B8E653E6A106D409A240CDA20738"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\level.dat",
+    "SHA256": "CEA5568662DAEF316A15ABC05CD7B83EF7F5BEA287B969F852747FD04A852B9F"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\level.dat_old",
+    "SHA256": "E780C519595347E98D9355B977D4AE90E451AB9B889178F17DC0633899034570"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\session.lock",
+    "SHA256": "64E1535CB76FD6EDD693010785A3FDD807D287D85DC1FEDEF5B152CC1552FC08"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\data\\industrialtech_machine_resume.dat",
+    "SHA256": "8FE921D4321D4476B39FFDCC500BB2E07DE8FC1EDB6DC1E3D34EA99D67FC32C8"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\data\\industrialtech_space_flights.dat",
+    "SHA256": "8F437A69E046915CC908DAE28C7D909425B6C4346148448FE747FDD7C820E406"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\data\\industrialtech_wireless.dat",
+    "SHA256": "BBFFCA892DDA6362EEB57CB30B74DBF36FDAB6F7F1AA541D2B0A69EEB7A2BFC5"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\data\\villages.dat",
+    "SHA256": "296C95257E5F4ECFA0DC54AA121E22070AC32651EAA47FF2DB2EFB38BE43D70E"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\DIM-1\\forcedchunks.dat",
+    "SHA256": "8A1FF1D28CC89BEFE2B93AEC31A800604D46B8E653E6A106D409A240CDA20738"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\DIM-1\\data\\villages.dat",
+    "SHA256": "0BA0CED0C7AE7CB3C6F93C46BD274B99E12841FBC98F23B5803A48E027BBEF51"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\DIM1\\forcedchunks.dat",
+    "SHA256": "8A1FF1D28CC89BEFE2B93AEC31A800604D46B8E653E6A106D409A240CDA20738"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\DIM1\\data\\villages.dat",
+    "SHA256": "0BA0CED0C7AE7CB3C6F93C46BD274B99E12841FBC98F23B5803A48E027BBEF51"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\IndustrialTechMars\\forcedchunks.dat",
+    "SHA256": "8A1FF1D28CC89BEFE2B93AEC31A800604D46B8E653E6A106D409A240CDA20738"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\IndustrialTechMars\\data\\villages.dat",
+    "SHA256": "0BA0CED0C7AE7CB3C6F93C46BD274B99E12841FBC98F23B5803A48E027BBEF51"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\IndustrialTechMars\\region\\r.0.0.mca",
+    "SHA256": "8AE15D17EE0C310F9EF9FF4F341CC0121463AE8F2CA36151C54E8AFE5661B9F2"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\IndustrialTechMoon\\forcedchunks.dat",
+    "SHA256": "8A1FF1D28CC89BEFE2B93AEC31A800604D46B8E653E6A106D409A240CDA20738"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\IndustrialTechMoon\\data\\villages.dat",
+    "SHA256": "0BA0CED0C7AE7CB3C6F93C46BD274B99E12841FBC98F23B5803A48E027BBEF51"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\IndustrialTechMoon\\region\\r.-1.-1.mca",
+    "SHA256": "3C78003FA246636F171102C42F61524C86B639CA0F7E96402B060EF84C6DC88B"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\IndustrialTechMoon\\region\\r.-3.1.mca",
+    "SHA256": "B4D236095012DC2DB173FAAE8AC133E1F54D2762EA1C608A2343CB46DCAEADF8"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\IndustrialTechMoon\\region\\r.0.0.mca",
+    "SHA256": "333327EDC57D85C1C9E7E74554E363CE5FCAF84FCE701E6A333B919FBE81FD6F"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\region\\r.-1.-1.mca",
+    "SHA256": "D9F05B06D65F4A0E3FAEE19D891F7E97960127A036229BF212177FFC7A95EAAF"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\region\\r.-1.0.mca",
+    "SHA256": "D470DC069173AB77B0AD56489959D144EC38888BE36F75F4DF86022F68060AF4"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\region\\r.-2.-1.mca",
+    "SHA256": "D2167F61904F3610F3463F4BF688B9129D0AC064FCAACCE7010BE40F058A3723"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\region\\r.-2.0.mca",
+    "SHA256": "91A59A9A818DB1C1A0C7B7F98EF7FBDA7F9D35857AE489EF5F621CA62CA76712"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\region\\r.-2.1.mca",
+    "SHA256": "5C97CE53E882571678A9A5670E164665B9DAA32489877D228C5F99F6E93C2F4A"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\region\\r.-3.1.mca",
+    "SHA256": "31BD4FF6FC62BE654536F1798479AA534682EEAD785D4D235E2E92F727237200"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\region\\r.0.-1.mca",
+    "SHA256": "B504D6871306A4E228519828726684C8F2267C2E087BAF1B9743CB019E673F89"
+  },
+  {
+    "Path": "D:\\IndustrialTechnology\\industrialMOD\\run-test-space-2.0.0-release-standalone\\space-world\\region\\r.0.0.mca",
+    "SHA256": "B65B0EBC7436C5D4D793D92CCFF3B3591ACD0F04D66B6F5DD5EC6C36A650CC2A"
+  }
+]

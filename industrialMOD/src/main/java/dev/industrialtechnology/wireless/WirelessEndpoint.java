@@ -14,13 +14,20 @@ public final class WirelessEndpoint {
     public boolean codeMode,scriptEnabled;
     public String script="";
     public java.util.List<dev.industrialtechnology.automation.ScriptRule> scriptRules=new java.util.ArrayList<dev.industrialtechnology.automation.ScriptRule>();
+    public int reactorType,reactorX,reactorY,reactorZ,reactorLastTarget=-1;
+    public UUID reactorCore;
+    public ReactorSettings reactor=new ReactorSettings();
+    public transient long reactorNextPoll=Long.MIN_VALUE,reactorLastCommand=Long.MIN_VALUE;
+    public transient int reactorCursor;
+    public transient String reactorMessage="Ready";
+    public final transient String[] reactorPositions=new String[ReactorSettings.MAX_FUEL];
     public int scriptRevision;
     public transient boolean scriptChecked;
     public transient String scriptError="";public transient int scriptErrorLine;
     public final AutomationRule[] rules=new AutomationRule[8];
     public transient long lastPoll=Long.MIN_VALUE;
     public transient String automationStatus="Waiting for inventory";
-    public WirelessEndpoint(){for(int i=0;i<rules.length;i++)rules[i]=new AutomationRule();}
+    public WirelessEndpoint(){java.util.Arrays.fill(reactorPositions,"READY");for(int i=0;i<rules.length;i++)rules[i]=new AutomationRule();}
     public NBTTagCompound write(){
         NBTTagCompound n=new NBTTagCompound();n.setString("Id",id.toString());n.setString("Network",network.toString());n.setString("Owner",owner.toString());
         if(tileToken!=null)n.setString("TileToken",tileToken.toString());
@@ -28,6 +35,8 @@ public final class WirelessEndpoint {
         n.setString("Name",name);n.setString("Block",block);n.setString("Machine",machine);n.setBoolean("Enabled",enabled);n.setBoolean("Physical",physical);
         n.setBoolean("PulseMode",pulseMode);n.setInteger("PulseSeconds",pulseSeconds);n.setBoolean("Powered",powered);n.setLong("PulseEnd",pulseEnd);
         NBTTagList list=new NBTTagList();for(AutomationRule r:rules)list.appendTag(r.write());n.setTag("Rules",list);
+        n.setTag("ReactorSettings",reactor.write());n.setInteger("ReactorType",reactorType);n.setInteger("ReactorLastTarget",reactorLastTarget);
+        if(reactorCore!=null){n.setString("ReactorCore",reactorCore.toString());n.setInteger("ReactorX",reactorX);n.setInteger("ReactorY",reactorY);n.setInteger("ReactorZ",reactorZ);}
         n.setString("Script",script);n.setBoolean("CodeMode",codeMode);n.setBoolean("ScriptEnabled",scriptEnabled);n.setInteger("ScriptRevision",scriptRevision);
         NBTTagList compiled=new NBTTagList();for(dev.industrialtechnology.automation.ScriptRule r:scriptRules)compiled.appendTag(r.write());n.setTag("ScriptRules",compiled);return n;
     }
@@ -39,6 +48,9 @@ public final class WirelessEndpoint {
         e.enabled=n.getBoolean("Enabled");e.physical=n.getBoolean("Physical");e.pulseMode=n.getBoolean("PulseMode");e.pulseSeconds=Math.max(5,Math.min(10,n.getInteger("PulseSeconds")));
         e.powered=n.getBoolean("Powered");e.pulseEnd=Math.max(0,n.getLong("PulseEnd"));NBTTagList rules=n.getTagList("Rules",10);
         for(int i=0;i<Math.min(8,rules.tagCount());i++)e.rules[i]=AutomationRule.read(rules.getCompoundTagAt(i));
+        e.reactor=ReactorSettings.read(n.getCompoundTag("ReactorSettings"));e.reactorType=Math.max(0,Math.min(3,n.getInteger("ReactorType")));e.reactorCore=WirelessData.uuid(n.getString("ReactorCore"));
+        e.reactorX=n.getInteger("ReactorX");e.reactorY=n.getInteger("ReactorY");e.reactorZ=n.getInteger("ReactorZ");e.reactorLastTarget=n.hasKey("ReactorLastTarget")?n.getInteger("ReactorLastTarget"):-1;
+        if(e.reactorLastTarget< -1||e.reactorLastTarget>100)e.reactorLastTarget=-1;
         e.codeMode=n.getBoolean("CodeMode");e.scriptEnabled=n.getBoolean("ScriptEnabled");e.script=n.getString("Script");e.scriptRevision=Math.max(0,n.getInteger("ScriptRevision"));
         NBTTagList compiled=n.getTagList("ScriptRules",10);boolean valid=e.script.length()<=dev.industrialtechnology.automation.ScriptCompiler.HARD_LENGTH&&compiled.tagCount()<=8;
         for(int i=0;i<Math.min(8,compiled.tagCount());i++){dev.industrialtechnology.automation.ScriptRule r=dev.industrialtechnology.automation.ScriptRule.read(compiled.getCompoundTagAt(i));if(r==null)valid=false;else e.scriptRules.add(r);}

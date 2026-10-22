@@ -23,10 +23,15 @@ public final class ChunkTickets {
     private final List<Ticket> owned = new ArrayList<Ticket>();
     private boolean dirty = true, requested;
     private long retryAt;
+    private java.util.UUID indexedId;private int indexedX,indexedY,indexedZ;
     public ChunkTickets(TileMachine tile) { this.tile = tile; }
     public void dirty() { dirty = true; retryAt = 0; }
     public void tick(boolean active) {
         if (tile.getWorldObj() == null || tile.getWorldObj().isRemote) return;
+        if(!tile.machineId.equals(indexedId)||indexedX!=tile.xCoord||indexedY!=tile.yCoord||indexedZ!=tile.zCoord){
+            dev.industrialtechnology.space.DimensionActivity.register(tile);indexedId=tile.machineId;indexedX=tile.xCoord;indexedY=tile.yCoord;indexedZ=tile.zCoord;
+        }
+        active = active && dev.industrialtechnology.space.DimensionActivity.active(tile.getWorldObj());
         if (!active) { if (!owned.isEmpty()) release(); requested = false; tile.ticketError = ""; return; }
         if (active != requested) dirty = true;
         requested = active;
@@ -102,7 +107,8 @@ public final class ChunkTickets {
                 if (te instanceof TileMachine) {
                     TileMachine tile = (TileMachine) te;
                     if (tile.machineId.toString().equals(n.getString("MachineId")) && tile.wantsChunks()) {
-                        tile.tickets.adopt(ticket); continue;
+                        dev.industrialtechnology.space.DimensionActivity.register(tile);
+                        if (dev.industrialtechnology.space.DimensionActivity.active(world)) { tile.tickets.adopt(ticket); continue; }
                     }
                 }
                 ForgeChunkManager.releaseTicket(ticket);

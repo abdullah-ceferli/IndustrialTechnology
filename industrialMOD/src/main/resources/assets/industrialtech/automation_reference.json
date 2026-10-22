@@ -80,6 +80,46 @@
       "title": "What this cannot do",
       "text": "Commands only read supported storage and control your linked Yellow Sticks. They cannot transfer items, create RF/HE, run Java, or control a machine that ignores vanilla redstone. Other HBM forks and unverified multiblocks may show FLUID DATA UNAVAILABLE.",
       "example": ""
+    },
+    {
+      "title": "Search linked devices",
+      "text": "Each terminal tab has a Search box and X to clear it. Type part of a device name; upper/lower case does not matter. The search includes machine names and coordinates, keeps your selected device, and remembers a separate query for each tab.",
+      "example": ""
+    },
+    {
+      "title": "HBM fuel and temperatures",
+      "text": "Attach Green to an RBMK fuel element or a ZIRNOX inventory port. Its Reactor page shows actual fuel depletion and remaining percentages. RBMK core/skin and ZIRNOX reactor temperatures are separate Celsius readings. Empty rods show EMPTY. HBM X5808 has no separate C depletion statistic.",
+      "example": ""
+    },
+    {
+      "title": "ZIRNOX fuel views",
+      "text": "One Green port link reads all 24 native fuel positions. Grid shows all seven staggered rows together on one screen; List has six pages. Click a position and hover for its full fuel name, condition and depletion. Offline ports never load chunks.",
+      "example": ""
+    },
+    {
+      "title": "Assign ZIRNOX fuel",
+      "text": "Select a Blue ZIRNOX port in Automation, then Reactor. Click a core position. Click Inventory and pick up a real ZIRNOX rod; you return to the full grid. Click its ghost square at the right. Nothing is consumed. Open Inventory again to return the real item, then Fuel grid.",
+      "example": ""
+    },
+    {
+      "title": "Run a local fuel feeder",
+      "text": "Choose Supply Auto or a direction next to the linked port. Put a real chest or supported inventory there. Apply saves all assignments. Enable starts the feeder. It inserts real matching fuel only into empty assigned positions, preserving fuel NBT. Wrong or occupied rods are never removed.",
+      "example": ""
+    },
+    {
+      "title": "ZIRNOX assignment controls",
+      "text": "ON/OFF changes the selected assignment draft. Clear removes only its assignment. All+ and All- change all nonempty drafts. Click Apply to save. Enable/Pause acts on saved assignments. SIMPLE and CODE remain saved and available separately.",
+      "example": ""
+    },
+    {
+      "title": "Remote RBMK control rods",
+      "text": "Link Blue to the RBMK console core and set its normal HBM reactor anchor. Choose Rods in Automation. The slider snaps to ten-percent insertion steps. Fully Insert is 100%; Withdraw is 0%. Click Apply rods to send the request. Native rod motion and power rules still apply.",
+      "example": ""
+    },
+    {
+      "title": "RBMK control limits",
+      "text": "Only connected loaded manual rods in the console native 15 by 15 view are commanded. Automatic rods are excluded. MIXED means actual rods differ; the displayed current value is their average. Read confirmation for blocked rods or unloaded boundaries. Protection and ownership still apply.",
+      "example": ""
     }
   ],
   "conditions": [

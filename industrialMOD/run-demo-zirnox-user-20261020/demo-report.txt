@@ -1,0 +1,7 @@
+PASS: Native ZIRNOX, real Blue/Green sticks and immediately adjacent chest built using the installed HBM version
+PASS: Blue access is (-2,67,0), chest is (-2,67,-1), torch is (-3,67,0): no pipe between chest and reactor
+PASS: Terminal and both physical links belong to the user's Zahin profile
+PASS: All 24 native reactor positions filled by the real scheduled Blue feeder, preserving 24 unique rod tags
+PASS: Removing one installed rod automatically refills its exact slot from the adjacent supply chest
+PASS: 24 correct installed rods, 27 spare chest rods, explanatory book and linked player terminal saved
+Failed: 0

@@ -24,7 +24,7 @@ public final class ModRegistry {
     };
     private ModRegistry() {}
     public static void register() {
-        for (int i = 0; i < 3; i++) { quarries[i] = new BlockQuarry(i); GameRegistry.registerBlock(quarries[i], "quarry_mk" + (i + 1)); }
+        for (int i = 0; i < 3; i++) { quarries[i] = new BlockQuarry(i); GameRegistry.registerBlock(quarries[i], dev.industrialtechnology.quarry.ItemBlockQuarry.class, "quarry_mk" + (i + 1)); }
         loader = new BlockChunkLoader(); GameRegistry.registerBlock(loader, "chunk_loader");
         GameRegistry.registerTileEntity(TileQuarry.MK1.class, "industrialtech:quarry_mk1");
         GameRegistry.registerTileEntity(TileQuarry.MK2.class, "industrialtech:quarry_mk2");

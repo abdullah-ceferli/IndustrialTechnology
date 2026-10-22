@@ -28,7 +28,7 @@ public final class MiningScheduler {
             for (int j = 0; j < size && scanned < ModConfig.globalScans && removed < ModConfig.globalRemovals; j++) {
                 int i = (first + j) % size;
                 TileQuarry tile = machines.get(i);
-                if (stopped[i] || scans[i] >= ModConfig.scansPerTick || removals[i] >= ModConfig.removalsPerTick || tile.isInvalid() || !tile.enabled) continue;
+                if (stopped[i] || scans[i] >= ModConfig.scansPerTick || removals[i] >= ModConfig.removalsPerTick || tile.isInvalid() || !tile.enabled || !dev.industrialtechnology.space.DimensionActivity.active(tile.getWorldObj())) continue;
                 MiningEngine.Result result;
                 try { result = MiningEngine.step(tile); }
                 catch (RuntimeException e) {

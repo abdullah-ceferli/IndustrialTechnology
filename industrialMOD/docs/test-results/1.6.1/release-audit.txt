@@ -1,0 +1,9 @@
+PASS: Final archive entries exactly match both native Forge production-tested release copies
+PASS: 141 Java 8 classes; no test harness, Minecraft/Forge/HBM/NEI classes or nested mod JARs
+PASS: Version 1.6.1; existing 24 block, 5 GUI and 8 item textures preserved
+PASS: Shared book/Help/Markdown reference preserves EVERY and documents separate depletion and Celsius readings
+PASS: Native HBM test dependency exactly matches the originally installed X5808 production JAR
+PASS: 377 recorded checks from the reports listed in checks.json
+SHA256: 39c3bf30d8e8a20d13e5900717b425ba1894498f8dde185389ca612f46f4b16b
+Size: 323624 bytes
+Failed: 0

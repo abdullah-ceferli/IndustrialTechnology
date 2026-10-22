@@ -18,6 +18,7 @@ public final class WirelessScheduler {
         }
     }
     public static void poll(WirelessData data,WirelessEndpoint endpoint){
+        ReactorAutomation.poll(data,endpoint);
         if(endpoint.codeMode){dev.industrialtechnology.automation.ScriptEngine.poll(data,endpoint);return;}
         MachineInspector.Reading reading=MachineInspector.inspect(endpoint,endpoint.dimension,false);
         if(reading.status!=WirelessAccess.Status.ONLINE||reading.inventory==null){endpoint.automationStatus=reading.status.toString();return;}

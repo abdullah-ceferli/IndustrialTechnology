@@ -1,0 +1,4 @@
+PASS: Actual restart restores both physical links, ownership, 24 correct native rods, 27 chest spares and enabled feeder
+PASS: The user's saved terminal opens its owned Blue reactor panel with all 24 native fuel positions
+PASS: Demonstration reactor remains switched off after a real native restart
+Failed: 0

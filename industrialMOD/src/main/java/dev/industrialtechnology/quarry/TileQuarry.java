@@ -37,6 +37,8 @@ public class TileQuarry extends TilePoweredMachine {
         super.updateEntity();
         if (worldObj == null || worldObj.isRemote) return;
         ensureMiningHeight();
+        if (!dev.industrialtechnology.space.DimensionActivity.active(worldObj)) { issue = "Suspended: no players in this dimension"; return; }
+        if (issue.equals("Suspended: no players in this dimension")) issue = "";
         metrics.advance(worldObj.getTotalWorldTime());
         if (!cursor.choose(selected)) {
             status = MachineStatus.COMPLETED;
@@ -77,6 +79,21 @@ public class TileQuarry extends TilePoweredMachine {
         metrics.record(worldObj.getTotalWorldTime()); if (enabled) status = MachineStatus.MINING; markDirty();
     }
     public void miningFailure(String reason) { issue = reason; enabled = false; status = MachineStatus.STOPPED; tickets.release(); markDirty(); syncVisual(); }
+    /** Portable configuration only: output items and world-specific mining state are not copied. */
+    public NBTTagCompound itemSettings() {
+        NBTTagCompound n = new NBTTagCompound(); n.setInteger("Version", 1);
+        n.setInteger("Selected", selected); n.setBoolean("Silk", silkMode); filter.write(n); return (NBTTagCompound) n.copy();
+    }
+    public void applyItemSettings(net.minecraft.item.ItemStack stack) {
+        if (stack == null || !stack.hasTagCompound() || !stack.getTagCompound().hasKey(ItemBlockQuarry.SETTINGS, 10)) return;
+        NBTTagCompound n = stack.getTagCompound().getCompoundTag(ItemBlockQuarry.SETTINGS);
+        if (n.getInteger("Version") != 1) return;
+        n = QuarryItemSettings.unpack(n);
+        if (n == null) { issue = "Saved quarry filter profile unavailable in this world"; markDirty(); return; }
+        silkMode = n.getBoolean("Silk") && ModConfig.silk;
+        filter.read(n); applySelection(ChunkArea.sanitize(n.getInteger("Selected"), ModConfig.maxChunks));
+        ensureMiningHeight(); markDirty(); syncVisual();
+    }
     @Override public void writeToNBT(NBTTagCompound tag) {
         ensureMiningHeight(); super.writeToNBT(tag); tag.setInteger("Tier", tier); tag.setBoolean("Silk", silkMode);
         tag.setInteger("MiningCeiling", miningCeiling); filter.write(tag);

@@ -1,0 +1,3 @@
+PASS: An occupied provider ID disables space without overwriting its existing provider
+PASS: Conflicting planet IDs cannot apply vacuum/gravity to another mod's dimension
+Failed: 0

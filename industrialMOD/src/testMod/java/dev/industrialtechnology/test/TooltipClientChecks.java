@@ -24,12 +24,7 @@ import dev.industrialtechnology.machine.MachineContainer;
 public final class TooltipClientChecks {
     private static final List<ItemStack> icons=new ArrayList<ItemStack>();
     public static void run(Minecraft mc,Consumer<String> pass)throws Exception{
-        Class<?> config=Class.forName("codechicken.nei.NEIClientConfig");
-        config.getMethod("setEnabled",boolean.class).invoke(null,true);config.getMethod("setInternalEnabled",boolean.class).invoke(null,true);
-        if((Boolean)config.getMethod("isHidden").invoke(null))config.getMethod("toggleBooleanSetting",String.class).invoke(null,"inventory.hidden");
-        Display.setDisplayMode(new DisplayMode(1560,900));Method resize=Minecraft.class.getDeclaredMethod("resize",int.class,int.class);resize.setAccessible(true);resize.invoke(mc,1560,900);
-        for(net.minecraft.block.Block b:ModRegistry.quarries)icons.add(new ItemStack(b));icons.add(new ItemStack(ModRegistry.loader));
-        for(Item item:new Item[]{ModRegistry.yellowStick,ModRegistry.greenStick,ModRegistry.blueStick,ModRegistry.circuit,ModRegistry.drill,ModRegistry.gear,ModRegistry.terminal,ModRegistry.automationGuide})icons.add(new ItemStack(item));
+        prepare(mc);
         NBTTagCompound n=new NBTTagCompound();n.setInteger("Tab",2);n.setString("Selected",UUID.randomUUID().toString());n.setString("Name","Logic: Tank");n.setString("Status","ONLINE");n.setInteger("Pages",1);n.setInteger("Minimum",1);n.setString("TargetName","Choose Yellow");n.setInteger("MaxScriptLen",4096);
         GuiWirelessTerminal terminal=new GuiWirelessTerminal(new TerminalContainer(mc.thePlayer));mc.displayGuiScreen(terminal);terminal.receive(n);
         checkTooltipState(terminal);pass.accept("Terminal tooltips restore both GUI light positions before NEI draws in the same frame");
@@ -40,6 +35,14 @@ public final class TooltipClientChecks {
         TileQuarry quarry=new TileQuarry.MK3();quarry.setWorldObj(mc.theWorld);quarry.xCoord=24;quarry.yCoord=72;quarry.zCoord=24;
         GuiMachine machine=new GuiMachine(new MachineContainer(mc.thePlayer.inventory,quarry));mc.displayGuiScreen(machine);checkTooltipState(machine);pass.accept("Quarry tooltips preserve GUI lights during the foreground pass");compareIcons(mc,machine,0,"quarry-control");pass.accept("Actual NEI icon colors stay identical while hovering the quarry Start button");
         mc.displayGuiScreen(null);
+    }
+    public static void prepare(Minecraft mc)throws Exception{
+        Class<?> config=Class.forName("codechicken.nei.NEIClientConfig");
+        config.getMethod("setEnabled",boolean.class).invoke(null,true);config.getMethod("setInternalEnabled",boolean.class).invoke(null,true);
+        if((Boolean)config.getMethod("isHidden").invoke(null))config.getMethod("toggleBooleanSetting",String.class).invoke(null,"inventory.hidden");
+        Display.setDisplayMode(new DisplayMode(1560,900));Method resize=Minecraft.class.getDeclaredMethod("resize",int.class,int.class);resize.setAccessible(true);resize.invoke(mc,1560,900);
+        icons.clear();for(net.minecraft.block.Block b:ModRegistry.quarries)icons.add(new ItemStack(b));icons.add(new ItemStack(ModRegistry.loader));
+        for(Item item:new Item[]{ModRegistry.yellowStick,ModRegistry.greenStick,ModRegistry.blueStick,ModRegistry.circuit,ModRegistry.drill,ModRegistry.gear,ModRegistry.terminal,ModRegistry.automationGuide})icons.add(new ItemStack(item));
     }
     private static Method tooltip()throws Exception{Method m=GuiTooltips.class.getDeclaredMethod("drawHoveringText",List.class,int.class,int.class,FontRenderer.class);m.setAccessible(true);return m;}
     private static void checkTooltipState(GuiScreen g)throws Exception{

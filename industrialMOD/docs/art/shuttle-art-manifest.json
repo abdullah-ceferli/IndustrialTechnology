@@ -1,0 +1,78 @@
+[
+  {
+    "path": "src/main/resources/assets/industrialtech/textures/blocks/lunar_iron_rock.png",
+    "sha256": "9bbb144333c3ccac8ab37778539076feb3e4cef1b8372e4a17ba0686a1aaf24a"
+  },
+  {
+    "path": "src/main/resources/assets/industrialtech/textures/blocks/lunar_ilmenite.png",
+    "sha256": "03575c871579e656b907df3563ee73742df0fd33b278358dbeb71a84a629ccb1"
+  },
+  {
+    "path": "src/main/resources/assets/industrialtech/textures/blocks/lunar_feldspar.png",
+    "sha256": "acdb8200267a869dd06f98cb519f77f3fdc26fbdede055a1ac1b27cbd1682546"
+  },
+  {
+    "path": "src/main/resources/assets/industrialtech/textures/blocks/martian_hematite.png",
+    "sha256": "b53dae251fa96afcb2e69e5ce95fa63caf79830907ca2719ff8b5271b3ebfc39"
+  },
+  {
+    "path": "src/main/resources/assets/industrialtech/textures/blocks/martian_titanium_rock.png",
+    "sha256": "be05f423b352502b833e1052ec28504add6df556e83c9aafa372ee4c5bb049f3"
+  },
+  {
+    "path": "src/main/resources/assets/industrialtech/textures/blocks/martian_silica.png",
+    "sha256": "4c665130d887eb07bc2e6bca6f8bd1aacd51ad565460c543cac9f7c805696a10"
+  },
+  {
+    "path": "src/main/resources/assets/industrialtech/textures/blocks/facility_part_0.png",
+    "sha256": "edd7f0267ce86f15d912f43af8eb18df272b3d0be648e6cfba98b0b602042a7c"
+  },
+  {
+    "path": "src/main/resources/assets/industrialtech/textures/blocks/facility_part_1.png",
+    "sha256": "7e5162faf3ad18a7105973e13e0e9703467a982f24570baa8548015a543daeb0"
+  },
+  {
+    "path": "src/main/resources/assets/industrialtech/textures/blocks/facility_part_2.png",
+    "sha256": "c4d19eb005cf4d49576d6159660a118ad7feb8cd01ef39a4119f27aa27a9a885"
+  },
+  {
+    "path": "src/main/resources/assets/industrialtech/textures/blocks/facility_part_3.png",
+    "sha256": "cddb136e03dc39b8368ac4abd64fbbe522e2bfcaedec30fe934f30595e0042bd"
+  },
+  {
+    "path": "src/main/resources/assets/industrialtech/textures/blocks/facility_part_4.png",
+    "sha256": "dd0bfc8ed99dc6b2169bc2947bdd66a9a8dbeb88ede397ca32ee04ace8b26f87"
+  },
+  {
+    "path": "src/main/resources/assets/industrialtech/textures/blocks/facility_part_5.png",
+    "sha256": "076ecef5ad8aba5db8a99250570178194bfcc1657415709ab8d84b7d9270019f"
+  },
+  {
+    "path": "src/main/resources/assets/industrialtech/textures/blocks/facility_part_6.png",
+    "sha256": "7c151d2f7003007e157eb2ea0a503b1bc9cbc1a9af6ec84642286aac0933b003"
+  },
+  {
+    "path": "src/main/resources/assets/industrialtech/textures/items/titanium_concentrate.png",
+    "sha256": "230518252f1385a68e01e73e1f09de6b0ab1c9168c2e79bbe54f764345f86c41"
+  },
+  {
+    "path": "src/main/resources/assets/industrialtech/textures/items/aluminium_concentrate.png",
+    "sha256": "af995ae8fc0b6e2595c978673ac87a34361c35910cc28f34a5b4fbe32a555c60"
+  },
+  {
+    "path": "src/main/resources/assets/industrialtech/textures/items/space_aluminium.png",
+    "sha256": "8a870c8e9b00597918f00cd2d4d21b7096c6677aacfc2c8bb5d34cd972a1cae5"
+  },
+  {
+    "path": "src/main/resources/assets/industrialtech/textures/items/launch_facility_section.png",
+    "sha256": "e4eb02b33957b4f91bc328e3558dbf30e6bc945073e1356a21a5ea0ae2064830"
+  },
+  {
+    "path": "src/main/resources/assets/industrialtech/textures/items/space_shuttle.png",
+    "sha256": "b33d49245083be876292742e2a091dfc1150a24b647399efb27e4fb48def6380"
+  },
+  {
+    "path": "src/main/resources/assets/industrialtech/textures/models/shuttle_atlas.png",
+    "sha256": "7de3f08b3e8405b2faab8ff1dd5ee86787b4d6c367e2e2856ae460c5fd060ef3"
+  }
+]

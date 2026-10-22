@@ -1,0 +1,37 @@
+PASS: Dimension providers and biomes register without replacing Earth
+PASS: Every rocket component, machine, suit and lamp has a real crafting recipe
+PASS: Incomplete assembly cannot output rocket; full assembly consumes 11 real parts and RF
+PASS: Research HDD owns exact powered-tick progress and pauses when power/drive/telescope are absent
+PASS: Refinery consumes crude and power, preserving separate kerosene/LOX chemistry
+PASS: Oxygen separation and cryogenic liquefaction are distinct powered stages
+PASS: Earth air compressor consumes a real filter and Moon ambient air is rejected
+PASS: Suit refill consumes finite breathable air and survives item NBT serialization
+PASS: Canister simulation, partial transfer and mismatched fluids conserve contents
+PASS: Vanilla sneaking block-use path withdraws real fluid into a canister
+PASS: Landed vehicle accepts canister refuelling and sneak withdrawal without recovering the rocket
+PASS: Planet generation is deterministic with solid terrain and no oceans or grass
+PASS: Incremental room scan finds exactly 27 air blocks and rejects unbounded outside
+PASS: Pressurizer spends air and RF, caches room, and a wall breach loses pressure
+PASS: Two-door airlock uses physical doors, finite air and mutual exclusion
+PASS: Green lamp follows real redstone with light 0/15
+PASS: Launch validation checks physical pad, parts, destination HDD, obstruction and two propellants
+PASS: Recovered vehicle restores finite propellants and physical HDD without duplication
+PASS: Persistent flight ledger rejects a second entity for the same physical vehicle
+PASS: Empty-dimension policy releases only owned tickets and a remaining player permits resume
+PASS: Optional grayscale height reference is bounded, functional and rejects oversized PNGs
+PASS: Touchdown rests on actual surface height without an extra floating air block
+PASS: Real complete HBM tank supplies a finite suit refill through its exposed fluid port
+PASS: Original HBM materials resolve to registered native steel and titanium
+PASS: Native HBM sending tank AIR transfer is exact and rejects oxygen and gas substitution
+PASS: New assembly selects full-scale Shuttle; legacy choice and NBT remain distinct
+PASS: Metre-scale LC39 kit deploys all parts in checked batches without one TE per block
+PASS: Occupied-cell preflight preserves builds and returns exactly one unbuilt kit
+PASS: Overlapping kit cannot dismantle another facility
+PASS: Forge placement cancellation rolls back parts; recovery respects break protection
+PASS: Construction and cleanup cursors persist for real server restart
+PASS: Both planets generate deterministic, body-specific mineable minerals and finite ice water recipe
+PASS: Planetary concentrates craft actual HBM titanium and aluminium ingots, not substitute items
+PASS: Genuine HBM kerosene pipes debit source and fill launch fuel port with exact shared tick limit
+PASS: HBM cryogenic OXYGEN pipes fill separate liquid oxygen tank directly
+PASS: Native HBM pipe can attach directly to LC39 root as well as existing fuel port
+Failed: 0

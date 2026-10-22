@@ -230,3 +230,9 @@ twenty seconds while true. Use `20m` for minutes or `20h` for hours. False reset
 the timer. Timers use server ticks; shutdown time does not count. Saves/restarts
 preserve pending deadlines; overdue loaded rules run once, without catch-up bursts.
 Choose an interval longer than the pulse to get a visible OFF gap.
+
+## HBM reactors and local search (1.6.0)
+
+See [REACTORS.md](REACTORS.md) for RBMK depletion and °C, ZIRNOX native fuel
+positions and adjacent supply assignments, native RBMK manual-rod controls,
+and independent search in each terminal tab. SIMPLE/CODE and EVERY remain available.

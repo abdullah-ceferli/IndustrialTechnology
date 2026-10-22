@@ -1,0 +1,8 @@
+[
+  "run-test-production-2.0.0-release-standalone",
+  "run-test-production-2.0.0-release-hbm",
+  "run-test-space-2.0.0-release-standalone",
+  "run-test-space-2.0.0-release-hbm5771",
+  "run-test-space-2.0.0-release-hbm5808",
+  "run-test-space-2.0.0-release-conflict"
+]

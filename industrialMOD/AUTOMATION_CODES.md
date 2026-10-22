@@ -1,6 +1,6 @@
-# Automation Codes — Industrial Technology 1.5.1
+# Automation Codes — Industrial Technology 1.6.3
 
-<!-- Reference SHA256: 36a0f15ec6d7bd47b84c10deebacd9be7b3f8b3a0bf24d6dec96a402417f9c51 -->
+<!-- Reference SHA256: fbe04887b7fe8df1045a2957a35c41226cebfb24da64282e6b4a9333e9ddee89 -->
 
 This is the complete reference for the Wireless Terminal SIMPLE/CODE system.
 The in-game Automation Guide and editor Help use the same reference data.
@@ -81,6 +81,38 @@ Devices must be loaded in the same dimension. Scripts do not load chunks. Missin
 ## What this cannot do
 
 Commands only read supported storage and control your linked Yellow Sticks. They cannot transfer items, create RF/HE, run Java, or control a machine that ignores vanilla redstone. Other HBM forks and unverified multiblocks may show FLUID DATA UNAVAILABLE.
+
+## Search linked devices
+
+Each terminal tab has a Search box and X to clear it. Type part of a device name; upper/lower case does not matter. The search includes machine names and coordinates, keeps your selected device, and remembers a separate query for each tab.
+
+## HBM fuel and temperatures
+
+Attach Green to an RBMK fuel element or a ZIRNOX inventory port. Its Reactor page shows actual fuel depletion and remaining percentages. RBMK core/skin and ZIRNOX reactor temperatures are separate Celsius readings. Empty rods show EMPTY. HBM X5808 has no separate C depletion statistic.
+
+## ZIRNOX fuel views
+
+One Green port link reads all 24 native fuel positions. Grid shows all seven staggered rows together on one screen; List has six pages. Click a position and hover for its full fuel name, condition and depletion. Offline ports never load chunks.
+
+## Assign ZIRNOX fuel
+
+Select a Blue ZIRNOX port in Automation, then Reactor. Click a core position. Click Inventory and pick up a real ZIRNOX rod; you return to the full grid. Click its ghost square at the right. Nothing is consumed. Open Inventory again to return the real item, then Fuel grid.
+
+## Run a local fuel feeder
+
+Choose Supply Auto or a direction next to the linked port. Put a real chest or supported inventory there. Apply saves all assignments. Enable starts the feeder. It inserts real matching fuel only into empty assigned positions, preserving fuel NBT. Wrong or occupied rods are never removed.
+
+## ZIRNOX assignment controls
+
+ON/OFF changes the selected assignment draft. Clear removes only its assignment. All+ and All- change all nonempty drafts. Click Apply to save. Enable/Pause acts on saved assignments. SIMPLE and CODE remain saved and available separately.
+
+## Remote RBMK control rods
+
+Link Blue to the RBMK console core and set its normal HBM reactor anchor. Choose Rods in Automation. The slider snaps to ten-percent insertion steps. Fully Insert is 100%; Withdraw is 0%. Click Apply rods to send the request. Native rod motion and power rules still apply.
+
+## RBMK control limits
+
+Only connected loaded manual rods in the console native 15 by 15 view are commanded. Automatic rods are excluded. MIXED means actual rods differ; the displayed current value is their average. Read confirmation for blocked rods or unloaded boundaries. Protection and ownership still apply.
 
 ## Code words
 
@@ -597,7 +629,7 @@ exposed set. Oversized, broken, or unresolved APIs pause rules instead of return
 The optional HBM adapter targets inspected 1.0.27_X5808 public APIs: Chemical Plant, Fluid Tank,
 Big Ass Tank and supported fluid-enabled multiblock proxies. Its public getAllTanks set is
 identified as such; only API-exposed tanks are included. Arc Furnace molten-material lists
-are not these fluid tanks. Full assembled structures, dynamic Chemical Factory delegates,
+are not these fluid tanks. Other assembled structures and dynamic Chemical Factory delegates,
 other HBM forks, and individual machines' redstone behavior require modpack verification.
 No direct HE conversion or general machine-control API is added.
 See docs/TESTING.md for the actual tested release and remaining coverage.

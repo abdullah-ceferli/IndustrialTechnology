@@ -50,7 +50,7 @@ public final class ClientTestProxy extends TestProxy {
     private volatile boolean failed;
     private boolean finished;
     private volatile TileQuarry powered;
-    @Override public void init(){if(Boolean.getBoolean("industrialtech.neiTest")){new NeiClientTest().init();return;}if(Boolean.getBoolean("industrialtech.codeTest")){new CodeClientTest().init();return;}
+    @Override public void init(){if(Boolean.getBoolean("industrialtech.reactorTest")){new ReactorClientTest().init();return;}if(Boolean.getBoolean("industrialtech.neiTest")){new NeiClientTest().init();return;}if(Boolean.getBoolean("industrialtech.codeTest")){new CodeClientTest().init();return;}
         if(Boolean.getBoolean("industrialtech.wirelessTest")){new WirelessClientTest().init();return;}FMLCommonHandler.instance().bus().register(this);}
     @SubscribeEvent public void supply(TickEvent.ServerTickEvent event) {
         TileQuarry q=powered;

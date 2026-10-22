@@ -14,10 +14,47 @@ public final class GuiWirelessTerminal extends GuiTooltips {
     public final TerminalContainer terminal;
     public NBTTagCompound state=new NBTTagCompound();
     private GuiTextField name,quantity;
+    public GuiTextField search;
+    public GuiReactorPanel reactor;
+    public final CatalogAssembler catalog=new CatalogAssembler();
+    private final String[] queries={"","",""};private final int[] listPages=new int[3];
+    private int searchTab=-1,filterTab=-1;private String filterQuery="";private NBTTagList filterSource;private List<NBTTagCompound> filtered=new ArrayList<NBTTagCompound>();
+    private String query(){return search==null?"":search.getText();}
+    private List<NBTTagCompound> matches(){
+        NBTTagList source=catalog.ready?catalog.rows:state.getTagList("Devices",10);String q=query();
+        if(source==filterSource&&filterTab==terminal.tab&&q.equals(filterQuery))return filtered;
+        filtered=new ArrayList<NBTTagCompound>();filterSource=source;filterTab=terminal.tab;filterQuery=q;
+        for(int i=0;i<source.tagCount();i++){NBTTagCompound row=source.getCompoundTagAt(i);if(catalog.ready&&row.getInteger("Kind")!=terminal.tab)continue;
+            if(DeviceSearch.matches(q,row.getString("Name"),row.getString("Machine"),row.getInteger("Dimension"),row.getInteger("X"),row.getInteger("Y"),row.getInteger("Z")))filtered.add(row);
+        }return filtered;
+    }
+    private NBTTagList visibleRows(){List<NBTTagCompound> all=matches();int tab=terminal.tab;listPages[tab]=DeviceSearch.page(listPages[tab],all.size());NBTTagList rows=new NBTTagList();for(int i=listPages[tab]*6;i<Math.min(all.size(),listPages[tab]*6+6);i++)rows.appendTag(all.get(i));return rows;}
+    public void receiveCatalog(WirelessCatalog packet){catalog.accept(packet);filterSource=null;updateButtons();}
+    public int searchCount(){return matches().size();}
+    public int searchPage(){return listPages[terminal.tab];}
+    private void searchChanged(){listPages[terminal.tab]=0;queries[terminal.tab]=query();filterSource=null;updateButtons();}
+    public int panelLeft(){return guiLeft;}public int panelTop(){return guiTop;}
+    public void addPanelButton(int id,int x,int y,int w,int h,String label,String tip){button(id,x,y,w,h,label,tip);}
+    public void sendReactor(int action,int value,String binding){send(action,value,0,binding);}
+    public void openGuide(){keepDraft();guide=new GuiAutomationGuide(()->{guide=null;if(editor!=null)editor.focused=code();});guide.setWorldAndResolution(mc,width,height);}
+    public void panelIcon(ItemStack icon,int x,int y){GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);GL11.glPushClientAttrib(GL11.GL_CLIENT_VERTEX_ARRAY_BIT);try{RenderHelper.enableGUIStandardItemLighting();GL11.glColor4f(1,1,1,1);itemRender.renderItemAndEffectIntoGUI(fontRendererObj,mc.getTextureManager(),icon,x,y);}finally{GL11.glPopClientAttrib();GL11.glPopAttrib();}}
+    public void panelTooltip(List<String> lines,int x,int y){
+        int wrap=Math.min(200,Math.max(80,width-24));List<String> visible=new ArrayList<String>();
+        for(String line:lines)visible.addAll(fontRendererObj.listFormattedStringToWidth(line,wrap));
+        int widest=0;for(String line:visible)widest=Math.max(widest,fontRendererObj.getStringWidth(line));
+        // Vanilla flips a tooltip to the left without clamping it to the viewport.
+        // Keep reactor names/help inside the terminal and clear of NEI's left buttons.
+        int anchor=Math.min(width-16,Math.max(x,Math.max(8,guiLeft)+widest+28));
+        tooltip(visible,anchor,y);
+    }
+    public void panelHoverButtons(int mouseX,int mouseY){
+        int x=mouseX-guiLeft,y=mouseY-guiTop;NBTTagList rows=visibleRows();if(x>=10&&x<112&&y>=48&&y<132){int i=(y-48)/14;if(i<rows.tagCount()){NBTTagCompound row=rows.getCompoundTagAt(i);tooltip(Arrays.asList(row.getString("Name"),row.getString("Status"),"id:"+row.getString("Id")),mouseX,mouseY);}return;}
+        for(MetalButton b:controls)if(b.hovered(mouseX,mouseY))tooltip(Arrays.asList(b.tooltip),mouseX,mouseY);
+    }
     public MultilineCodeEditor editor;public GuiAutomationGuide guide;
     private String editorDevice="",pendingDevice="",pendingText="";
     private final Map<String,String> drafts=new HashMap<String,String>();private final Set<String> dirtyDrafts=new HashSet<String>();
-    private boolean code(){return terminal.tab==2&&selected()&&state.getBoolean("CodeMode");}
+    private boolean code(){return terminal.tab==2&&selected()&&state.getBoolean("CodeMode")&&!state.getBoolean("ReactorView");}
     private void keepDraft(){if(editor!=null&&!editorDevice.isEmpty()){drafts.put(editorDevice,editor.model.text());if(editor.dirty)dirtyDrafts.add(editorDevice);else dirtyDrafts.remove(editorDevice);}}
     public void receiveScript(java.util.UUID device,int revision,String text){String key=device.toString();
         boolean accepted=key.equals(pendingDevice)&&text.equals(pendingText);
@@ -50,12 +87,22 @@ public final class GuiWirelessTerminal extends GuiTooltips {
         button(26,224,205,79,13,"Enable","Enable or disable the last successfully saved program");
         name=new GuiTextField(fontRendererObj,guiLeft+123,guiTop+33,116,13);name.setMaxStringLength(32);name.setText(state.getString("Name"));
         quantity=new GuiTextField(fontRendererObj,guiLeft+151,guiTop+112,56,13);quantity.setMaxStringLength(10);quantity.setText(Integer.toString(Math.max(1,state.getInteger("Minimum"))));
+        search=new GuiTextField(fontRendererObj,guiLeft+10,guiTop+33,87,12);search.setMaxStringLength(64);search.setText(queries[Math.max(0,terminal.tab)]);searchTab=terminal.tab;
+        button(27,100,33,12,12,"X","Clear the local device search");
+        if(reactor==null)reactor=new GuiReactorPanel(this);reactor.init();
         editKey="";receive(state);
     }
     private void button(int id,int x,int y,int w,int h,String label,String tooltip){MetalButton b=new MetalButton(id,guiLeft+x,guiTop+y,w,h,label,tooltip);controls.add(b);buttonList.add(b);}
     public void receive(NBTTagCompound n){
         keepDraft();boolean wasCode=code();state=n;terminal.tab=n.getInteger("Tab");terminal.page=n.getInteger("Page");terminal.ruleIndex=n.getInteger("Rule");
-        terminal.selected=WirelessData.uuid(n.getString("Selected"));terminal.layout(code());
+        terminal.selected=WirelessData.uuid(n.getString("Selected"));terminal.reactors.view=n.getBoolean("ReactorView");terminal.reactors.type=n.getCompoundTag("Reactor").getInteger("Type");terminal.layout(code());
+        if(search!=null&&searchTab!=terminal.tab){if(searchTab>=0)queries[searchTab]=search.getText();search.setText(queries[terminal.tab]);searchTab=terminal.tab;filterSource=null;}
+        if(reactor!=null)reactor.receive();
+        if(terminal.reactors.view&&terminal.tab==2&&terminal.reactors.type==HbmReactors.ZIRNOX){
+            NBTTagList fuel=n.getCompoundTag("Reactor").getTagList("Fuels",10);ItemStack desired=null;
+            for(int i=0;i<fuel.tagCount();i++){NBTTagCompound row=fuel.getCompoundTagAt(i);if(row.getInteger("Slot")==n.getCompoundTag("Reactor").getInteger("SelectedSlot")&&row.hasKey("Desired"))desired=ItemStack.loadItemStackFromNBT(row.getCompoundTag("Desired"));}
+            terminal.ghost.setInventorySlotContents(0,desired);
+        }
         String device=n.getString("Selected");if(editor!=null&&!device.equals(editorDevice)){editorDevice=device;editor.set(drafts.containsKey(device)?drafts.get(device):"");editor.dirty=dirtyDrafts.contains(device);}
         if(editor!=null){editor.model.limit=n.hasKey("MaxScriptLength")?n.getInteger("MaxScriptLength"):4096;editor.errorLine=n.getInteger("ScriptErrorLine");if(code()&&!wasCode)editor.focused=true;}
         String key=n.getString("Selected")+":"+n.getInteger("Rule");
@@ -69,23 +116,26 @@ public final class GuiWirelessTerminal extends GuiTooltips {
     private void send(int action,int a,int b,String text){IndustrialTechnology.network.sendToServer(new WirelessCommand(terminal.windowId,action,a,b,text));}
     private boolean selected(){return !state.getString("Selected").isEmpty();}
     private void updateButtons(){
+        if(reactor!=null)reactor.layout();
         for(MetalButton b:controls){b.visible=true;b.enabled=true;b.selected=false;
             if(b.id<=3){b.selected=b.id-1==terminal.tab;continue;}
-            if(b.id==4){b.enabled=state.getInteger("Page")>0;continue;}if(b.id==5){b.enabled=state.getInteger("Page")+1<state.getInteger("Pages");continue;}
-            b.visible=selected();if(b.id==6||b.id==7)continue;
+            if(b.id>=40){if(reactor!=null)reactor.update(b);else b.visible=false;continue;}
+            if(b.id==27){b.visible=true;b.enabled=!query().isEmpty();continue;}
+            if(b.id==4){b.enabled=listPages[terminal.tab]>0;continue;}if(b.id==5){b.enabled=listPages[terminal.tab]+1<DeviceSearch.pages(matches().size());continue;}
+            b.visible=selected();if(b.id==7){b.width=state.getBoolean("ReactorView")?38:58;b.yPosition=guiTop+(state.getBoolean("ReactorView")?185:181);}if(b.id==6||b.id==7)continue;
             if(b.id==9||b.id==10||b.id==11){b.visible=selected()&&terminal.tab==1;
                 if("OTHER_DIMENSION".equals(state.getString("Status")))b.enabled=false;
                 if(b.id==9)b.displayString=state.getBoolean("PulseMode")?"Pulse mode":"Manual mode";
                 if(b.id==10)b.displayString=state.getInteger("Seconds")+" seconds";
                 if(b.id==11)b.enabled="ONLINE".equals(state.getString("Status"))&&state.getBoolean("PulseMode")&&!state.getBoolean("Signal");continue;}
-            if(b.id>=12&&b.id<=17){b.visible=selected()&&terminal.tab==2&&!code();
+            if(b.id>=12&&b.id<=17){b.visible=selected()&&terminal.tab==2&&!code()&&!state.getBoolean("ReactorView");
                 if(b.id==12)b.enabled=state.getInteger("Rule")>0;if(b.id==13)b.enabled=state.getInteger("Rule")<7;
                 if(b.id==14)b.displayString=CONDITIONS[condition];if(b.id==15){b.displayString=ruleEnabled?"Enabled":"Disabled";b.selected=ruleEnabled;}
                 if(b.id==17)b.displayString=shorten(state.getString("TargetName"),78);
                 if(b.id==16)b.enabled=state.getTagList("Targets",10).tagCount()>0;continue;}
-            if(b.id==22||b.id==23){b.visible=selected()&&terminal.tab==2;b.selected=b.id==23?code():!code();continue;}
+            if(b.id==22||b.id==23){b.visible=selected()&&terminal.tab==2;b.selected=b.id==23?code():!code()&&!state.getBoolean("ReactorView");boolean extra=state.getCompoundTag("Reactor").getInteger("Type")>0;b.xPosition=guiLeft+(b.id==22?123:extra?181:200);b.width=extra?54:b.id==22?73:103;continue;}
             if(b.id>=24){b.visible=code();if(b.id==26){b.displayString=state.getBoolean("ScriptEnabled")?"Disable":"Enable";b.selected=state.getBoolean("ScriptEnabled");}continue;}
-            if(b.id>=18){b.visible=selected()&&terminal.tab==0;
+            if(b.id>=18){b.visible=selected()&&terminal.tab==0&&!state.getBoolean("ReactorView");
                 if(b.id==18)b.selected=monitorMode==0;if(b.id==19)b.selected=monitorMode==1;
                 if(b.id==20)b.enabled=(monitorMode==0?state.getInteger("DetailPage"):tankPage)>0;
                 if(b.id==21)b.enabled=monitorMode==0?state.getInteger("DetailPage")+1<state.getInteger("InventoryPages"):(tankPage+1)*4<state.getTagList("Tanks",10).tagCount();
@@ -94,9 +144,11 @@ public final class GuiWirelessTerminal extends GuiTooltips {
     }
     @Override protected void actionPerformed(GuiButton b){
         if(!b.enabled||choosingTarget)return;
+        if(b.id>=40){reactor.action(b.id);updateButtons();return;}
         switch(b.id){
             case 1:case 2:case 3:dirtyRule=false;send(WirelessCommand.TAB,b.id-1,0,"");break;
-            case 4:case 5:send(WirelessCommand.PAGE,Math.max(0,state.getInteger("Page")+(b.id==5?1:-1)),0,"");break;
+            case 4:case 5:listPages[terminal.tab]=DeviceSearch.page(listPages[terminal.tab]+(b.id==5?1:-1),matches().size());break;
+            case 27:search.setText("");searchChanged();search.setFocused(true);break;
             case 6:send(WirelessCommand.RENAME,0,0,name.getText());name.setFocused(false);break;
             case 7:send(WirelessCommand.UNLINK,0,0,"");break;
             case 9:send(WirelessCommand.MODE,0,0,"");break;
@@ -109,7 +161,7 @@ public final class GuiWirelessTerminal extends GuiTooltips {
                 try{int minimum=Integer.parseInt(quantity.getText());if(minimum<1||minimum>1000000000)return;send(WirelessCommand.SAVE_RULE,condition,minimum,ruleEnabled?"1":"0");dirtyRule=false;}catch(NumberFormatException ignored){}break;
             case 22:case 23:keepDraft();send(WirelessCommand.CODE_MODE,b.id==23?1:0,0,"");break;
             case 24:keepDraft();pendingDevice=state.getString("Selected");pendingText=editor.model.text();IndustrialTechnology.network.sendToServer(new dev.industrialtechnology.automation.ScriptUpload(terminal.windowId,java.util.UUID.fromString(pendingDevice),pendingText));break;
-            case 25:keepDraft();guide=new GuiAutomationGuide(()->{guide=null;editor.focused=true;});guide.setWorldAndResolution(mc,width,height);break;
+            case 25:openGuide();break;
             case 26:send(WirelessCommand.SCRIPT_ENABLE,0,0,"");break;
             case 17:targetPage=0;choosingTarget=true;break;
             case 18:monitorMode=0;break;case 19:monitorMode=1;break;
@@ -119,6 +171,8 @@ public final class GuiWirelessTerminal extends GuiTooltips {
     }
     @Override protected void mouseClicked(int mouseX,int mouseY,int button){
         if(guide!=null){guide.click(mouseX,mouseY,button);return;}
+        if(search!=null){search.mouseClicked(mouseX,mouseY,button);if(search.isFocused()){name.setFocused(false);quantity.setFocused(false);editor.focused=false;return;}}
+        if(reactor!=null&&reactor.click(mouseX-guiLeft,mouseY-guiTop,button)){name.setFocused(false);quantity.setFocused(false);editor.focused=false;return;}
         if(code()&&editor.click(mouseX,mouseY,button))return;
         int x=mouseX-guiLeft,y=mouseY-guiTop;
         if(choosingTarget){
@@ -127,26 +181,30 @@ public final class GuiWirelessTerminal extends GuiTooltips {
             else if(button==0&&y>=124&&y<138){if(x>=125&&x<163)targetPage=Math.max(0,targetPage-1);else if(x>=263&&x<302)targetPage=Math.min(Math.max(0,(targets.tagCount()-1)/5),targetPage+1);}
             else choosingTarget=false;return;
         }
-        if(button==0&&x>=10&&x<112&&y>=48&&y<132){int index=(y-48)/14;NBTTagList rows=state.getTagList("Devices",10);
+        if(button==0&&x>=10&&x<112&&y>=48&&y<132){int index=(y-48)/14;NBTTagList rows=visibleRows();
             if(index<rows.tagCount()){NBTTagCompound row=rows.getCompoundTagAt(index);send(WirelessCommand.SELECT,0,0,row.getString("Id"));
                 if(terminal.tab==1&&x>=81&&"ONLINE".equals(row.getString("Status")))send(WirelessCommand.TOGGLE,0,0,"");}return;}
         if(button==0&&terminal.tab==1&&selected()&&x>=250&&x<303&&y>=116&&y<130){send(WirelessCommand.TOGGLE,0,0,"");return;}
-        if(selected())name.mouseClicked(mouseX,mouseY,button);if(terminal.tab==2&&selected()&&!code())quantity.mouseClicked(mouseX,mouseY,button);
+        if(selected())name.mouseClicked(mouseX,mouseY,button);if(terminal.tab==2&&selected()&&!code()&&!state.getBoolean("ReactorView"))quantity.mouseClicked(mouseX,mouseY,button);
+        boolean choosingFuel=reactor!=null&&reactor.inventoryOpen()&&mc.thePlayer.inventory.getItemStack()==null;
         super.mouseClicked(mouseX,mouseY,button);
+        if(choosingFuel&&mc.thePlayer.inventory.getItemStack()!=null){reactor.closeInventory();updateButtons();}
     }
     @Override protected void keyTyped(char c,int key){
         if(guide!=null){guide.key(c,key);return;}
+        if(reactor!=null&&reactor.inventoryOpen()&&(key==1||key==mc.gameSettings.keyBindInventory.getKeyCode()&&!search.isFocused()&&!name.isFocused())){reactor.closeInventory();updateButtons();return;}
+        if(search!=null&&search.isFocused()){if(key==1||key==28){search.setFocused(false);return;}String before=search.getText();search.textboxKeyTyped(c,key);if(!before.equals(search.getText()))searchChanged();return;}
         if(code()&&editor.key(c,key)){keepDraft();return;}
         if(choosingTarget){if(key==1)choosingTarget=false;return;}
         if(selected()&&name.textboxKeyTyped(c,key))return;
-        if(terminal.tab==2&&selected()&&!code()&&quantity.textboxKeyTyped(c,key)){dirtyRule=true;return;}
+        if(terminal.tab==2&&selected()&&!code()&&!state.getBoolean("ReactorView")&&quantity.textboxKeyTyped(c,key)){dirtyRule=true;return;}
         super.keyTyped(c,key);
     }
-    @Override protected void mouseClickMove(int x,int y,int button,long duration){if(guide!=null)return;if(code()&&editor.dragging){editor.drag(x,y);return;}super.mouseClickMove(x,y,button,duration);}
-    @Override protected void mouseMovedOrUp(int x,int y,int button){if(editor!=null)editor.dragging=false;if(guide==null)super.mouseMovedOrUp(x,y,button);}
+    @Override protected void mouseClickMove(int x,int y,int button,long duration){if(guide!=null)return;if(reactor!=null&&reactor.dragging()){reactor.drag(x-guiLeft,y-guiTop);return;}if(code()&&editor.dragging){editor.drag(x,y);return;}super.mouseClickMove(x,y,button,duration);}
+    @Override protected void mouseMovedOrUp(int x,int y,int button){if(editor!=null)editor.dragging=false;if(reactor!=null)reactor.release();if(guide==null)super.mouseMovedOrUp(x,y,button);}
     @Override public void handleMouseInput(){super.handleMouseInput();int wheel=org.lwjgl.input.Mouse.getEventDWheel();if(guide==null&&code()&&wheel!=0)editor.scroll(wheel>0?-3:3);}
     @Override public void onGuiClosed(){keepDraft();org.lwjgl.input.Keyboard.enableRepeatEvents(false);super.onGuiClosed();}
-    @Override public void updateScreen(){super.updateScreen();if(editor!=null)editor.tick();if(name!=null)name.updateCursorCounter();if(quantity!=null)quantity.updateCursorCounter();updateButtons();}
+    @Override public void updateScreen(){super.updateScreen();if(editor!=null)editor.tick();if(name!=null)name.updateCursorCounter();if(quantity!=null)quantity.updateCursorCounter();if(search!=null)search.updateCursorCounter();updateButtons();}
     @Override public void drawScreen(int x,int y,float partial){
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);GL11.glPushClientAttrib(GL11.GL_CLIENT_VERTEX_ARRAY_BIT);
         try{GL11.glColor4f(1,1,1,1);if(guide!=null)guide.drawScreen(x,y,partial);else super.drawScreen(x,y,partial);}finally{GL11.glPopClientAttrib();GL11.glPopAttrib();}
@@ -156,22 +214,26 @@ public final class GuiWirelessTerminal extends GuiTooltips {
         Tessellator t=Tessellator.instance;t.startDrawingQuads();t.addVertexWithUV(guiLeft,guiTop+ySize,0,0,ySize/256.0);t.addVertexWithUV(guiLeft+xSize,guiTop+ySize,0,xSize/512.0,ySize/256.0);t.addVertexWithUV(guiLeft+xSize,guiTop,0,xSize/512.0,0);t.addVertexWithUV(guiLeft,guiTop,0,0,0);t.draw();
         int[] accents={0xff70b37a,0xffd5b35d,0xff69a3d4};for(int i=0;i<3;i++)drawRect(guiLeft+117+i*61,guiTop+25,guiLeft+175+i*61,guiTop+26,accents[i]);
         if(code()){drawRect(guiLeft+76,guiTop+149,guiLeft+241,guiTop+226,0xff3b4449);drawRect(guiLeft+119,guiTop+29,guiLeft+307,guiTop+232,0xff262f35);editor.draw();}
-        if(selected()){name.drawTextBox();if(terminal.tab==2&&!code()){quantity.drawTextBox();drawRect(guiLeft+127,guiTop+110,guiLeft+145,guiTop+128,0xff141c22);drawRect(guiLeft+128,guiTop+111,guiLeft+144,guiTop+127,0xff3a4750);}}
+        if(search!=null){search.drawTextBox();if(query().isEmpty()&&!search.isFocused())fontRendererObj.drawString("Search...",guiLeft+13,guiTop+35,0x74858e);}
+        if(reactor!=null)reactor.background();
+        if(selected()){name.drawTextBox();if(terminal.tab==2&&!code()&&!state.getBoolean("ReactorView")){quantity.drawTextBox();drawRect(guiLeft+127,guiTop+110,guiLeft+145,guiTop+128,0xff141c22);drawRect(guiLeft+128,guiTop+111,guiLeft+144,guiTop+127,0xff3a4750);}}
     }
     @Override protected void drawGuiContainerForegroundLayer(int mx,int my){
-        text("Wireless Terminal",10,10,0xe3d7ba);text("LINKED: "+state.getInteger("Total"),10,35,0x929c9c);if(!code())text("Inventory",78,141,0xa1aaa9);
-        NBTTagList rows=state.getTagList("Devices",10);int x=mx-guiLeft,y=my-guiTop;
+        text("Wireless Terminal",10,10,0xe3d7ba);if(!code()&&(reactor==null||!reactor.fullGrid()))text("Inventory",78,141,0xa1aaa9);
+        NBTTagList rows=visibleRows();int x=mx-guiLeft,y=my-guiTop;
         for(int i=0;i<rows.tagCount();i++){
             NBTTagCompound row=rows.getCompoundTagAt(i);int py=48+i*14;boolean active=row.getString("Id").equals(state.getString("Selected"));
             drawRect(9,py-1,113,py+12,active?0xff46585f:0xff2a343b);drawRect(10,py,12,py+10,statusColor(row.getString("Status"))|0xff000000);
             text(shorten(row.getString("Name"),terminal.tab==1?63:96),15,py+2,0xc9d0cd);
             if(terminal.tab==1)slider(81,py,30,11,row.getBoolean("Signal"),"ONLINE".equals(row.getString("Status")));
         }
-        text((state.getInteger("Page")+1)+" / "+Math.max(1,state.getInteger("Pages")),15,162,0x9ca8ac);
+        text((listPages[terminal.tab]+1)+" / "+DeviceSearch.pages(matches().size()),15,state.getBoolean("ReactorView")?159:162,0x9ca8ac);
+        if(matches().isEmpty()&&!query().isEmpty()){text("NO MATCHING",13,54,0xb5c2c7);text("DEVICES",13,66,0xb5c2c7);}
         if(!state.getString("Error").isEmpty())text(shorten(state.getString("Error"),180),123,55,0xd6a16d);
         if(!selected()){text("No linked devices",123,49,0xc9d0cd);text("Carry this terminal.",123,70,0x9ca8ac);text("Right-click a machine",123,83,0x9ca8ac);text("with a colored stick.",123,96,0x9ca8ac);return;}
         if(terminal.tab!=2)text(shorten(net.minecraft.util.StatCollector.translateToLocal(state.getString("Machine")),180),123,49,0xb4bdbc);
         String status=state.getString("Status");String statusLabel=status.replace('_',' ');if(terminal.tab==0&&state.getBoolean("HasInventory"))statusLabel+="  "+state.getInteger("Occupied")+"/"+state.getInteger("Slots")+" slots";if(terminal.tab!=2)text(shorten(statusLabel,174),123,60,statusColor(status));
+        if(reactor!=null&&reactor.view()){reactor.draw(x,y);return;}
         if(!code()){text("Dim:"+state.getInteger("Dimension"),245,155,0x8e9a9d);text("X:"+state.getInteger("X"),245,167,0x8e9a9d);text("Y:"+state.getInteger("Y"),245,179,0x8e9a9d);text("Z:"+state.getInteger("Z"),245,191,0x8e9a9d);text(net.minecraftforge.common.util.ForgeDirection.getOrientation(state.getInteger("Side")).toString(),245,203,0x8e9a9d);}
         if(terminal.tab==0)drawMonitor(x,y);else if(terminal.tab==1){
             text("Redstone: "+(state.getBoolean("Signal")?"15":"0"),123,78,0xc9d0cd);

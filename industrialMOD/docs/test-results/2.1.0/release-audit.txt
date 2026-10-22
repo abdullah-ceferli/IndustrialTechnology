@@ -1,0 +1,11 @@
+PASS: 211 Java 8 classes; no bundled HBM/Forge/NEI/test classes or nested JARs
+PASS: 148 existing artwork/reference files preserved byte for byte
+PASS: 133 preexisting non-space subsystem classes preserved byte for byte
+PASS: 19 original new pixel assets match source and packaged hashes
+PASS: Existing source files and registry classes retained; changes confined to space and mod version
+PASS: Final production JAR matches all 3 native dedicated-server/upgrade copies
+PASS: 182 recorded successful checks from performed reports
+PASS: Source archive contains current operation guide, handoff, scale/geology notes and texture authoring source
+SHA256: cd9bae2002bdeb9ff9952987385dbf7039ad4e4f723f7dd3fe070bb8d5997311
+Size: 563089 bytes
+Failed: 0

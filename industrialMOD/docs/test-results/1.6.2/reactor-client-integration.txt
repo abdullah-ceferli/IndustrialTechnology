@@ -1,0 +1,20 @@
+PASS: Native HBM assemblies and physical wireless links initialize on the integrated server
+PASS: 112 owned device rows arrive through bounded catalog packets and every monitor page is searchable
+PASS: Green RBMK panel displays native fuel depletion plus separate core and skin Celsius temperatures
+PASS: All 24 ZIRNOX positions are visible and selectable together, including the bottom row
+PASS: ZIRNOX retains its optional six-page fuel-name list alongside the complete single-page grid
+PASS: Inventory drawer picks up a real player fuel rod and automatically returns to the full grid
+PASS: GUI ghost Apply saves metadata without consuming any actual fuel
+PASS: Actual adjacent supply receives a partially used NBT-tagged rod
+PASS: GUI-enabled feeder moves the real supplied rod into native slot 3 while preserving its NBT
+PASS: Reactor editor coexists with saved SIMPLE and CODE modes
+PASS: Slider packet commands a real 70-percent insertion target through native HBM control methods
+PASS: Fully Insert button requests native extraction level zero
+PASS: Fully Withdraw button requests native extraction level one
+PASS: Monitor search filters case-insensitive partial names locally, resets pages, handles clipboard paste and empty results
+PASS: Controls search has its own query and captures typing and Escape without gameplay actions
+PASS: Automation search preserves selected devices even when hidden by a filter
+PASS: Renamed devices update search metadata and each tab preserves its independent query
+PASS: Actual NEI icon pixels remain unchanged while hovering reactor fuel Apply
+PASS: Actual NEI icon pixels remain unchanged while hovering control rod Apply
+Failed: 0

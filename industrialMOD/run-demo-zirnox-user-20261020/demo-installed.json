@@ -1,0 +1,14 @@
+{
+  "world_name": "ZIRNOX Chest Placement Demo",
+  "installed_path": "D:\\programs\\Maincraft\\Minecraft\\game\\saves\\ZIRNOX Chest Placement Demo",
+  "archive": "D:\\IndustrialTechnology\\industrialMOD\\build\\demo-worlds\\ZIRNOX-Chest-Placement-Demo.zip",
+  "preserved_existing_folders": [
+    "NEI",
+    "New World",
+    "New World-",
+    "world"
+  ],
+  "preserved_files": 1802,
+  "installed_files": 36,
+  "verification": "Native feeder fill + refill and actual restart passed; every pre-existing save file size/time and level.dat hash is unchanged."
+}

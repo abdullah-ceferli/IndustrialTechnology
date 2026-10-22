@@ -1,0 +1,7 @@
+PASS: LC39 structure, Shuttle marker and independent propellant tanks survive real restart
+PASS: Restart resumes partial construction and exactly-once dismantling with retained contents
+PASS: Powered green lamp retains actual emission and block light after restart
+PASS: Actual dedicated-server restart restores researched HDD and recovered vehicle propellant
+PASS: Restart restores 7x7 controller assembly identity and separate propellant stores
+PASS: Planet terrain and suit/refill output survive independent dimension save folders
+Failed: 0

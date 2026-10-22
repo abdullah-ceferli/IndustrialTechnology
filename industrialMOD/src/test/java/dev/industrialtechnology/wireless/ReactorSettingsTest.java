@@ -1,0 +1,8 @@
+package dev.industrialtechnology.wireless;
+import org.junit.Test;import static org.junit.Assert.*;import net.minecraft.nbt.*;
+public class ReactorSettingsTest {
+    @Test public void legacyEmptySettingsRemainDisabled(){ReactorSettings r=ReactorSettings.read(new NBTTagCompound());assertFalse(r.running);assertEquals(-1,r.supply);for(String id:r.items)assertEquals("",id);}
+    @Test public void roundTripPreservesEveryAssignmentMetadataAndEnableFlag(){ReactorSettings r=new ReactorSettings();r.running=true;r.supply=5;for(int i=0;i<24;i++){r.items[i]="hbm:test_rod";r.metadata[i]=i;r.enabled[i]=i%2==0;}ReactorSettings copy=r.copy();assertTrue(copy.running);assertEquals(5,copy.supply);for(int i=0;i<24;i++){assertEquals(r.items[i],copy.items[i]);assertEquals(i,copy.metadata[i]);assertEquals(r.enabled[i],copy.enabled[i]);}copy.items[0]="changed";assertEquals("hbm:test_rod",r.items[0]);}
+    @Test public void invalidSupplyAndOversizedRulesDisableRunning(){NBTTagCompound n=new NBTTagCompound();n.setBoolean("Running",true);n.setInteger("Supply",6);assertFalse(ReactorSettings.read(n).running);n.setInteger("Supply",-1);NBTTagList list=new NBTTagList();for(int i=0;i<25;i++)list.appendTag(new NBTTagCompound());n.setTag("Assignments",list);assertFalse(ReactorSettings.read(n).running);}
+    @Test public void invalidOrDuplicatePositionsCannotCreateOutOfRangeAssignments(){NBTTagCompound n=new NBTTagCompound();n.setBoolean("Running",true);NBTTagList list=new NBTTagList();for(int slot:new int[]{0,0,99}){NBTTagCompound row=new NBTTagCompound();row.setInteger("Slot",slot);row.setString("Item","hbm:rod");row.setInteger("Meta",1);list.appendTag(row);}n.setTag("Assignments",list);assertFalse(ReactorSettings.read(n).running);}
+}

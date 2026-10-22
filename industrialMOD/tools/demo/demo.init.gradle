@@ -1,0 +1,21 @@
+allprojects {
+    afterEvaluate { p ->
+        if (p.plugins.hasPlugin('forge')) {
+            p.sourceSets {
+                demoWorld {
+                    java.srcDir 'tools/demo/src'
+                    compileClasspath += p.sourceSets.main.output + p.sourceSets.main.compileClasspath
+                    runtimeClasspath += p.sourceSets.main.output + p.sourceSets.main.runtimeClasspath
+                }
+            }
+            def demoJar = p.tasks.create('demoWorldJar', Jar) {
+                dependsOn p.tasks.demoWorldClasses
+                archiveBaseName.set('industrialtech-demo-world-builder')
+                archiveVersion.set('1')
+                destinationDirectory.set(p.file('.toolchain/demo'))
+                from p.sourceSets.demoWorld.output
+            }
+            p.tasks.reobf.reobf(demoJar) { spec -> spec.classpath = p.sourceSets.demoWorld.compileClasspath }
+        }
+    }
+}

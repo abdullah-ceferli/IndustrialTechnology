@@ -1,0 +1,22 @@
+{
+  "TEST-dev.industrialtechnology.automation.AutomationReferenceTest.xml": 2,
+  "TEST-dev.industrialtechnology.automation.RepeatTimingTest.xml": 7,
+  "TEST-dev.industrialtechnology.automation.ScriptCompilerTest.xml": 12,
+  "TEST-dev.industrialtechnology.automation.ScriptPacketTest.xml": 5,
+  "TEST-dev.industrialtechnology.client.CodeEditorModelTest.xml": 6,
+  "TEST-dev.industrialtechnology.quarry.AreaCursorTest.xml": 5,
+  "TEST-dev.industrialtechnology.quarry.BoundaryGeometryTest.xml": 5,
+  "TEST-dev.industrialtechnology.quarry.MiningRateTest.xml": 3,
+  "TEST-dev.industrialtechnology.wireless.DeviceSearchTest.xml": 4,
+  "TEST-dev.industrialtechnology.wireless.ReactorSettingsTest.xml": 4,
+  "TEST-dev.industrialtechnology.wireless.WirelessCatalogTest.xml": 5,
+  "TEST-dev.industrialtechnology.wireless.WirelessCommandTest.xml": 4,
+  "production-hbm-initial.txt": 153,
+  "production-hbm-restart.txt": 11,
+  "production-initial.txt": 117,
+  "production-restart.txt": 10,
+  "reactor-client-integration.txt": 17,
+  "code-client-integration.txt": 23,
+  "wireless-client-integration.txt": 19,
+  "nei-client-integration.txt": 6
+}

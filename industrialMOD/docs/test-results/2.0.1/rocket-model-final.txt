@@ -1,0 +1,164 @@
+PASS: Loaded 16px face research_computer
+PASS: Loaded 16px face research_computer_side
+PASS: Loaded 16px face research_computer_top
+PASS: Loaded 16px face research_computer_bottom
+PASS: Loaded 16px face telescope
+PASS: Loaded 16px face telescope_side
+PASS: Loaded 16px face telescope_top
+PASS: Loaded 16px face telescope_bottom
+PASS: Loaded 16px face rocket_assembly
+PASS: Loaded 16px face rocket_assembly_side
+PASS: Loaded 16px face rocket_assembly_top
+PASS: Loaded 16px face rocket_assembly_bottom
+PASS: Loaded 16px face fuel_refinery
+PASS: Loaded 16px face fuel_refinery_side
+PASS: Loaded 16px face fuel_refinery_top
+PASS: Loaded 16px face fuel_refinery_bottom
+PASS: Loaded 16px face oxygen_plant
+PASS: Loaded 16px face oxygen_plant_side
+PASS: Loaded 16px face oxygen_plant_top
+PASS: Loaded 16px face oxygen_plant_bottom
+PASS: Loaded 16px face air_compressor
+PASS: Loaded 16px face air_compressor_side
+PASS: Loaded 16px face air_compressor_top
+PASS: Loaded 16px face air_compressor_bottom
+PASS: Loaded 16px face suit_refill_station
+PASS: Loaded 16px face suit_refill_station_side
+PASS: Loaded 16px face suit_refill_station_top
+PASS: Loaded 16px face suit_refill_station_bottom
+PASS: Loaded 16px face atmosphere_pressurizer
+PASS: Loaded 16px face atmosphere_pressurizer_side
+PASS: Loaded 16px face atmosphere_pressurizer_top
+PASS: Loaded 16px face atmosphere_pressurizer_bottom
+PASS: Loaded 16px face launch_controller
+PASS: Loaded 16px face launch_controller_side
+PASS: Loaded 16px face launch_controller_top
+PASS: Loaded 16px face launch_controller_bottom
+PASS: Loaded 16px face fuel_port
+PASS: Loaded 16px face fuel_port_side
+PASS: Loaded 16px face fuel_port_top
+PASS: Loaded 16px face fuel_port_bottom
+PASS: Loaded 16px face airlock_controller
+PASS: Loaded 16px face airlock_controller_side
+PASS: Loaded 16px face airlock_controller_top
+PASS: Loaded 16px face airlock_controller_bottom
+PASS: Armor UV sheet tier 1 layer 1 has dedicated model area
+PASS: Armor UV sheet tier 1 layer 2 has dedicated model area
+PASS: Armor UV sheet tier 2 layer 1 has dedicated model area
+PASS: Armor UV sheet tier 2 layer 2 has dedicated model area
+PASS: Armor UV sheet tier 3 layer 1 has dedicated model area
+PASS: Armor UV sheet tier 3 layer 2 has dedicated model area
+PASS: Front matches facing 2 for research_computer
+PASS: Top and underside differ for research_computer / 2
+PASS: Front matches facing 3 for research_computer
+PASS: Top and underside differ for research_computer / 3
+PASS: Front matches facing 4 for research_computer
+PASS: Top and underside differ for research_computer / 4
+PASS: Front matches facing 5 for research_computer
+PASS: Top and underside differ for research_computer / 5
+PASS: Legacy metadata keeps visible front for research_computer
+PASS: Front matches facing 2 for telescope
+PASS: Top and underside differ for telescope / 2
+PASS: Front matches facing 3 for telescope
+PASS: Top and underside differ for telescope / 3
+PASS: Front matches facing 4 for telescope
+PASS: Top and underside differ for telescope / 4
+PASS: Front matches facing 5 for telescope
+PASS: Top and underside differ for telescope / 5
+PASS: Legacy metadata keeps visible front for telescope
+PASS: Front matches facing 2 for rocket_assembly
+PASS: Top and underside differ for rocket_assembly / 2
+PASS: Front matches facing 3 for rocket_assembly
+PASS: Top and underside differ for rocket_assembly / 3
+PASS: Front matches facing 4 for rocket_assembly
+PASS: Top and underside differ for rocket_assembly / 4
+PASS: Front matches facing 5 for rocket_assembly
+PASS: Top and underside differ for rocket_assembly / 5
+PASS: Legacy metadata keeps visible front for rocket_assembly
+PASS: Front matches facing 2 for fuel_refinery
+PASS: Top and underside differ for fuel_refinery / 2
+PASS: Front matches facing 3 for fuel_refinery
+PASS: Top and underside differ for fuel_refinery / 3
+PASS: Front matches facing 4 for fuel_refinery
+PASS: Top and underside differ for fuel_refinery / 4
+PASS: Front matches facing 5 for fuel_refinery
+PASS: Top and underside differ for fuel_refinery / 5
+PASS: Legacy metadata keeps visible front for fuel_refinery
+PASS: Front matches facing 2 for oxygen_plant
+PASS: Top and underside differ for oxygen_plant / 2
+PASS: Front matches facing 3 for oxygen_plant
+PASS: Top and underside differ for oxygen_plant / 3
+PASS: Front matches facing 4 for oxygen_plant
+PASS: Top and underside differ for oxygen_plant / 4
+PASS: Front matches facing 5 for oxygen_plant
+PASS: Top and underside differ for oxygen_plant / 5
+PASS: Legacy metadata keeps visible front for oxygen_plant
+PASS: Front matches facing 2 for air_compressor
+PASS: Top and underside differ for air_compressor / 2
+PASS: Front matches facing 3 for air_compressor
+PASS: Top and underside differ for air_compressor / 3
+PASS: Front matches facing 4 for air_compressor
+PASS: Top and underside differ for air_compressor / 4
+PASS: Front matches facing 5 for air_compressor
+PASS: Top and underside differ for air_compressor / 5
+PASS: Legacy metadata keeps visible front for air_compressor
+PASS: Front matches facing 2 for suit_refill_station
+PASS: Top and underside differ for suit_refill_station / 2
+PASS: Front matches facing 3 for suit_refill_station
+PASS: Top and underside differ for suit_refill_station / 3
+PASS: Front matches facing 4 for suit_refill_station
+PASS: Top and underside differ for suit_refill_station / 4
+PASS: Front matches facing 5 for suit_refill_station
+PASS: Top and underside differ for suit_refill_station / 5
+PASS: Legacy metadata keeps visible front for suit_refill_station
+PASS: Front matches facing 2 for atmosphere_pressurizer
+PASS: Top and underside differ for atmosphere_pressurizer / 2
+PASS: Front matches facing 3 for atmosphere_pressurizer
+PASS: Top and underside differ for atmosphere_pressurizer / 3
+PASS: Front matches facing 4 for atmosphere_pressurizer
+PASS: Top and underside differ for atmosphere_pressurizer / 4
+PASS: Front matches facing 5 for atmosphere_pressurizer
+PASS: Top and underside differ for atmosphere_pressurizer / 5
+PASS: Legacy metadata keeps visible front for atmosphere_pressurizer
+PASS: Front matches facing 2 for launch_controller
+PASS: Top and underside differ for launch_controller / 2
+PASS: Front matches facing 3 for launch_controller
+PASS: Top and underside differ for launch_controller / 3
+PASS: Front matches facing 4 for launch_controller
+PASS: Top and underside differ for launch_controller / 4
+PASS: Front matches facing 5 for launch_controller
+PASS: Top and underside differ for launch_controller / 5
+PASS: Legacy metadata keeps visible front for launch_controller
+PASS: Front matches facing 2 for fuel_port
+PASS: Top and underside differ for fuel_port / 2
+PASS: Front matches facing 3 for fuel_port
+PASS: Top and underside differ for fuel_port / 3
+PASS: Front matches facing 4 for fuel_port
+PASS: Top and underside differ for fuel_port / 4
+PASS: Front matches facing 5 for fuel_port
+PASS: Top and underside differ for fuel_port / 5
+PASS: Legacy metadata keeps visible front for fuel_port
+PASS: Front matches facing 2 for airlock_controller
+PASS: Top and underside differ for airlock_controller / 2
+PASS: Front matches facing 3 for airlock_controller
+PASS: Top and underside differ for airlock_controller / 3
+PASS: Front matches facing 4 for airlock_controller
+PASS: Top and underside differ for airlock_controller / 4
+PASS: Front matches facing 5 for airlock_controller
+PASS: Top and underside differ for airlock_controller / 5
+PASS: Legacy metadata keeps visible front for airlock_controller
+PASS: Placement direction 0 faces player
+PASS: Facing update preserves tile and item 0
+PASS: Placement direction 1 faces player
+PASS: Facing update preserves tile and item 1
+PASS: Placement direction 2 faces player
+PASS: Facing update preserves tile and item 2
+PASS: Placement direction 3 faces player
+PASS: Facing update preserves tile and item 3
+PASS: Two-part airlock door remains intact
+PASS: World-facing overload matches placed orientation
+PASS: Equipment gallery leaves white OpenGL color
+PASS: Equipment gallery leaves no OpenGL error
+PASS: Rocket landing struts leaves white OpenGL color
+PASS: Rocket landing struts leaves no OpenGL error
+Failed: 0

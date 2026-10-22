@@ -1,0 +1,11 @@
+PASS: 193 Java 8 classes; no bundled tests or third-party game/mod classes
+PASS: 38 legacy textures/reference resources preserved byte-for-byte
+PASS: All 109 authored space textures match the PNG inventory and release bytes
+PASS: 150 baseline Java source files retained unchanged; all source changes match the visual whitelist
+PASS: Core travel, machine, pressure, research, airlock, HBM and legacy machine bytecode matches 2.0.0
+PASS: Production JAR bytes match all 3 dedicated-server test copies
+PASS: 522 successful recorded checks (including repeated compatibility runs)
+PASS: Current guides, handoff and visual rework documentation in source archive
+SHA256: 0a2a7299d135bcb814102321060c6d8885ca8f55e4927e1d30d45a2997ddff2a
+Size: 507526 bytes
+Failed: 0
