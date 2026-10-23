@@ -1,0 +1,140 @@
+package com.gtnewhorizons.angelica.client.font;
+
+import com.gtnewhorizons.angelica.config.FontConfig;
+import jss.util.RandomXoshiro256StarStar;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.IReloadableResourceManager;
+import net.minecraft.client.resources.IResourceManager;
+import net.minecraft.client.resources.IResourceManagerReloadListener;
+import net.minecraft.util.ResourceLocation;
+
+import java.io.IOException;
+import java.io.InputStream;
+
+public final class FontProviderUnicode implements FontProvider, IResourceManagerReloadListener {
+
+    private FontProviderUnicode() {
+        onResourceManagerReload(Minecraft.getMinecraft().getResourceManager());
+        ((IReloadableResourceManager) Minecraft.getMinecraft().getResourceManager()).registerReloadListener(this);
+    }
+
+    @Override
+    public void onResourceManagerReload(IResourceManager resourceManager) {
+        try {
+            InputStream inputstream = resourceManager.getResource(new ResourceLocation("font/glyph_sizes.bin")).getInputStream();
+            //noinspection ResultOfMethodCallIgnored
+            inputstream.read(this.glyphWidth);
+        }
+        catch (IOException ioexception) {
+            throw new RuntimeException(ioexception);
+        }
+    }
+
+    private static class InstLoader { static final FontProviderUnicode instance = new FontProviderUnicode(); }
+    public static FontProviderUnicode get() { return FontProviderUnicode.InstLoader.instance; }
+
+    private static final ResourceLocation[] unicodePageLocations = new ResourceLocation[256];
+    private final byte[] glyphWidth = new byte[65536];
+    private final RandomXoshiro256StarStar fontRandom = new RandomXoshiro256StarStar();
+
+    private ResourceLocation getUnicodePageLocation(int page) {
+        final ResourceLocation lookup = unicodePageLocations[page];
+        if (lookup == null) {
+            final ResourceLocation rl = new ResourceLocation(String.format(
+                "textures/font/unicode_page_%02x.png",
+                page));
+            unicodePageLocations[page] = rl;
+            return rl;
+        } else {
+            return lookup;
+        }
+    }
+
+    @Override
+    public boolean isGlyphAvailable(char chr) {
+        return true;
+    }
+
+    /**
+     * A random glyph of the same width, for {@code §k}. Kept inside the character's own
+     * 256-glyph page so the swap neither pulls in another page's texture nor splits the
+     * batch. Empty entries are left alone, and never swapped in for a glyph that draws.
+     */
+    @Override
+    public char getRandomReplacement(char chr) {
+        if (this.glyphWidth[chr] == 0) {
+            return chr;
+        }
+        final int pageStart = (chr / 256) * 256;
+        final float targetWidth = getXAdvance(chr);
+        for (int attempt = 0; attempt < RANDOM_GLYPH_TRIES; attempt++) {
+            final char candidate = (char) (pageStart + fontRandom.nextInt(256));
+            if (this.glyphWidth[candidate] != 0 && getXAdvance(candidate) == targetWidth) {
+                return candidate;
+            }
+        }
+        return chr;
+    }
+
+    @Override
+    public float getUStart(char chr) {
+        final float startColumnF = (float)((this.glyphWidth[chr] >>> 4) & 15);
+        return ((float) (chr % 16 * 16) + startColumnF + 0.01f) / 256.0f;
+    }
+
+    @Override
+    public float getVStart(char chr) {
+        return ((float) ((chr & 255) / 16 * 16) + 0.01f) / 256.0f;
+    }
+
+    @Override
+    public float getXAdvance(char chr) {
+        final int startColumn = (this.glyphWidth[chr] >>> 4) & 15;
+        final int endColumn = this.glyphWidth[chr] & 15;
+        final float startColumnF = (float) startColumn;
+        final float endColumnF = (float) (endColumn + 1);
+        return (endColumnF - startColumnF) / 2.0F + 1.0F;
+    }
+
+    @Override
+    public float getGlyphW(char chr) {
+        final int startColumn = (this.glyphWidth[chr] >>> 4) & 15;
+        final int endColumn = this.glyphWidth[chr] & 15;
+        final float startColumnF = (float) startColumn;
+        final float endColumnF = (float) (endColumn + 1);
+        final float chrWidth = endColumnF - startColumnF - 0.02F;
+        return chrWidth / 2.0f + 1.0f;
+    }
+
+    @Override
+    public float getUSize(char chr) {
+        final int startColumn = (this.glyphWidth[chr] >>> 4) & 15;
+        final int endColumn = this.glyphWidth[chr] & 15;
+        final float startColumnF = (float) startColumn;
+        final float endColumnF = (float) (endColumn + 1);
+        final float chrWidth = endColumnF - startColumnF - 0.02F;
+        return (chrWidth - 0.02f) / 256.0f;
+    }
+
+    @Override
+    public float getVSize(char chr) {
+        return (16.0f - 0.02f) / 256.0f;
+    }
+
+    @Override
+    public float getShadowOffset() {
+        return FontConfig.fontShadowOffset * FontConfig.fontShadowOffsetUC;
+    }
+
+    @Override
+    public int getTexture(char chr) {
+        final int uniPage = chr / 256;
+        ResourceLocation rl = getUnicodePageLocation(uniPage);
+        return FontStrategist.getIntFromResourceLocation(rl);
+    }
+
+    @Override
+    public float getYScaleMultiplier() {
+        return 1;
+    }
+}

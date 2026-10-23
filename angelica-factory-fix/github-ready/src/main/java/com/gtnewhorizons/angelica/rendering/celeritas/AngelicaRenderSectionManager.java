@@ -1,0 +1,354 @@
+package com.gtnewhorizons.angelica.rendering.celeritas;
+
+import com.cardinalstar.cubicchunks.world.ICubicWorld;
+import com.gtnewhorizons.angelica.client.rendering.AngelicaFogService;
+import com.gtnewhorizons.angelica.compat.ModStatus;
+import com.gtnewhorizons.angelica.compat.cubicchunks.CubicChunksAPI;
+import com.gtnewhorizons.angelica.glsm.profiling.Tracy;
+import com.gtnewhorizons.angelica.glsm.profiling.TracyBackend;
+import com.gtnewhorizons.angelica.mixins.interfaces.RenderSectionManagerAccessor;
+import com.gtnewhorizons.angelica.proxy.ClientProxy;
+import com.gtnewhorizons.angelica.rendering.AngelicaRenderQueue;
+import com.gtnewhorizons.angelica.rendering.celeritas.api.IrisShaderProviderHolder;
+import com.gtnewhorizons.angelica.rendering.celeritas.threading.ChunkTaskProvider;
+import com.gtnewhorizons.angelica.rendering.celeritas.threading.ChunkTaskRegistry;
+import com.gtnewhorizons.angelica.rendering.celeritas.world.WorldSlice;
+import com.gtnewhorizons.angelica.rendering.celeritas.world.cloned.ClonedChunkSectionCache;
+import it.unimi.dsi.fastutil.longs.LongIterator;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.WorldClient;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.world.chunk.Chunk;
+import org.embeddedt.embeddium.impl.gl.device.CommandList;
+import org.embeddedt.embeddium.impl.render.chunk.ChunkUpdateType;
+import org.embeddedt.embeddium.impl.render.chunk.RenderPassConfiguration;
+import org.embeddedt.embeddium.impl.render.chunk.RenderSection;
+import org.embeddedt.embeddium.impl.render.chunk.RenderSectionManager;
+import org.embeddedt.embeddium.impl.render.chunk.compile.ChunkBuildOutput;
+import org.embeddedt.embeddium.impl.render.chunk.compile.tasks.ChunkBuilderTask;
+import org.embeddedt.embeddium.impl.render.chunk.data.BuiltRenderSectionData;
+import org.embeddedt.embeddium.impl.render.chunk.fog.FogService;
+import org.embeddedt.embeddium.impl.render.chunk.lists.SectionTicker;
+import org.embeddedt.embeddium.impl.render.chunk.occlusion.AsyncOcclusionMode;
+import org.embeddedt.embeddium.impl.render.chunk.sprite.GenericSectionSpriteTicker;
+import org.embeddedt.embeddium.impl.render.chunk.vertex.format.ChunkVertexType;
+import org.embeddedt.embeddium.impl.render.viewport.Viewport;
+import org.embeddedt.embeddium.impl.util.PositionUtil;
+import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3d;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.locks.LockSupport;
+import java.util.function.BooleanSupplier;
+
+public class AngelicaRenderSectionManager extends RenderSectionManager {
+    private static final long P_MESH_REGIONS = Tracy.plotHandle("mesh.regions");
+    private static final long P_MESH_VISIBLE_CHUNKS = Tracy.plotHandle("mesh.visibleChunks");
+    private static final long P_SHADOW_REGIONS = Tracy.plotHandle("shadow.regions");
+    private static final long P_SHADOW_VISIBLE_CHUNKS = Tracy.plotHandle("shadow.visibleChunks");
+    private static final long P_MESH_SCHEDULED_JOBS = Tracy.plotHandle("mesh.scheduledJobs");
+    private static final long P_MESH_BUSY_THREADS = Tracy.plotHandle("mesh.busyThreads");
+    private static final long P_MESH_DEVICE_USED = Tracy.plotHandle("mesh.deviceUsed", TracyBackend.PLOT_FORMAT_MEMORY);
+    private static final long P_DRAW_REGION_BUFFERS = Tracy.plotHandle("draw.regionBuffers");
+    private static final long P_MESH_DEVICE_ALLOCATED = Tracy.plotHandle("mesh.deviceAllocated", TracyBackend.PLOT_FORMAT_MEMORY);
+    private static final long P_MESH_DEFERRED_PENDING = Tracy.plotHandle("mesh.deferredPending");
+
+    private static final Tracy.ZoneId Z_BIOME_REBUILDS = Tracy.zoneId("biomeRebuilds", Tracy.COLOR_TERRAIN);
+    private static final Tracy.ZoneId Z_GRAPH_SEARCH = Tracy.zoneId("graphSearch", Tracy.COLOR_TERRAIN);
+    private static final Tracy.ZoneId Z_SECTION_UPLOAD = Tracy.zoneId("sectionUpload", Tracy.COLOR_TERRAIN);
+
+    private final WorldClient world;
+    private final ClonedChunkSectionCache sectionCache;
+    private final ChunkTaskProvider taskProvider;
+    private final LongOpenHashSet biomeRebuildColumns = new LongOpenHashSet();
+    private final DeferredMeshScheduler deferredScheduler;
+    private int shadowSearchSubmissions;
+
+    public AngelicaRenderSectionManager(RenderPassConfiguration<?> configuration, WorldClient world, int renderDistance, CommandList commandList, int minSection, int maxSection, int requestedThreads, ChunkTaskProvider taskProvider) {
+        super(configuration, () -> new AngelicaChunkBuildContext(configuration, world), AngelicaChunkRenderer::new, renderDistance, commandList, minSection, maxSection, requestedThreads, true  /* hasShadowPass = true for Iris */);
+        this.world = world;
+        this.sectionCache = new ClonedChunkSectionCache(world);
+        this.taskProvider = taskProvider;
+        this.deferredScheduler = new DeferredMeshScheduler(configuration, () -> new AngelicaChunkBuildContext(configuration, world), () -> new WorldSlice(world), AngelicaRenderQueue::submit, ((RenderSectionManagerAccessor) this).angelica$getBuildResults());
+    }
+
+    public static AngelicaRenderSectionManager create(ChunkVertexType vertexType, WorldClient world, int renderDistance, CommandList commandList) {
+        final ChunkTaskProvider provider = ChunkTaskRegistry.getActiveProvider();
+        final int minSection;
+        final int maxSection;
+
+        if (ModStatus.isCubicChunksLoaded && world instanceof ICubicWorld) {
+            minSection = CubicChunksAPI.getMinSectionY(world);
+            maxSection = CubicChunksAPI.getMaxSectionYExclusive(world);
+        } else {
+            minSection = 0;
+            maxSection = 16;
+        }
+
+        return new AngelicaRenderSectionManager(AngelicaRenderPassConfiguration.build(vertexType), world, renderDistance, commandList, minSection, maxSection, provider.threadCount(), provider);
+    }
+
+    @Override
+    public FogService getFogService() {
+        return AngelicaFogService.INSTANCE;
+    }
+
+    @Override
+    protected AsyncOcclusionMode getAsyncOcclusionMode() {
+        return ClientProxy.options().performance.asyncOcclusionMode;
+    }
+
+    @Override
+    protected boolean shouldRespectUpdateTaskQueueSizeLimit() {
+        return true;
+    }
+
+    @Override
+    protected boolean useRasterOcclusionCulling() {
+        return false;
+    }
+
+    @Override
+    protected boolean useFogOcclusion() {
+        return ClientProxy.options().performance.useFogOcclusion && !IrisShaderProviderHolder.isActive();
+    }
+
+    @Override
+    protected boolean isDebugInfoShown() {
+        return Minecraft.getMinecraft().gameSettings.showDebugInfo;
+    }
+
+    @Override
+    protected boolean shouldUseOcclusionCulling(Viewport positionedViewport, boolean spectator) {
+        if (spectator) {
+            final var camBlockPos = positionedViewport.getBlockCoord();
+            if (this.world.getBlock(camBlockPos.x(), camBlockPos.y(), camBlockPos.z()).isOpaqueCube()) {
+                return false;
+            }
+        }
+        return ClientProxy.options().performance.useOcclusionCulling;
+    }
+
+    @Override
+    public boolean isSectionVisuallyEmpty(int x, int y, int z) {
+        final Chunk chunk = this.world.getChunkFromChunkCoords(x, z);
+        if (chunk.isEmpty()) {
+            return true;
+        }
+
+        if (ModStatus.isCubicChunksLoaded) {
+            final var section = CubicChunksAPI.getCubeStorage(this.world, x, y, z);
+            return section == null || section.isEmpty();
+        }
+
+        final var array = chunk.getBlockStorageArray();
+        if (y < 0 || y >= array.length) {
+            return true;
+        }
+        return array[y] == null || array[y].isEmpty();
+    }
+
+    @Override
+    protected boolean updateSectionInfo(RenderSection render, @Nullable BuiltRenderSectionData info) {
+        if (info instanceof AngelicaBuiltRenderSectionData data) data.applySectionBuilt();
+        return super.updateSectionInfo(render, info);
+    }
+
+    @Override
+    protected @Nullable ChunkBuilderTask<ChunkBuildOutput> createRebuildTask(RenderSection render, int frame) {
+        if (isSectionVisuallyEmpty(render.getChunkX(), render.getChunkY(), render.getChunkZ())) {
+            return null;
+        }
+
+        final ChunkBuilderTask<ChunkBuildOutput> task = this.taskProvider.createRebuildTask(render, frame, new Vector3d(this.cameraPosition), this.sectionCache);
+        if (task instanceof AngelicaChunkBuilderMeshingTask t) {
+            final ChunkUpdateType pending = render.getPendingUpdate();
+            t.bindScheduler(this.deferredScheduler, pending != null && pending.isImportant());
+        }
+        return task;
+    }
+
+    @Override
+    protected void invalidateCachedSectionData(RenderSection section) {
+        super.invalidateCachedSectionData(section);
+        this.sectionCache.invalidate(section.getChunkX(), section.getChunkY(), section.getChunkZ());
+    }
+
+    public void onBiomesChanged(int chunkX, int chunkZ) {
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                this.biomeRebuildColumns.add(PositionUtil.packChunk(chunkX + dx, chunkZ + dz));
+            }
+        }
+    }
+
+    private void flushBiomeRebuilds() {
+        if (this.biomeRebuildColumns.isEmpty()) {
+            return;
+        }
+        if (Tracy.ENABLED) Tracy.beginZone(Z_BIOME_REBUILDS);
+        try {
+            final int sectionCountY = this.world.getHeight() >> 4;
+            for (final LongIterator it = this.biomeRebuildColumns.iterator(); it.hasNext(); ) {
+                final long column = it.nextLong();
+                final int cx = PositionUtil.unpackChunkX(column);
+                final int cz = PositionUtil.unpackChunkZ(column);
+                for (int cy = 0; cy < sectionCountY; cy++) {
+                    this.sectionCache.invalidate(cx, cy, cz);
+                    this.scheduleRebuild(cx, cy, cz, false);
+                }
+            }
+            this.biomeRebuildColumns.clear();
+        } finally {
+            if (Tracy.ENABLED) Tracy.endZone();
+        }
+    }
+
+    @Override
+    public void updateChunks(boolean updateImmediately) {
+        this.sectionCache.cleanup();
+        this.flushBiomeRebuilds();
+        if (Tracy.ENABLED) Tracy.beginZone(Z_GRAPH_SEARCH);
+        try {
+            super.updateChunks(updateImmediately);
+            this.deferredScheduler.runImportant();
+        } finally {
+            if (Tracy.ENABLED) Tracy.endZone();
+        }
+    }
+
+    @Override
+    public void destroy() {
+        this.deferredScheduler.markDestroyed();
+        super.destroy();
+        this.deferredScheduler.runImportant();
+    }
+
+    @Override
+    public void uploadChunks() {
+        if (Tracy.ENABLED) Tracy.beginZone(Z_SECTION_UPLOAD);
+        try {
+            super.uploadChunks();
+        } finally {
+            if (Tracy.ENABLED) Tracy.endZone();
+        }
+    }
+
+    @Override
+    protected boolean allowImportantRebuilds() {
+        return !ClientProxy.options().performance.alwaysDeferChunkUpdates;
+    }
+
+    @Override
+    protected @Nullable SectionTicker createSectionTicker() {
+        return new GenericSectionSpriteTicker<>(AngelicaRenderSectionManager::markSpriteActive);
+    }
+
+    private static void markSpriteActive(TextureAtlasSprite sprite) {
+        ((SpriteExtension) sprite).celeritas$markActive();
+    }
+
+    @Override
+    public boolean isInShadowPass() {
+        return IrisShaderProviderHolder.isShadowPass();
+    }
+
+    public void markShadowGraphDirty() {
+        if (this.shadowRenderListManager != null) {
+            this.shadowRenderListManager.setNeedsUpdate(true);
+        }
+    }
+
+    @Override
+    protected boolean canSubmitShadowGraphSearch() {
+        return super.canSubmitShadowGraphSearch() && this.shadowRenderListManager.isNeedsUpdate();
+    }
+
+    @Override
+    protected void submitShadowGraphSearch(Viewport viewport, int frame) {
+        super.submitShadowGraphSearch(viewport, frame);
+        this.shadowSearchSubmissions++;
+    }
+
+    /** Running count of submitted shadow searches; a change across a shadow pass means new lists are pending. */
+    public int getShadowSearchSubmissions() {
+        return this.shadowSearchSubmissions;
+    }
+
+    public boolean isShadowGraphDirty() {
+        return this.shadowRenderListManager != null && this.shadowRenderListManager.isNeedsUpdate();
+    }
+
+    @Override
+    public Collection<String> getDebugStrings() {
+        List<String> list = new ArrayList<>(super.getDebugStrings());
+
+        // Add thread info
+        var builder = getBuilder();
+        int busyThreads = builder.getBusyThreadCount();
+        int totalThreads = builder.getTotalThreadCount();
+
+        if (totalThreads > 0) {
+            list.add(String.format("Chunk Workers: %d/%d busy", busyThreads, totalThreads));
+        } else {
+            list.add("Chunk Workers: single-threaded");
+        }
+
+        // Main thread queue metrics
+        final int queueDepth = AngelicaRenderQueue.getQueueDepth();
+        final int tasksRan = AngelicaRenderQueue.getLastFrameTasksRan();
+        final double mtTimeMs = AngelicaRenderQueue.getLastFrameTimeNs() / 1_000_000.0;
+        list.add(String.format("MT Queue: %d, ran %d (%.1fms)", queueDepth, tasksRan, mtTimeMs));
+
+        return list;
+    }
+
+    /**
+     * Process both asyncSubmittedTasks and AngelicaRenderQueue.TASKS.
+     */
+    @Override
+    public void managedBlock(BooleanSupplier isDone) {
+        final RenderSectionManagerAccessor accessor = (RenderSectionManagerAccessor) this;
+        while (!isDone.getAsBoolean()) {
+            Runnable task = accessor.angelica$getAsyncSubmittedTasks().poll();
+            if (task != null) {
+                task.run();
+                continue;
+            }
+
+            if (AngelicaRenderQueue.processTasks(1) > 0) {
+                continue;
+            }
+
+            LockSupport.parkNanos("Wait", 100000L);
+        }
+    }
+
+    public void tracyPlots() {
+        int regions = 0;
+        for (var it = this.getRenderLists().iterator(); it.hasNext(); it.next()) {
+            regions++;
+        }
+        Tracy.plotInt(P_MESH_REGIONS, regions);
+        Tracy.plotInt(P_MESH_VISIBLE_CHUNKS, this.getVisibleChunkCount());
+        if (this.shadowRenderListManager != null) {
+            int shadowRegions = 0, shadowSections = 0;
+            for (var it = this.shadowRenderListManager.getRenderLists().iterator(); it.hasNext(); ) {
+                shadowSections += it.next().getSectionsWithGeometryCount();
+                shadowRegions++;
+            }
+            Tracy.plotInt(P_SHADOW_REGIONS, shadowRegions);
+            Tracy.plotInt(P_SHADOW_VISIBLE_CHUNKS, shadowSections);
+        }
+        Tracy.plotInt(P_MESH_SCHEDULED_JOBS, this.getBuilder().getScheduledJobCount());
+        Tracy.plotInt(P_MESH_BUSY_THREADS, this.getBuilder().getBusyThreadCount());
+        final var mem = this.getDeviceMemoryStats();
+        Tracy.plotInt(P_MESH_DEVICE_USED, mem.deviceUsed + mem.indexUsed);
+        Tracy.plotInt(P_MESH_DEVICE_ALLOCATED, mem.deviceAllocated + mem.indexAllocated);
+        Tracy.plotInt(P_DRAW_REGION_BUFFERS, mem.bufferCount);
+        Tracy.plotInt(P_MESH_DEFERRED_PENDING, this.deferredScheduler.pendingCount());
+    }
+}

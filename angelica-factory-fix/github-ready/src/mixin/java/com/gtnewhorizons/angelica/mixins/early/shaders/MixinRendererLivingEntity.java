@@ -1,0 +1,124 @@
+package com.gtnewhorizons.angelica.mixins.early.shaders;
+
+import com.gtnewhorizons.angelica.experimental.surround.Surround;
+import com.gtnewhorizons.angelica.helpers.RendererLivingEntityHelper;
+import com.gtnewhorizons.angelica.shadercompat.ShaderGlint;
+import net.coderbot.iris.gbuffer_overrides.matching.SpecialCondition;
+import net.coderbot.iris.layer.GbufferPrograms;
+import net.coderbot.iris.uniforms.CapturedRenderingState;
+import net.coderbot.iris.uniforms.ItemIdManager;
+import net.minecraft.client.renderer.entity.RenderPlayer;
+import net.minecraft.client.renderer.entity.RendererLivingEntity;
+import net.minecraft.entity.EntityLivingBase;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.Slice;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+@Mixin(RendererLivingEntity.class)
+public abstract class MixinRendererLivingEntity {
+
+    @Shadow
+    protected abstract void renderModel(EntityLivingBase entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch, float scale);
+
+    @Shadow
+    protected abstract int getColorMultiplier(EntityLivingBase entity, float brightness, float partialTicks);
+
+    /**
+     * Reset ID before damage overlay renders, otherwise you get random shiny zombies
+     */
+    @Inject(
+        method = "doRender(Lnet/minecraft/entity/EntityLivingBase;DDDFF)V",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/RendererLivingEntity;renderEquippedItems(Lnet/minecraft/entity/EntityLivingBase;F)V", shift = At.Shift.AFTER)
+    )
+    private void iris$resetItemIdAfterEquipped(EntityLivingBase entity, double x, double y, double z, float entityYaw, float partialTicks, CallbackInfo ci) {
+        ItemIdManager.resetItemId();
+    }
+
+    @Redirect(
+        method = "doRender(Lnet/minecraft/entity/EntityLivingBase;DDDFF)V",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/RendererLivingEntity;renderModel(Lnet/minecraft/entity/EntityLivingBase;FFFFFF)V")
+    )
+    private void iris$declarePlayerModelTranslucent(RendererLivingEntity instance, EntityLivingBase entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch, float scale) {
+        if (!(instance instanceof RenderPlayer)) {
+            renderModel(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch, scale);
+            return;
+        }
+
+        final Boolean previous = GbufferPrograms.beginTranslucencyDeclaration(Boolean.TRUE);
+        try {
+            renderModel(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch, scale);
+        } finally {
+            GbufferPrograms.endTranslucencyDeclaration(previous);
+        }
+    }
+
+    /**
+     * Capture entity color for shader access.
+     */
+    @Redirect(
+        method = "doRender",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/RendererLivingEntity;getColorMultiplier(Lnet/minecraft/entity/EntityLivingBase;FF)I")
+    )
+    private int iris$setEntityColor(RendererLivingEntity instance, EntityLivingBase elb, float f0, float f1) {
+        final int j = getColorMultiplier(elb, f0, f1);
+        final float a = (j >> 24 & 255) / 255.0F;
+        final float r = (j >> 16 & 255) / 255.0F;
+        final float g = (j >> 8 & 255) / 255.0F;
+        final float b = (j & 255) / 255.0F;
+        CapturedRenderingState.INSTANCE.setCurrentEntityColor(r, g, b, a);
+        return j;
+    }
+
+    @Surround(
+        method = "doRender(Lnet/minecraft/entity/EntityLivingBase;DDDFF)V",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/model/ModelBase;render(Lnet/minecraft/entity/Entity;FFFFFF)V", ordinal = 0),
+        slice = @Slice(
+            from = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/RendererLivingEntity;shouldRenderPass(Lnet/minecraft/entity/EntityLivingBase;IF)I")
+        )
+    )
+    private void iris$specialRenderConditionEntityEyes() {
+        @Surround.Carry
+        boolean eyes = RendererLivingEntityHelper.hasEyePass(this);
+        if (eyes) {
+            GbufferPrograms.setupSpecialRenderCondition(SpecialCondition.ENTITY_EYES);
+        }
+    }
+
+    @Surround.Finally
+    private void iris$specialRenderConditionEntityEyesEnd(@Surround.Carry boolean eyes) {
+        if (eyes) {
+            GbufferPrograms.teardownSpecialRenderCondition();
+        }
+    }
+
+    /**
+     * Activate GLINT shader before rendering enchantment glint on armor.
+     */
+    @Inject(
+        method = "doRender(Lnet/minecraft/entity/EntityLivingBase;DDDFF)V",
+        at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glDepthFunc(I)V", ordinal = 0),
+        remap = false
+    )
+    private void iris$glintStart(CallbackInfo ci) {
+        GbufferPrograms.setupSpecialRenderCondition(SpecialCondition.GLINT);
+        ShaderGlint.beginGlint();
+    }
+
+    /**
+     * Deactivate GLINT shader after rendering enchantment glint on armor.
+     */
+    @Inject(
+        method = "doRender(Lnet/minecraft/entity/EntityLivingBase;DDDFF)V",
+        at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glDepthFunc(I)V", ordinal = 1, shift = At.Shift.AFTER),
+        remap = false
+    )
+    private void iris$glintEnd(CallbackInfo ci) {
+        GbufferPrograms.teardownSpecialRenderCondition();
+        ShaderGlint.endGlint();
+    }
+
+}

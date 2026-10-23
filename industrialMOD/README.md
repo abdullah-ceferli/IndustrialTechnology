@@ -1,9 +1,10 @@
 # Industrial Technology — Minecraft 1.7.10
 
-Version **2.1.0** adds a full-scale Space Shuttle, a deployable LC-39 facility kit, native HBM pipe refuelling and geological resources that produce HBM-compatible metals. See [the current space handoff](SPACE_HANDOFF.md) and [Shuttle/resource notes](docs/SHUTTLE_LC39_RESOURCES.md). It also includes the [space visual rework](docs/SPACE_VISUAL_REWORK.md), rocket assembly and animated Moon/Mars travel, research HDDs,
-fuel and air manufacturing, spacesuits, sealed bases, two-door airlocks and a green
-redstone lamp. Read [the space guide](SPACE_EXPLORATION_GUIDE.md) and
-[technical notes and verification](SPACE_TECHNICAL_NOTES.md).
+Version **2.2.1** removes the space expansion while retaining all quarry, chunk-loader,
+wireless, automation and HBM reactor features. The **Green Redstone Lamp remains**;
+its faces are plain green and glow bright green when powered. Attach a lever directly
+to any of its six faces to switch the light. See [lamp appearance](docs/CHANGES-2.2.1.md).
+See [changes and save compatibility](docs/CHANGES-2.2.0.md).
 
 A Forge technology mod with three RF-powered quarry tiers and a separate,
 precise chunk loader. Both share an extensible machine and ticket framework.
@@ -11,7 +12,7 @@ precise chunk loader. Both share an extensible machine and ticket framework.
 ## Install
 
 Use **Minecraft 1.7.10, Forge 10.13.4.1614, and Java 8**. Put
-`IndustrialTechnology-1.7.10-2.1.0.jar` from `build/libs` into `mods` on both
+`IndustrialTechnology-1.7.10-2.2.1.jar` from `build/libs` into `mods` on both
 the client and dedicated server. Replace the older Industrial Technology JAR; keep only one version in `mods`. The sources JAR is for developers.
 No Thermal Expansion, HBM, BuildCraft, or CoFHCore installation is required.
 The small official CoFH RF API is bundled with its version annotation.
@@ -379,7 +380,7 @@ This workspace also has a downloaded portable, checksum-verified Temurin Java 8
 JDK under `.toolchain/jdk8`; the script uses it when present. The build cache is
 project-local at `.gradle-user`. On other platforms use `./gradlew` with Java 8.
 
-The reobfuscated installable JAR is `build/libs/IndustrialTechnology-1.7.10-2.1.0.jar`.
+The reobfuscated installable JAR is `build/libs/IndustrialTechnology-1.7.10-2.2.1.jar`.
 The `-sources.jar` contains the complete mod/API source and assets. **Run `build`
 after `runClient`/`runServer` before distributing**: a development run can replace
 the release archive with its unreobfuscated development input.

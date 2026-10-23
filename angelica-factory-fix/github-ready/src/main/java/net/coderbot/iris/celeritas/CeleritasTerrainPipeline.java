@@ -1,0 +1,224 @@
+package net.coderbot.iris.celeritas;
+
+import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.Ints;
+import lombok.Getter;
+import lombok.experimental.Accessors;
+import net.coderbot.iris.Iris;
+import net.coderbot.iris.gl.blending.BlendModeOverride;
+import net.coderbot.iris.gl.blending.BufferBlendOverride;
+import net.coderbot.iris.gl.framebuffer.GlFramebuffer;
+import net.coderbot.iris.shaderpack.loading.ProgramId;
+import net.coderbot.iris.gl.program.ProgramImages;
+import net.coderbot.iris.gl.program.ProgramSamplers;
+import net.coderbot.iris.gl.program.ProgramUniforms;
+import net.coderbot.iris.pipeline.PatchedShaderPrinter;
+import net.coderbot.iris.pipeline.transform.PatchShaderType;
+import net.coderbot.iris.rendertarget.RenderTargets;
+import net.coderbot.iris.gl.state.FogMode;
+import net.coderbot.iris.uniforms.CommonUniforms;
+import net.coderbot.iris.uniforms.builtin.BuiltinReplacementUniforms;
+import net.coderbot.iris.shaderpack.ProgramSource;
+import net.coderbot.iris.uniforms.custom.CustomUniforms;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.IntFunction;
+
+public class CeleritasTerrainPipeline {
+    private final EnumMap<IrisTerrainPass, PassInfo> passInfoMap = new EnumMap<>(IrisTerrainPass.class);
+
+    @Getter
+    private final CustomUniforms customUniforms;
+
+    private final IntFunction<ProgramSamplers> createTerrainSamplers;
+    private final IntFunction<ProgramSamplers> createShadowSamplers;
+
+    private final IntFunction<ProgramImages> createTerrainImages;
+    private final IntFunction<ProgramImages> createShadowImages;
+
+    @Getter
+    @Accessors(fluent = true)
+    public static final class PassInfo {
+        private final EnumMap<PatchShaderType, Optional<String>> sources = new EnumMap<>(PatchShaderType.class);
+        private GlFramebuffer framebuffer;
+        private BlendModeOverride blendModeOverride;
+        private List<BufferBlendOverride> bufferBlendOverrides;
+        private float alphaReference;
+
+        private PassInfo() {
+            for (PatchShaderType type : PatchShaderType.VALUES) {
+                sources.put(type, Optional.empty());
+            }
+        }
+
+        private void setSource(PatchShaderType type, @Nullable String source) {
+            sources.put(type, Optional.ofNullable(source));
+        }
+    }
+
+    public CeleritasTerrainPipeline(
+            IntFunction<ProgramSamplers> createTerrainSamplers,
+            IntFunction<ProgramSamplers> createShadowSamplers,
+            IntFunction<ProgramImages> createTerrainImages,
+            IntFunction<ProgramImages> createShadowImages,
+            CustomUniforms customUniforms,
+            Optional<ProgramSource> terrainSolidSource,
+            Optional<ProgramSource> terrainCutoutSource,
+            Optional<ProgramSource> translucentSource,
+            Optional<ProgramSource> shadowSolidSource,
+            Optional<ProgramSource> shadowCutoutSource,
+            Optional<ProgramSource> shadowTranslucentSource,
+            CompletableFuture<Map<PatchShaderType, String>> terrainSolidFuture,
+            CompletableFuture<Map<PatchShaderType, String>> terrainCutoutFuture,
+            CompletableFuture<Map<PatchShaderType, String>> translucentFuture,
+            CompletableFuture<Map<PatchShaderType, String>> shadowSolidFuture,
+            CompletableFuture<Map<PatchShaderType, String>> shadowCutoutFuture,
+            CompletableFuture<Map<PatchShaderType, String>> shadowTranslucentFuture,
+            RenderTargets renderTargets,
+            ImmutableSet<Integer> flippedAfterPrepare,
+            ImmutableSet<Integer> flippedAfterTranslucent,
+            @Nullable GlFramebuffer shadowFramebuffer
+    ) {
+        this.customUniforms = customUniforms;
+        this.createTerrainSamplers = createTerrainSamplers;
+        this.createShadowSamplers = createShadowSamplers;
+        this.createTerrainImages = createTerrainImages;
+        this.createShadowImages = createShadowImages;
+
+        // Build program source map (local - only needed during construction)
+        final EnumMap<IrisTerrainPass, Optional<ProgramSource>> gbufferProgramSource = new EnumMap<>(IrisTerrainPass.class);
+        gbufferProgramSource.put(IrisTerrainPass.GBUFFER_SOLID, terrainSolidSource);
+        gbufferProgramSource.put(IrisTerrainPass.GBUFFER_CUTOUT, terrainCutoutSource);
+        gbufferProgramSource.put(IrisTerrainPass.GBUFFER_TRANSLUCENT, translucentSource);
+        gbufferProgramSource.put(IrisTerrainPass.SHADOW, shadowSolidSource);
+        gbufferProgramSource.put(IrisTerrainPass.SHADOW_CUTOUT, shadowCutoutSource);
+        gbufferProgramSource.put(IrisTerrainPass.SHADOW_TRANSLUCENT, shadowTranslucentSource);
+
+        // Initialize PassInfo, framebuffers, blend modes, and alpha in single pass
+        for (IrisTerrainPass pass : IrisTerrainPass.VALUES) {
+            PassInfo passInfo = new PassInfo();
+            passInfoMap.put(pass, passInfo);
+
+            // Set up framebuffer, blend mode, and buffer blend overrides
+            final ProgramId programId = switch (pass) {
+                case GBUFFER_SOLID -> ProgramId.TerrainSolid;
+                case GBUFFER_CUTOUT -> ProgramId.TerrainCutout;
+                case GBUFFER_TRANSLUCENT -> ProgramId.Water;
+                case SHADOW_TRANSLUCENT -> ProgramId.ShadowWater;
+                case SHADOW -> ProgramId.ShadowSolid;
+                case SHADOW_CUTOUT -> ProgramId.ShadowCutout;
+            };
+
+            if (pass.isShadow()) {
+                passInfo.framebuffer = shadowFramebuffer;
+                passInfo.blendModeOverride = programId.getBlendModeOverride();
+                passInfo.bufferBlendOverrides = Collections.emptyList();
+            } else if (renderTargets != null) {
+                ImmutableSet<Integer> flipped = pass == IrisTerrainPass.GBUFFER_TRANSLUCENT ? flippedAfterTranslucent : flippedAfterPrepare;
+
+                Optional<ProgramSource> programSource = gbufferProgramSource.get(pass);
+                programSource.ifPresentOrElse(source -> {
+                    passInfo.framebuffer = renderTargets.createGbufferFramebuffer(flipped, source.getDirectives().getDrawBuffers());
+                    passInfo.blendModeOverride = source.getDirectives().getBlendModeOverride().orElse(programId.getBlendModeOverride());
+
+                    passInfo.bufferBlendOverrides = new ArrayList<>();
+                    source.getDirectives().getBufferBlendOverrides().forEach(information -> {
+                        int index = Ints.indexOf(source.getDirectives().getDrawBuffers(), information.getIndex());
+                        if (index > -1) {
+                            passInfo.bufferBlendOverrides.add(new BufferBlendOverride(index, information.getBlendMode()));
+                        }
+                    });
+                }, () -> {
+                    passInfo.framebuffer = renderTargets.createGbufferFramebuffer(flipped, new int[] {0});
+                    passInfo.blendModeOverride = programId.getBlendModeOverride();
+                    passInfo.bufferBlendOverrides = Collections.emptyList();
+                });
+            } else {
+                passInfo.blendModeOverride = programId.getBlendModeOverride();
+                passInfo.bufferBlendOverrides = Collections.emptyList();
+            }
+
+            // Set alpha reference
+            passInfo.alphaReference = switch (pass) {
+                case GBUFFER_CUTOUT, SHADOW_CUTOUT -> 0.1f;
+                default -> 0.0f;
+            };
+        }
+
+        // Process and apply shader sources
+        processShaderFuture(terrainSolidFuture, terrainSolidSource, passInfoMap.get(IrisTerrainPass.GBUFFER_SOLID));
+        processShaderFuture(terrainCutoutFuture, terrainCutoutSource, passInfoMap.get(IrisTerrainPass.GBUFFER_CUTOUT));
+        processShaderFuture(translucentFuture, translucentSource, passInfoMap.get(IrisTerrainPass.GBUFFER_TRANSLUCENT));
+        processShaderFuture(shadowSolidFuture, shadowSolidSource, passInfoMap.get(IrisTerrainPass.SHADOW));
+        processShaderFuture(shadowCutoutFuture, shadowCutoutSource, passInfoMap.get(IrisTerrainPass.SHADOW_CUTOUT));
+        processShaderFuture(shadowTranslucentFuture, shadowTranslucentSource, passInfoMap.get(IrisTerrainPass.SHADOW_TRANSLUCENT));
+    }
+
+    private void processShaderFuture(@Nullable CompletableFuture<Map<PatchShaderType, String>> future, Optional<ProgramSource> source, PassInfo... targets) {
+        if (future == null || source.isEmpty()) {
+            return;
+        }
+        final String sourceName = source.get().getName();
+        try {
+            final Map<PatchShaderType, String> result = future.join();
+            for (PassInfo target : targets) {
+                target.setSource(PatchShaderType.VERTEX, result.get(PatchShaderType.VERTEX));
+                target.setSource(PatchShaderType.GEOMETRY, result.get(PatchShaderType.GEOMETRY));
+                target.setSource(PatchShaderType.FRAGMENT, result.get(PatchShaderType.FRAGMENT));
+                target.setSource(PatchShaderType.COMPUTE, result.get(PatchShaderType.COMPUTE));
+            }
+            PatchedShaderPrinter.debugPatchedShaders(sourceName + "_celeritas",
+                result.get(PatchShaderType.VERTEX), result.get(PatchShaderType.GEOMETRY), result.get(PatchShaderType.FRAGMENT));
+        } catch (Exception e) {
+            Iris.logger.error("Failed to transform shader for Celeritas: {}", sourceName, e);
+            throw new RuntimeException("Shader transformation failed for " + sourceName, e);
+        }
+    }
+
+    public PassInfo getPassInfo(IrisTerrainPass pass) {
+        return passInfoMap.get(pass);
+    }
+
+    public ProgramUniforms.Builder initUniforms(int programId) {
+        final ProgramUniforms.Builder uniforms = ProgramUniforms.builder("<celeritas shaders>", programId);
+
+        CommonUniforms.addDynamicUniforms(uniforms, FogMode.PER_VERTEX);
+        customUniforms.assignTo(uniforms);
+
+        BuiltinReplacementUniforms.addBuiltinReplacementUniforms(uniforms);
+        return uniforms;
+    }
+
+    public boolean hasShadowPass() {
+        return createShadowSamplers != null;
+    }
+
+    public ProgramSamplers initTerrainSamplers(int programId) {
+        return createTerrainSamplers.apply(programId);
+    }
+
+    public ProgramSamplers initShadowSamplers(int programId) {
+        return createShadowSamplers.apply(programId);
+    }
+
+    public ProgramImages initTerrainImages(int programId) {
+        return createTerrainImages.apply(programId);
+    }
+
+    public ProgramImages initShadowImages(int programId) {
+        return createShadowImages.apply(programId);
+    }
+
+    public Optional<String> getShadowVoxelizationComputeSource() {
+        final PassInfo shadow = passInfoMap.get(IrisTerrainPass.SHADOW);
+        if (shadow == null) return Optional.empty();
+        return shadow.sources.get(PatchShaderType.COMPUTE);
+    }
+}

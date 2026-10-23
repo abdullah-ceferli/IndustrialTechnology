@@ -1,0 +1,5 @@
+PASS: 2.1.0 save opens without the removed-content startup prompt
+PASS: Previously placed green lamp retains its registry identity, position and powered light
+PASS: Only retired launch and machine blocks disappear when old chunks load
+PASS: Old planet folders remain on disk without registering their dimensions
+Failed: 0

@@ -1,6 +1,0 @@
-package dev.industrialtechnology.space;
-import org.junit.Test;import static org.junit.Assert.*;import java.util.*;
-public class LaunchFacilityPlanTest {
-    @Test public void dimensionsAndClearEnvelopeMatchMetreScale(){assertEquals(119,LaunchFacilityPlan.MAX_X-LaunchFacilityPlan.MIN_X+1);assertEquals(99,LaunchFacilityPlan.MAX_Z-LaunchFacilityPlan.MIN_Z+1);assertEquals(56.1,LaunchFacilityPlan.SHUTTLE_HEIGHT,0);assertEquals(23.8,LaunchFacilityPlan.WINGSPAN,0);Set<String> cells=new HashSet<String>();int high=-1,concrete=0;for(LaunchFacilityPlan.Cell c:LaunchFacilityPlan.CELLS){assertTrue(cells.add(c.x+":"+c.y+":"+c.z));assertTrue(c.x>=-59&&c.x<=59&&c.z>=-74&&c.z<=24);high=Math.max(high,c.y);if(c.y==-1)concrete++;assertFalse("Part obstructs shuttle",c.x>=-16&&c.x<=10&&c.z>=-31&&c.z<=-2&&c.y>=15&&c.y<72);}assertEquals(105,high);assertEquals(119*99,concrete);assertTrue(cells.size()<30000);}
-    @Test public void rotationPreservesEveryCellAndItsInverse(){for(int f=2;f<=5;f++){Set<String> seen=new HashSet<String>();int inv=f==4?5:f==5?4:f;for(LaunchFacilityPlan.Cell c:LaunchFacilityPlan.CELLS){int x=LaunchFacilityPlan.dx(c.x,c.z,f),z=LaunchFacilityPlan.dz(c.x,c.z,f);assertTrue(seen.add(x+":"+c.y+":"+z));assertEquals(c.x,LaunchFacilityPlan.dx(x,z,inv));assertEquals(c.z,LaunchFacilityPlan.dz(x,z,inv));}}}
-}

@@ -1,0 +1,33 @@
+name: HBM factory rendering problem
+description: Report flicker, missing models, or a regression with this unofficial HBM patch.
+title: "[HBM] "
+body:
+  - type: markdown
+    attributes:
+      value: "This is an unofficial experimental patch. Please include a same-view comparison when possible."
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions and setup
+      description: Minecraft, Forge, Java, Angelica filename, HBM version, GPU/driver, and other rendering mods.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Machine and reproduction steps
+      description: Which factory or machine disappears? Does it happen while standing still, moving, or rebuilding chunks?
+    validations:
+      required: true
+  - type: textarea
+    id: comparison
+    attributes:
+      label: Expected behavior and before/after result
+      description: Compare the same location, direction, resolution, and settings with official Angelica and this patch.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or screenshots
+      description: Include relevant errors and the fallback activation message, if present. Remove personal information before posting logs.

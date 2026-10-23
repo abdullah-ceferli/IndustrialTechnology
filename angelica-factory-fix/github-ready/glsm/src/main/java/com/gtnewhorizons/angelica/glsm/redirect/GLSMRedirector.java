@@ -1,0 +1,1112 @@
+package com.gtnewhorizons.angelica.glsm.redirect;
+
+import com.google.common.collect.ImmutableSet;
+import com.gtnewhorizon.gtnhlib.asm.ClassConstantPoolParser;
+import com.gtnewhorizons.angelica.config.SystemProperties;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL12;
+import org.objectweb.asm.Handle;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.IntInsnNode;
+import org.objectweb.asm.tree.InvokeDynamicInsnNode;
+import org.objectweb.asm.tree.LdcInsnNode;
+import org.objectweb.asm.tree.MethodInsnNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.TypeInsnNode;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Core GL call redirector for GLSM. Rewrites bytecode so that GL calls go through {@code GLStateManager} for state tracking and backend abstraction.
+ * <p>
+ * THIS CLASS MIGHT BE LOADED ON A DIFFERENT CLASS LOADER.
+ * IT SHOULD NOT CALL ANY CODE FROM THE MAIN MOD.
+ */
+public class GLSMRedirector {
+
+    private static final boolean LOG_SPAM = SystemProperties.REDIRECTOR_LOGSPAM;
+    private static final Logger LOGGER = LogManager.getLogger("GLSMRedirector");
+
+    private static final String LWJGL_GL_PACKAGE = "org/lwjgl/opengl/";
+
+    private static final Set<String> DEBUG_OWNERS = ImmutableSet.of(
+        "org/lwjgl/opengl/ARBDebugOutput",
+        "org/lwjgl/opengl/AMDDebugOutput"
+    );
+
+    private static final Set<String> DEBUG_METHODS = ImmutableSet.of(
+        "glDebugMessageCallback",
+        "glDebugMessageControl",
+        "glDebugMessageInsert",
+        "glGetDebugMessageLog",
+        "glObjectLabel",
+        "glGetObjectLabel",
+        "glObjectPtrLabel",
+        "glGetObjectPtrLabel",
+        "glPushDebugGroup",
+        "glPopDebugGroup"
+    );
+
+    private static final Set<String> UNMAPPED_SEEN = ConcurrentHashMap.newKeySet();
+    private static final Set<String> DEBUG_SEEN = ConcurrentHashMap.newKeySet();
+
+    private static boolean detectionEnabled() {
+        return SystemProperties.UNMAPPED_GL.detects();
+    }
+
+    private static final String GLSYNC_TYPE = "Lorg/lwjgl/opengl/GLSync;";
+
+    private static boolean isDebugCall(String owner, String name) {
+        if (!owner.startsWith(LWJGL_GL_PACKAGE)) return false;
+        return DEBUG_OWNERS.contains(owner) || DEBUG_METHODS.contains(name);
+    }
+
+    private static boolean isUnmappedGlCall(String owner, String name, String desc) {
+        if (!owner.startsWith(LWJGL_GL_PACKAGE)) return false;
+        if (!name.startsWith("gl") && !name.startsWith("ngl")) return false;
+        if (desc.contains(GLSYNC_TYPE)) return false;
+        return true;
+    }
+
+    private static boolean hasLwjglTypedDescriptor(String desc) {
+        return desc.contains("Lorg/lwjgl/");
+    }
+
+    private static final Set<String> AWARE_NON_DISPATCHING = ImmutableSet.of(
+        "org/lwjgl/opengl/GL getCapabilities",
+        "org/lwjgl/opengl/GL setCapabilities",
+        "org/lwjgl/opengl/GL getFunctionProvider",
+        "org/lwjgl/opengl/GL create",
+        "org/lwjgl/opengl/GLCapabilities getAddressBuffer",
+        "org/lwjgl/opengl/GLCapabilities initialize",
+        "org/lwjgl/opengl/GLDebugMessageCallback create",
+        "org/lwjgl/opengl/GLDebugMessageCallback createSafe",
+        "org/lwjgl/opengl/GLDebugMessageCallback getMessage"
+    );
+
+    private static boolean isAwareNonDispatching(String owner, String name) {
+        return AWARE_NON_DISPATCHING.contains(owner + " " + name);
+    }
+
+    private static void reportAwareUnroutable(String className, String owner, String name, String desc) {
+        if (!detectionEnabled()) return;
+        if (UNMAPPED_SEEN.add("aware " + owner + "." + name + desc)) {
+            LOGGER.warn("Aware-unroutable GL call {}.{}{} in {}; needs an awareOwnerRedirects entry (see AwareGLDebugShim)", owner, name, desc, className);
+        }
+        if (SystemProperties.UNMAPPED_GL.failsAwareUnroutable()) {
+            throw new IllegalStateException("Aware-unroutable GL call " + owner + "." + name + desc + " in " + className);
+        }
+    }
+
+    private static void reportUnmapped(String className, String owner, String name, String desc) {
+        if (!detectionEnabled()) return;
+        if (UNMAPPED_SEEN.add(owner + "." + name + desc)) {
+            LOGGER.warn("Unmapped GL call {}.{}{} in {} reached the redirector; on a non-GL backend this will crash at runtime.", owner, name, desc, className);
+        }
+        if (SystemProperties.UNMAPPED_GL.failsUnmapped()) {
+            throw new IllegalStateException("Unmapped GL call " + owner + "." + name + desc + " in " + className);
+        }
+    }
+
+    private static void reportDebugPassthrough(String className, String owner, String name, String desc) {
+        if (!detectionEnabled()) return;
+        if (DEBUG_SEEN.add(owner + "." + name + desc)) {
+            LOGGER.info("Debug-output call {}.{}{} in {} bypasses the backend (reaches real GL; unsupported on the SDL backend).", owner, name, desc, className);
+        }
+    }
+
+    private static final String Drawable = "org/lwjgl/opengl/Drawable";
+    private static final String SharedDrawable = "org/lwjgl/opengl/SharedDrawable";
+    private static final String Display = "org/lwjgl/opengl/Display";
+
+    private static boolean isDrawableOwner(String owner) {
+        return owner.startsWith(Drawable) || owner.equals(SharedDrawable);
+    }
+    private static final String GLStateManager = "com/gtnewhorizons/angelica/glsm/GLStateManager";
+    private static final String AwareGLDebugShim = "com/gtnewhorizons/angelica/sdlgpu/compat/AwareGLDebugShim";
+    private static final Map<String, String> awareOwnerRedirects = new HashMap<>();
+    private static final String GL_PREFIX = "org/lwjgl/opengl/GL";
+    private static final String ARBVertexArrayObject = "org/lwjgl/opengl/ARBVertexArrayObject";
+    private static final String APPLEVertexArrayObject = "org/lwjgl/opengl/APPLEVertexArrayObject";
+    private static final String Project = "org/lwjgl/util/glu/Project";
+    private static final String GLU = "org/lwjgl/util/glu/GLU";
+    private static final String OpenGlHelper = "net/minecraft/client/renderer/OpenGlHelper";
+    private static final String EXTBlendFunc = "org/lwjgl/opengl/EXTBlendFuncSeparate";
+    private static final String EXTSecondaryColor = "org/lwjgl/opengl/EXTSecondaryColor";
+    private static final String EXTFogCoord = "org/lwjgl/opengl/EXTFogCoord";
+    private static final String ARBMultiTexture = "org/lwjgl/opengl/ARBMultitexture";
+    private static final String ARBShaderObjects = "org/lwjgl/opengl/ARBShaderObjects";
+    private static final String ARBInstancedArrays = "org/lwjgl/opengl/ARBInstancedArrays";
+    private static final String ARBDrawInstanced = "org/lwjgl/opengl/ARBDrawInstanced";
+    private static final String EXTDrawInstanced = "org/lwjgl/opengl/EXTDrawInstanced";
+    private static final String ARBBufferObject = "org/lwjgl/opengl/ARBBufferObject";
+    private static final String ARBVertexBufferObject = "org/lwjgl/opengl/ARBVertexBufferObject";
+    private static final String ARBBufferStorage = "org/lwjgl/opengl/ARBBufferStorage";
+    private static final String ARBCopyBuffer = "org/lwjgl/opengl/ARBCopyBuffer";
+    private static final String ARBMapBufferRange = "org/lwjgl/opengl/ARBMapBufferRange";
+    private static final String ARBFramebufferObject = "org/lwjgl/opengl/ARBFramebufferObject";
+    private static final String EXTFramebufferObject = "org/lwjgl/opengl/EXTFramebufferObject";
+    private static final String ARBVertexShader = "org/lwjgl/opengl/ARBVertexShader";
+    private static final String ARBOcclusionQuery = "org/lwjgl/opengl/ARBOcclusionQuery";
+    private static final String ARBDrawElementsBaseVertex = "org/lwjgl/opengl/ARBDrawElementsBaseVertex";
+    private static final String ARBMultiDrawIndirect = "org/lwjgl/opengl/ARBMultiDrawIndirect";
+    private static final String ARBUniformBufferObject = "org/lwjgl/opengl/ARBUniformBufferObject";
+    private static final String EXTGpuShader4 = "org/lwjgl/opengl/EXTGpuShader4";
+    private static final String EXTGPUShader4 = "org/lwjgl/opengl/EXTGPUShader4";
+    private static final String ARBTimerQuery = "org/lwjgl/opengl/ARBTimerQuery";
+    private static final String EXTTimerQuery = "org/lwjgl/opengl/EXTTimerQuery";
+    private static final String ARBSamplerObjects = "org/lwjgl/opengl/ARBSamplerObjects";
+    private static final String ARBMultiBind = "org/lwjgl/opengl/ARBMultiBind";
+    private static final String ARBDirectStateAccess = "org/lwjgl/opengl/ARBDirectStateAccess";
+    private static final String ARBGeometryShader4 = "org/lwjgl/opengl/ARBGeometryShader4";
+    private static final String EXTGeometryShader4 = "org/lwjgl/opengl/EXTGeometryShader4";
+    private static final String NVGeometryProgram4 = "org/lwjgl/opengl/NVGeometryProgram4";
+    private static final String EXTTextureArray = "org/lwjgl/opengl/EXTTextureArray";
+    private static final String EXTDirectStateAccess = "org/lwjgl/opengl/EXTDirectStateAccess";
+    private static final String ARBShaderImageLoadStore = "org/lwjgl/opengl/ARBShaderImageLoadStore";
+    private static final String EXTShaderImageLoadStore = "org/lwjgl/opengl/EXTShaderImageLoadStore";
+
+    // Redirect VAO related calls from NHLib
+    private static final String UniversalVAO = "com/gtnewhorizon/gtnhlib/client/opengl/UniversalVAO";
+
+    private static final Map<String, Map<String, String>> methodRedirects = new HashMap<>(32);
+    private static final Map<String, String> glMethodRedirects = new HashMap<>(256);
+    private static final Map<String, String> glDescRedirects = new HashMap<>();
+    private static final Map<Integer, String> glCapRedirects = new HashMap<>();
+    private static final Map<String, String> typeRedirects = new HashMap<>();
+    private static final ClassConstantPoolParser cstPoolParser;
+    private static final String[] CONSTANT_POOL_SEARCH_STRINGS;
+
+    private static final String[] CORE_EXCLUSIONS = {
+        "org.lwjgl",
+        "com.gtnewhorizon.gtnhlib.asm",
+        "com.gtnewhorizons.angelica.glsm.",
+        "me.eigenraven.lwjgl3ify"
+    };
+
+    static {
+        glCapRedirects.put(GL11.GL_ALPHA_TEST, "AlphaTest");
+        glCapRedirects.put(GL11.GL_BLEND, "Blend");
+        glCapRedirects.put(GL11.GL_DEPTH_TEST, "DepthTest");
+        glCapRedirects.put(GL11.GL_CULL_FACE, "Cull");
+        glCapRedirects.put(GL11.GL_LIGHTING, "Lighting");
+        glCapRedirects.put(GL11.GL_TEXTURE_2D, "Texture");
+        glCapRedirects.put(GL11.GL_FOG, "Fog");
+        glCapRedirects.put(GL12.GL_RESCALE_NORMAL, "RescaleNormal");
+        glCapRedirects.put(GL11.GL_SCISSOR_TEST, "ScissorTest");
+
+        final var gl11 = RedirectMap.newMap()
+            // glEnable/Disable - Special cased in GLSMRedirector, but included here for the external API
+            .add("glEnable")
+            .add("glDisable")
+            .add("glAlphaFunc")
+            .add("glBegin")
+            .add("glBindTexture")
+            .add("glBlendFunc")
+            .add("glCallList")
+            .add("glCallLists")
+            .add("glClear")
+            .add("glClearColor")
+            .add("glClearDepth")
+            .add("glClearStencil")
+            .add("glClipPlane")
+            .add("glColor3b")
+            .add("glColor3d")
+            .add("glColor3f")
+            .add("glColor3ub")
+            .add("glColor4b")
+            .add("glColor4d")
+            .add("glColor4f")
+            .add("glColor4ub")
+            .add("glColorMask")
+            .add("glColorMaterial")
+            .add("glDeleteLists")
+            .add("glGenLists")
+            .add("glGenTextures")
+            .add("glIsList")
+            .add("glIsTexture")
+            .add("glDeleteTextures")
+            .add("glDepthFunc")
+            .add("glDepthMask")
+            .add("glDepthRange")
+            .add("glDrawArrays")
+            .add("glDrawBuffer")
+            .add("glDrawElements")
+            .add("glEdgeFlag")
+            .add("glEnd")
+            .add("glEndList")
+            .add("glFog")
+            .add("glFogf")
+            .add("glFogi")
+            .add("glFrustum")
+            .add("glGetBoolean")
+            .add("glGetClipPlane")
+            .add("glGetDouble")
+            .add("glGetDoublev", "glGetDouble")
+            .add("glGetFloat")
+            .add("glGetFloatv", "glGetFloat")
+            .add("glGetInteger")
+            .add("glGetIntegerv", "glGetInteger")
+            .add("glGetIntegeri")
+            .add("glGetIntegeri_v")
+            .add("glGetBooleani")
+            .add("glGetBooleani_v")
+            .add("glGetLight")
+            .add("glGetMaterial")
+            .add("glGetTexLevelParameteri")
+            .add("glGetTexParameterf")
+            .add("glGetTexParameteri")
+            .add("glIsEnabled")
+            .add("glMaterial")
+            .add("glMaterialf")
+            .add("glMateriali")
+            .add("glLight")
+            .add("glLightf")
+            .add("glLighti")
+            .add("glLightModel")
+            .add("glLightModelf")
+            .add("glLightModeli")
+            .add("glLineStipple")
+            .add("glLineWidth")
+            .add("glListBase")
+            .add("glLoadIdentity")
+            .add("glLoadMatrix")
+            .add("glLoadMatrixf", "glLoadMatrix")
+            .add("glLogicOp")
+            .add("glMatrixMode")
+            .add("glMultMatrix")
+            .add("glNewList")
+            .add("glNormal3b")
+            .add("glNormal3d")
+            .add("glFlush")
+            .add("glFinish")
+            .add("glGetError")
+            .add("glGetString")
+            .add("glGetTexImage")
+            .add("glNormal3f")
+            .add("glNormal3i")
+            .add("glOrtho")
+            .add("glPopAttrib")
+            .add("glPopMatrix")
+            .add("glPushAttrib")
+            .add("glPushMatrix")
+            .add("glRasterPos2d")
+            .add("glRasterPos2f")
+            .add("glRasterPos2i")
+            .add("glRasterPos3d")
+            .add("glRasterPos3f")
+            .add("glRasterPos3i")
+            .add("glRasterPos4d")
+            .add("glRasterPos4f")
+            .add("glRasterPos4i")
+            .add("glRotated")
+            .add("glRotatef")
+            .add("glScaled")
+            .add("glScalef")
+            .add("glShadeModel")
+            .add("glTexCoord1d")
+            .add("glTexCoord1f")
+            .add("glTexCoord2d")
+            .add("glTexCoord2f")
+            .add("glTexCoord3d")
+            .add("glTexCoord3f")
+            .add("glTexCoord4d")
+            .add("glTexCoord4f")
+            .add("glTexEnvi")
+            .add("glTexEnvf")
+            .add("glTexEnv")
+            .add("glGetTexEnv")
+            .add("glGetTexEnvi")
+            .add("glGetTexEnvf")
+            .add("glTexGeni")
+            .add("glTexGenf")
+            .add("glTexGend")
+            .add("glTexGen")
+            .add("glGetTexGen")
+            .add("glGetTexGeni")
+            .add("glGetTexGenf")
+            .add("glGetTexGend")
+            .add("glTexImage1D")
+            .add("glTexImage2D")
+            .add("glTexImage3D")
+            .add("glTexSubImage1D")
+            .add("glTexSubImage2D")
+            .add("glCopyTexImage1D")
+            .add("glCopyTexImage2D")
+            .add("glCopyTexSubImage1D")
+            .add("glCopyTexSubImage2D")
+            .add("glPixelStoref")
+            .add("glPixelStorei")
+            .add("glPixelTransferf")
+            .add("glPixelTransferi")
+            .add("glTexParameter")
+            .add("glTexParameterf")
+            .add("glTexParameteri")
+            .add("glCullFace")
+            .add("glFrontFace")
+            .add("glHint")
+            .add("glLineStipple")
+            .add("glLineWidth")
+            .add("glPointSize")
+            .add("glPolygonMode")
+            .add("glPolygonOffset")
+            .add("glPolygonStipple")
+            .add("glAccum")
+            .add("glReadBuffer")
+            .add("glReadPixels")
+            .add("glSampleCoverage")
+            .add("glScissor")
+            .add("glStencilFunc")
+            .add("glStencilFuncSeparate")
+            .add("glStencilMask")
+            .add("glStencilMaskSeparate")
+            .add("glStencilOp")
+            .add("glStencilOpSeparate")
+            .add("glTranslated")
+            .add("glTranslatef")
+            .add("glVertex2d")
+            .add("glVertex2f")
+            .add("glVertex2i")
+            .add("glVertex3d")
+            .add("glVertex3f")
+            .add("glVertex3i")
+            .add("glVertexPointer")
+            .add("glColorPointer")
+            .add("glNormalPointer")
+            .add("glTexCoordPointer")
+            .add("glEnableClientState")
+            .add("glDisableClientState")
+            .add("glInterleavedArrays")
+            .add("glEdgeFlagPointer")
+            .add("glGetPointer")
+            .add("glPushClientAttrib")
+            .add("glPopClientAttrib")
+            .add("glViewport")
+            .add("glFeedbackBuffer")
+            .add("glRenderMode")
+            .add("glPassThrough")
+            .add("glSelectBuffer")
+            .add("glInitNames")
+            .add("glPushName")
+            .add("glPopName")
+            .add("glLoadName");
+        final var gl12 = RedirectMap.newMap()
+            .add("glTexImage3D")
+            .add("glTexSubImage3D")
+            .add("glCopyTexSubImage3D")
+            .add("glDrawRangeElements");
+        final var gl13 = RedirectMap.newMap()
+            .add("glActiveTexture")
+            .add("glSampleCoverage")
+            .add("glClientActiveTexture")
+            .add("glMultiTexCoord2f")
+            .add("glMultiTexCoord2d")
+            .add("glMultiTexCoord2s");
+        final var gl14 = RedirectMap.newMap()
+            .add("glBlendFuncSeparate", "tryBlendFuncSeparate")
+            .add("glBlendColor")
+            .add("glBlendEquation")
+            .add("glMultiDrawArrays")
+            .add("glPointParameterf")
+            .add("glPointParameteri")
+            .add("glPointParameter")
+            .add("glPointParameterfv", "glPointParameter")
+            .add("glPointParameteriv", "glPointParameter")
+            // Removed in core profile - emulated by the FFP shaders, calling through would abort the JVM
+            .add("glSecondaryColor3f")
+            .add("glSecondaryColor3d")
+            .add("glSecondaryColor3b")
+            .add("glSecondaryColor3ub")
+            .add("glSecondaryColorPointer")
+            .add("glFogCoordPointer");
+        final var gl15 = RedirectMap.newMap()
+            .add("glGenBuffers")
+            .add("glBindBuffer")
+            .add("glDeleteBuffers")
+            .add("glBufferData")
+            .add("nglBufferData")
+            .add("glBufferSubData")
+            .add("nglBufferSubData")
+            .add("glMapBuffer")
+            .add("glUnmapBuffer")
+            .add("glGetBufferSubData")
+            .add("nglGetBufferSubData")
+            .add("glGetBufferParameteri")
+            .add("glGetBufferParameter")
+            .add("glGetBufferParameteriv")
+            .add("glIsBuffer")
+            .add("glIsQuery")
+            .add("glGenQueries")
+            .add("glDeleteQueries")
+            .add("glBeginQuery")
+            .add("glEndQuery")
+            .add("glGetQueryObjectui")
+            .add("glGetQueryObjecti");
+        final var gl20 = RedirectMap.newMap()
+            .add("glBlendEquationSeparate")
+            .add("glDrawBuffers")
+            .add("glStencilFuncSeparate")
+            .add("glStencilMaskSeparate")
+            .add("glStencilOpSeparate")
+            .add("glUseProgram")
+            .add("glShaderSource")
+            .add("nglShaderSource")
+            .add("glLinkProgram")
+            .add("glDeleteProgram")
+            .add("glCreateShader")
+            .add("glCompileShader")
+            .add("glCreateProgram")
+            .add("glAttachShader")
+            .add("glDetachShader")
+            .add("glValidateProgram")
+            .add("glGetUniformLocation")
+            .add("glGetAttribLocation")
+            .add("glIsShader")
+            .add("glIsProgram")
+            .add("glUniform1f")
+            .add("glUniform2f")
+            .add("glUniform3f")
+            .add("glUniform4f")
+            .add("glUniform1i")
+            .add("glUniform2i")
+            .add("glUniform3i")
+            .add("glUniform4i")
+            .add("glUniform1")
+            .add("glUniform2")
+            .add("glUniform3")
+            .add("glUniform4")
+            .add("glUniform1fv", "glUniform1")
+            .add("glUniform3fv", "glUniform3")
+            .add("glUniform4fv", "glUniform4")
+            .add("glUniformMatrix2")
+            .add("glUniformMatrix3")
+            .add("glUniformMatrix4")
+            .add("glUniformMatrix3fv", "glUniformMatrix3")
+            .add("glUniformMatrix4fv", "glUniformMatrix4")
+            .add("glDeleteShader")
+            .add("glGetShaderi")
+            .add("glGetShaderInfoLog")
+            .add("glGetProgrami")
+            .add("glGetProgramInfoLog")
+            .add("glBindAttribLocation")
+            .add("glVertexAttrib2f")
+            .add("glVertexAttrib2s")
+            .add("glVertexAttrib3f")
+            .add("glVertexAttrib4f")
+            .add("glGetActiveUniform")
+            .add("glGetAttachedShaders")
+            .add("glGetShaderSource")
+            .add("glGetUniform")
+            .add("glVertexAttribPointer")
+            .add("glEnableVertexAttribArray")
+            .add("glDisableVertexAttribArray")
+            .add("glGetActiveAttrib");
+        final var gl30 = RedirectMap.newMap()
+            .add("glGenVertexArrays")
+            .add("glBindVertexArray")
+            .add("glDeleteVertexArrays")
+            .add("glIsVertexArray")
+            .add("glBindFragDataLocation")
+            .add("glBindFramebuffer")
+            .add("glDeleteFramebuffers")
+            .add("glGenFramebuffers")
+            .add("glCheckFramebufferStatus")
+            .add("glFramebufferTexture1D")
+            .add("glFramebufferTexture2D")
+            .add("glFramebufferTexture3D")
+            .add("glFramebufferTextureLayer")
+            .add("glVertexAttribIPointer")
+            .add("glGenerateMipmap")
+            .add("glGetFramebufferAttachmentParameteri")
+            .add("glBlitFramebuffer")
+            .add("glMapBufferRange")
+            .add("glFlushMappedBufferRange")
+            .add("glGenRenderbuffers")
+            .add("glDeleteRenderbuffers")
+            .add("glBindRenderbuffer")
+            .add("glRenderbufferStorage")
+            .add("glRenderbufferStorageMultisample")
+            .add("glFramebufferRenderbuffer")
+            .add("glIsFramebuffer")
+            .add("glIsRenderbuffer")
+            .add("glBindBufferBase")
+            .add("glBindBufferRange");
+        final var gl31 = RedirectMap.newMap()
+            .add("glDrawElementsInstanced")
+            .add("glDrawArraysInstanced")
+            .add("glCopyBufferSubData")
+            .add("glPrimitiveRestartIndex")
+            .add("glGetUniformBlockIndex")
+            .add("glUniformBlockBinding");
+        final var gl32 = RedirectMap.newMap()
+            .add("glFramebufferTexture")
+            .add("glDrawRangeElementsBaseVertex")
+            .add("glDrawElementsBaseVertex");
+        final var gl33 = RedirectMap.newMap()
+            .add("glGenSamplers")
+            .add("glDeleteSamplers")
+            .add("glIsSampler")
+            .add("glBindSampler")
+            .add("glSamplerParameteri")
+            .add("glSamplerParameterf")
+            .add("glVertexAttribDivisor")
+            .add("glQueryCounter")
+            .add("glGetQueryObjectui64");
+        final var gl42 = RedirectMap.newMap()
+            .add("glBindImageTexture")
+            .add("glMemoryBarrier")
+            .add("glTexStorage2D");
+        final var gl43 = RedirectMap.newMap()
+            .add("glDispatchCompute")
+            .add("glClearBufferSubData")
+            .add("glClearBufferData")
+            .add("glBindVertexBuffer")
+            .add("glVertexAttribFormat")
+            .add("glVertexAttribIFormat")
+            .add("glVertexAttribBinding")
+            .add("glMultiDrawElementsIndirect");
+        final var gl44 = RedirectMap.newMap()
+            .add("glBufferStorage")
+            .add("glBindSamplers")
+            .add("glClearTexImage")
+            .add("glBindTextures")
+            .add("glBindImageTextures");
+        final var gl45 = RedirectMap.newMap()
+            .add("glCreateBuffers")
+            .add("glNamedBufferData")
+            .add("glNamedBufferSubData")
+            .add("glNamedFramebufferTexture")
+            .add("glNamedFramebufferTextureLayer")
+            .add("glNamedFramebufferRenderbuffer")
+            .add("glCreateTextures")
+            .add("glBindTextureUnit");
+        final var gl46 = RedirectMap.newMap()
+            .add("glPolygonOffsetClamp")
+            .add("glMultiDrawArraysIndirectCount")
+            .add("glMultiDrawElementsIndirectCount")
+            .add("glSpecializeShader");
+
+        glMethodRedirects.putAll(gl11);
+        glMethodRedirects.putAll(gl12);
+        glMethodRedirects.putAll(gl13);
+        glMethodRedirects.putAll(gl14);
+        glMethodRedirects.putAll(gl15);
+        glMethodRedirects.putAll(gl20);
+        glMethodRedirects.putAll(gl30);
+        glMethodRedirects.putAll(gl31);
+        glMethodRedirects.putAll(gl32);
+        glMethodRedirects.putAll(gl33);
+        glMethodRedirects.putAll(gl42);
+        glMethodRedirects.putAll(gl43);
+        glMethodRedirects.putAll(gl44);
+        glMethodRedirects.putAll(gl45);
+        glMethodRedirects.putAll(gl46);
+
+        // MINECRAFT
+        methodRedirects.put(OpenGlHelper, RedirectMap.newMap()
+            .add("glBlendFunc", "tryBlendFuncSeparate")
+            .add("func_148821_a", "tryBlendFuncSeparate")
+            .add("func_153171_g", "glBindFramebuffer")
+            .add("func_153174_h", "glDeleteFramebuffers")
+            .add("func_153165_e", "glGenFramebuffers")
+            .add("func_153167_i", "glCheckFramebufferStatus")
+            .add("func_153188_a", "glFramebufferTexture2D")
+            .add("setActiveTexture")
+            .add("setLightmapTextureCoords")
+            .add("isFramebufferEnabled")
+        );
+        methodRedirects.put(EXTBlendFunc, RedirectMap.newMap().add("glBlendFuncSeparateEXT", "tryBlendFuncSeparate"));
+        methodRedirects.put(EXTSecondaryColor, RedirectMap.newMap()
+            .add("glSecondaryColor3bEXT", "glSecondaryColor3b")
+            .add("glSecondaryColor3fEXT", "glSecondaryColor3f")
+            .add("glSecondaryColor3dEXT", "glSecondaryColor3d")
+            .add("glSecondaryColor3ubEXT", "glSecondaryColor3ub")
+            .add("glSecondaryColorPointerEXT", "glSecondaryColorPointer"));
+        methodRedirects.put(EXTFogCoord, RedirectMap.newMap().add("glFogCoordPointerEXT", "glFogCoordPointer"));
+
+        // ARB
+        methodRedirects.put(ARBMultiTexture, RedirectMap.newMap()
+            .add("glActiveTextureARB")
+            .add("glClientActiveTextureARB", "glClientActiveTexture")
+            .add("glMultiTexCoord2fARB", "glMultiTexCoord2f")
+        );
+        methodRedirects.put(ARBVertexShader, RedirectMap.newMap()
+            .add("glGetAttribLocationARB", "glGetAttribLocation")
+        );
+        methodRedirects.put(ARBFramebufferObject, RedirectMap.newMap()
+            .add("glBindFramebuffer")
+            .add("glDeleteFramebuffers")
+            .add("glGenFramebuffers")
+            .add("glCheckFramebufferStatus")
+            .add("glFramebufferTexture1D")
+            .add("glFramebufferTexture2D")
+            .add("glFramebufferTexture3D")
+            .add("glFramebufferTextureLayer")
+            .add("glBindRenderbuffer")
+            .add("glDeleteRenderbuffers")
+            .add("glGenRenderbuffers")
+            .add("glRenderbufferStorage")
+            .add("glFramebufferRenderbuffer")
+            .add("glGenerateMipmap")
+        );
+        methodRedirects.put(EXTFramebufferObject, RedirectMap.newMap()
+            .add("glBindFramebufferEXT", "glBindFramebuffer")
+            .add("glDeleteFramebuffersEXT", "glDeleteFramebuffers")
+            .add("glGenFramebuffersEXT", "glGenFramebuffers")
+            .add("glCheckFramebufferStatusEXT", "glCheckFramebufferStatus")
+            .add("glFramebufferTexture1DEXT", "glFramebufferTexture1D")
+            .add("glFramebufferTexture2DEXT", "glFramebufferTexture2D")
+            .add("glFramebufferTexture3DEXT", "glFramebufferTexture3D")
+            .add("glBindRenderbufferEXT", "glBindRenderbuffer")
+            .add("glDeleteRenderbuffersEXT", "glDeleteRenderbuffers")
+            .add("glGenRenderbuffersEXT", "glGenRenderbuffers")
+            .add("glRenderbufferStorageEXT", "glRenderbufferStorage")
+            .add("glFramebufferRenderbufferEXT", "glFramebufferRenderbuffer")
+            .add("glGenerateMipmapEXT", "glGenerateMipmap")
+        );
+        methodRedirects.put(ARBOcclusionQuery, RedirectMap.newMap()
+            .add("glGenQueriesARB", "glGenQueries")
+            .add("glBeginQueryARB", "glBeginQuery")
+            .add("glEndQueryARB", "glEndQuery")
+            .add("glGetQueryObjectuARB", "glGetQueryObjectui")
+        );
+        methodRedirects.put(ARBTimerQuery, RedirectMap.newMap()
+            .add("glQueryCounter")
+            .add("glGetQueryObjectui64")
+        );
+        methodRedirects.put(EXTTimerQuery, RedirectMap.newMap()
+            .add("glGetQueryObjectuEXT", "glGetQueryObjectui64")
+            .add("glGetQueryObjectui64EXT", "glGetQueryObjectui64")
+        );
+
+        glDescRedirects.put("org/lwjgl/opengl/GL32C glFenceSync(II)J", "glFenceSync");
+        glDescRedirects.put("org/lwjgl/opengl/GL32C glClientWaitSync(JIJ)I", "glClientWaitSync");
+        glDescRedirects.put("org/lwjgl/opengl/GL32C glWaitSync(JIJ)V", "glWaitSync");
+        glDescRedirects.put("org/lwjgl/opengl/GL32C glGetSynci(JILjava/nio/IntBuffer;)I", "glGetSynci");
+        glDescRedirects.put("org/lwjgl/opengl/GL32C glDeleteSync(J)V", "glDeleteSync");
+        glDescRedirects.put("org/lwjgl/opengl/GL15C nglMapBuffer(II)J", "nglMapBuffer");
+        glDescRedirects.put("org/lwjgl/opengl/GL32C nglMultiDrawElementsBaseVertex(IJIJIJ)V", "nglMultiDrawElementsBaseVertex");
+
+        for (String o : new String[]{"org/lwjgl/opengl/KHRDebug", "org/lwjgl/opengl/GL43", "org/lwjgl/opengl/GL43C"}) {
+            glDescRedirects.put(o + " glObjectLabel(IILjava/lang/CharSequence;)V", "glObjectLabel");
+            glDescRedirects.put(o + " glGetObjectLabel(III)Ljava/lang/String;", "glGetObjectLabel");
+            glDescRedirects.put(o + " glPushDebugGroup(IILjava/lang/CharSequence;)V", "glPushDebugGroup");
+            glDescRedirects.put(o + " glPopDebugGroup()V", "glPopDebugGroup");
+            glDescRedirects.put(o + " glDebugMessageInsert(IIIILjava/lang/CharSequence;)V", "glDebugMessageInsert");
+            glDescRedirects.put(o + " glDebugMessageControl(IIILjava/nio/IntBuffer;Z)V", "glDebugMessageControl");
+            glDescRedirects.put(o + " glGetDebugMessageLog(ILjava/nio/IntBuffer;Ljava/nio/IntBuffer;Ljava/nio/IntBuffer;Ljava/nio/IntBuffer;Ljava/nio/IntBuffer;Ljava/nio/ByteBuffer;)I", "glGetDebugMessageLog");
+            glDescRedirects.put(o + " glDebugMessageCallback(Lorg/lwjgl/opengl/KHRDebugCallback;)V", "glDebugMessageCallback");
+            awareOwnerRedirects.put(o + " glDebugMessageCallback(Lorg/lwjgl/opengl/GLDebugMessageCallbackI;J)V", AwareGLDebugShim);
+        }
+
+        awareOwnerRedirects.put("org/lwjgl/opengl/GLUtil setupDebugMessageCallback()Lorg/lwjgl/system/Callback;", AwareGLDebugShim);
+        awareOwnerRedirects.put("org/lwjgl/opengl/GLUtil setupDebugMessageCallback(Ljava/io/PrintStream;)Lorg/lwjgl/system/Callback;", AwareGLDebugShim);
+        methodRedirects.put(ARBShaderObjects, RedirectMap.newMap()
+            .add("glUseProgramObjectARB", "glUseProgram")
+            .add("glShaderSourceARB", "glShaderSource")
+            .add("nglShaderSourceARB", "nglShaderSource")
+            .add("glLinkProgramARB", "glLinkProgram")
+            .add("glCreateShaderObjectARB", "glCreateShader")
+            .add("glCompileShaderARB", "glCompileShader")
+            .add("glCreateProgramObjectARB", "glCreateProgram")
+            .add("glAttachObjectARB", "glAttachShader")
+            .add("glDetachObjectARB", "glDetachShader")
+            .add("glValidateProgramARB", "glValidateProgram")
+            .add("glGetUniformLocationARB", "glGetUniformLocation")
+            .add("glGetAttribLocationARB", "glGetAttribLocation")
+            .add("glDeleteObjectARB")
+            .add("glGetObjectParameterARB")
+            .add("glGetObjectParameteriARB")
+            .add("glGetInfoLogARB")
+            .add("glGetHandleARB")
+            .add("glUniform1fARB", "glUniform1f")
+            .add("glUniform2fARB", "glUniform2f")
+            .add("glUniform3fARB", "glUniform3f")
+            .add("glUniform4fARB", "glUniform4f")
+            .add("glUniform1iARB", "glUniform1i")
+            .add("glUniform2iARB", "glUniform2i")
+            .add("glUniform3iARB", "glUniform3i")
+            .add("glUniform4iARB", "glUniform4i")
+            .add("glUniform1ARB", "glUniform1")
+            .add("glUniform2ARB", "glUniform2")
+            .add("glUniform3ARB", "glUniform3")
+            .add("glUniform4ARB", "glUniform4")
+            .add("glUniformMatrix2ARB", "glUniformMatrix2")
+            .add("glUniformMatrix3ARB", "glUniformMatrix3")
+            .add("glUniformMatrix4ARB", "glUniformMatrix4")
+            .add("glGetActiveUniformARB", "glGetActiveUniform")
+            .add("glGetAttachedObjectsARB", "glGetAttachedShaders")
+            .add("glGetShaderSourceARB", "glGetShaderSource")
+            .add("glGetUniformARB", "glGetUniform")
+        );
+        methodRedirects.put(ARBVertexArrayObject, RedirectMap.newMap()
+            .add("glBindVertexArray")
+            .add("glDeleteVertexArrays")
+            .add("glGenVertexArrays")
+        );
+        methodRedirects.put(ARBDrawElementsBaseVertex, RedirectMap.newMap()
+            .add("glDrawElementsBaseVertex")
+        );
+        methodRedirects.put(ARBMultiDrawIndirect, RedirectMap.newMap()
+            .add("glMultiDrawElementsIndirect")
+        );
+        final var uniformBufferObject = RedirectMap.newMap()
+            .add("glBindBufferBase")
+            .add("glBindBufferRange")
+            .add("glGetUniformBlockIndex")
+            .add("glUniformBlockBinding");
+        methodRedirects.put(ARBUniformBufferObject, uniformBufferObject);
+        final var gpuShader4 = RedirectMap.newMap()
+            .add("glVertexAttribIPointerEXT", "glVertexAttribIPointer");
+        methodRedirects.put(EXTGpuShader4, gpuShader4);
+        methodRedirects.put(EXTGPUShader4, gpuShader4);
+        methodRedirects.put(ARBInstancedArrays, RedirectMap.newMap()
+            .add("glVertexAttribDivisorARB")
+        );
+        methodRedirects.put(ARBDrawInstanced, RedirectMap.newMap()
+            .add("glDrawArraysInstancedARB", "glDrawArraysInstanced")
+            .add("glDrawElementsInstancedARB", "glDrawElementsInstanced")
+        );
+        methodRedirects.put(EXTDrawInstanced, RedirectMap.newMap()
+            .add("glDrawArraysInstancedEXT", "glDrawArraysInstanced")
+            .add("glDrawElementsInstancedEXT", "glDrawElementsInstanced")
+        );
+        final var arbBufferObject = RedirectMap.newMap()
+            .add("glBindBufferARB", "glBindBuffer")
+            .add("glGenBuffersARB", "glGenBuffers")
+            .add("glDeleteBuffersARB", "glDeleteBuffers")
+            .add("glIsBufferARB", "glIsBuffer")
+            .add("glBufferDataARB", "glBufferData")
+            .add("glBufferSubDataARB", "glBufferSubData")
+            .add("glGetBufferSubDataARB", "glGetBufferSubData")
+            .add("glMapBufferARB", "glMapBuffer")
+            .add("glUnmapBufferARB", "glUnmapBuffer")
+            .add("glGetBufferParameterARB", "glGetBufferParameter")
+            .add("glGetBufferParameteriARB", "glGetBufferParameteri")
+            .add("glGetBufferParameterivARB", "glGetBufferParameteriv");
+        methodRedirects.put(ARBBufferObject, arbBufferObject);
+        methodRedirects.put(ARBVertexBufferObject, arbBufferObject);
+        methodRedirects.put(ARBBufferStorage, RedirectMap.newMap()
+            .add("glBufferStorage")
+        );
+        methodRedirects.put(ARBCopyBuffer, RedirectMap.newMap()
+            .add("glCopyBufferSubData")
+        );
+        methodRedirects.put(ARBMapBufferRange, RedirectMap.newMap()
+            .add("glMapBufferRange")
+            .add("glFlushMappedBufferRange")
+        );
+        methodRedirects.put(ARBSamplerObjects, RedirectMap.newMap()
+            .add("glGenSamplers")
+            .add("glDeleteSamplers")
+            .add("glIsSampler")
+            .add("glBindSampler")
+            .add("glSamplerParameteri")
+            .add("glSamplerParameterf")
+        );
+        methodRedirects.put(ARBMultiBind, RedirectMap.newMap()
+            .add("glBindSamplers")
+            .add("glBindTextures")
+            .add("glBindImageTextures")
+        );
+        methodRedirects.put(ARBDirectStateAccess, RedirectMap.newMap()
+            .add("glNamedFramebufferTexture")
+            .add("glNamedFramebufferTextureLayer")
+            .add("glNamedFramebufferRenderbuffer")
+            .add("glCreateTextures")
+            .add("glBindTextureUnit")
+        );
+        methodRedirects.put(ARBGeometryShader4, RedirectMap.newMap()
+            .add("glFramebufferTextureARB", "glFramebufferTexture")
+            .add("glFramebufferTextureLayerARB", "glFramebufferTextureLayer")
+            .add("glFramebufferTextureFaceARB", "glFramebufferTextureFace")
+        );
+        final var geometryShader4 = RedirectMap.newMap()
+            .add("glFramebufferTextureEXT", "glFramebufferTexture")
+            .add("glFramebufferTextureLayerEXT", "glFramebufferTextureLayer")
+            .add("glFramebufferTextureFaceEXT", "glFramebufferTextureFace");
+        methodRedirects.put(EXTGeometryShader4, geometryShader4);
+        methodRedirects.put(NVGeometryProgram4, geometryShader4);
+        methodRedirects.put(EXTTextureArray, RedirectMap.newMap()
+            .add("glFramebufferTextureLayerEXT", "glFramebufferTextureLayer")
+        );
+        methodRedirects.put(EXTDirectStateAccess, RedirectMap.newMap()
+            .add("glNamedFramebufferTexture1DEXT")
+            .add("glNamedFramebufferTexture2DEXT")
+            .add("glNamedFramebufferTexture3DEXT")
+            .add("glNamedFramebufferTextureEXT")
+            .add("glNamedFramebufferTextureLayerEXT", "glNamedFramebufferTextureLayer")
+            .add("glNamedFramebufferTextureFaceEXT")
+            .add("glNamedFramebufferRenderbufferEXT", "glNamedFramebufferRenderbuffer")
+            .add("glBindMultiTextureEXT")
+        );
+        methodRedirects.put(ARBShaderImageLoadStore, RedirectMap.newMap()
+            .add("glBindImageTexture")
+        );
+        methodRedirects.put(EXTShaderImageLoadStore, RedirectMap.newMap()
+            .add("glBindImageTextureEXT", "glBindImageTexture")
+        );
+
+        // APPLE
+        methodRedirects.put(APPLEVertexArrayObject, RedirectMap.newMap()
+            .add("glBindVertexArrayAPPLE", "glBindVertexArray")
+            .add("glGenVertexArraysAPPLE", "glGenVertexArrays")
+            .add("glDeleteVertexArraysAPPLE", "glDeleteVertexArrays")
+        );
+
+        // GTNHLib VAO
+        methodRedirects.put(UniversalVAO, RedirectMap.newMap()
+            .add("bindVertexArray", "glBindVertexArray")
+            .add("deleteVertexArrays", "glDeleteVertexArrays")
+        );
+
+        // GLU
+        methodRedirects.put(Project, RedirectMap.newMap()
+            .add("gluPerspective")
+            .add("gluLookAt")
+            .add("gluPickMatrix")
+            .add("gluUnProject")
+        );
+        methodRedirects.put(GLU, RedirectMap.newMap()
+            .add("gluPerspective")
+            .add("gluLookAt")
+            .add("gluOrtho2D")
+            .add("gluPickMatrix")
+            .add("gluBuild2DMipmaps")
+            .add("gluErrorString")
+        );
+        // Must honor disableErrorChecks like glGetError, or it throws on errors those checks left latched
+        methodRedirects.put("org/lwjgl/opengl/Util", RedirectMap.newMap().add("checkGLError"));
+
+        // Quadric type replacements
+        typeRedirects.put("org/lwjgl/util/glu/Sphere", "com/gtnewhorizons/angelica/glsm/compat/lwjgl/AngelicaSphere");
+        typeRedirects.put("org/lwjgl/util/glu/Cylinder", "com/gtnewhorizons/angelica/glsm/compat/lwjgl/AngelicaCylinder");
+        typeRedirects.put("org/lwjgl/util/glu/Disk", "com/gtnewhorizons/angelica/glsm/compat/lwjgl/AngelicaDisk");
+        typeRedirects.put("org/lwjgl/util/glu/PartialDisk", "com/gtnewhorizons/angelica/glsm/compat/lwjgl/AngelicaPartialDisk");
+
+        final List<String> stringsToSearch = new ArrayList<>(32);
+        stringsToSearch.add(LWJGL_GL_PACKAGE);
+        stringsToSearch.add(Drawable);
+        stringsToSearch.add(SharedDrawable);
+        stringsToSearch.add(Display);
+        stringsToSearch.addAll(typeRedirects.keySet());
+        stringsToSearch.addAll(methodRedirects.keySet());
+        CONSTANT_POOL_SEARCH_STRINGS = stringsToSearch.toArray(new String[0]);
+        cstPoolParser = new ClassConstantPoolParser(CONSTANT_POOL_SEARCH_STRINGS);
+    }
+
+    public String[] getCoreExclusions() {
+        return CORE_EXCLUSIONS.clone();
+    }
+
+    public String[] getConstantPoolSearchStrings() {
+        return CONSTANT_POOL_SEARCH_STRINGS.clone();
+    }
+
+    public static String getGLPrefix() { return GL_PREFIX; }
+
+    public static String getTargetClassName() { return GLStateManager; }
+
+    /** Key: original method name, value: GLStateManager method name. */
+    public static Map<String, String> getGLPrefixMethodRedirects() {
+        return Collections.unmodifiableMap(glMethodRedirects);
+    }
+
+    /** Key: internal class name, value: per-method redirect map. */
+    public static Map<String, Map<String, String>> getNamedClassMethodRedirects() {
+        return Collections.unmodifiableMap(methodRedirects);
+    }
+
+    public boolean shouldTransform(byte[] basicClass) {
+        return cstPoolParser.find(basicClass, true);
+    }
+
+    public boolean transformClassNode(String transformedName, ClassNode cn) {
+        return transformClassNode(transformedName, cn, false);
+    }
+
+    public boolean transformClassNode(String transformedName, ClassNode cn, boolean lwjgl3Aware) {
+        boolean changed = false;
+        final boolean isOpenGlHelper = transformedName.equals("net.minecraft.client.renderer.OpenGlHelper");
+
+        for (MethodNode mn : (List<MethodNode>) cn.methods) {
+            if (isOpenGlHelper && (mn.name.equals("glBlendFunc") || mn.name.equals("func_148821_a"))) {
+                continue;
+            }
+            for (AbstractInsnNode node : mn.instructions.toArray()) {
+                if (node instanceof TypeInsnNode tNode) {
+                    if (tNode.getOpcode() == Opcodes.NEW || tNode.getOpcode() == Opcodes.CHECKCAST) {
+                        final String redirect = typeRedirects.get(tNode.desc);
+                        if (redirect != null) {
+                            if (LOG_SPAM) {
+                                LOGGER.info("Redirecting {} in {} from {} to {}", tNode.getOpcode() == Opcodes.NEW ? "NEW" : "CHECKCAST", transformedName, tNode.desc, redirect);
+                            }
+                            tNode.desc = redirect;
+                            changed = true;
+                        }
+                    }
+                } else if (node instanceof MethodInsnNode mNode) {
+                    if (mNode.desc.equals("(I)V") && mNode.owner.startsWith(GL_PREFIX) && (mNode.name.equals("glEnable") || mNode.name.equals("glDisable"))) {
+                        final AbstractInsnNode prevNode = node.getPrevious();
+                        String name = null;
+                        if (prevNode instanceof LdcInsnNode ldcNode) {
+                            name = glCapRedirects.get(((Integer) ldcNode.cst));
+                        } else if (prevNode instanceof IntInsnNode intNode) {
+                            name = glCapRedirects.get(intNode.operand);
+                        }
+                        if (name != null) {
+                            if (mNode.name.equals("glEnable")) {
+                                name = "enable" + name;
+                            } else {
+                                name = "disable" + name;
+                            }
+                        }
+                        if (LOG_SPAM) {
+                            final String shortOwner = mNode.owner.substring(mNode.owner.lastIndexOf("/") + 1);
+                            if (name == null) {
+                                LOGGER.info("Redirecting call in {} from {}.{}(I)V to GLStateManager.{}(I)V", transformedName, shortOwner, mNode.name, mNode.name);
+                            } else {
+                                LOGGER.info("Redirecting call in {} from {}.{}(I)V to GLStateManager.{}()V", transformedName, shortOwner, mNode.name, name);
+                            }
+                        }
+                        mNode.owner = GLStateManager;
+                        if (name != null) {
+                            mNode.name = name;
+                            mNode.desc = "()V";
+                            mn.instructions.remove(prevNode);
+                        }
+                        changed = true;
+                    } else if (mNode.name.equals("makeCurrent") && isDrawableOwner(mNode.owner)) {
+                        mNode.setOpcode(Opcodes.INVOKESTATIC);
+                        mNode.owner = GLStateManager;
+                        mNode.desc = "(L" + Drawable + ";)V";
+                        mNode.itf = false;
+                        changed = true;
+                        if (LOG_SPAM) {
+                            LOGGER.info("Redirecting call in {} to GLStateManager.makeCurrent()", transformedName);
+                        }
+                    } else if (mNode.name.equals("releaseContext") && isDrawableOwner(mNode.owner)) {
+                        mNode.setOpcode(Opcodes.INVOKESTATIC);
+                        mNode.owner = GLStateManager;
+                        mNode.desc = "(L" + Drawable + ";)V";
+                        mNode.itf = false;
+                        changed = true;
+                        if (LOG_SPAM) {
+                            LOGGER.info("Redirecting call in {} to GLStateManager.releaseContext()", transformedName);
+                        }
+                    } else if (mNode.name.equals("swapBuffers") && mNode.owner.equals(Display) && mNode.desc.equals("()V")) {
+                        mNode.owner = GLStateManager;
+                        changed = true;
+                        if (LOG_SPAM) {
+                            LOGGER.info("Redirecting call in {} to GLStateManager.swapBuffers()", transformedName);
+                        }
+                    } else if (mNode.name.equals("update") && mNode.owner.equals(Display) && (mNode.desc.equals("()V") || mNode.desc.equals("(Z)V"))) {
+                        mNode.owner = GLStateManager;
+                        mNode.name = "updateDisplay";
+                        changed = true;
+                        if (LOG_SPAM) {
+                            LOGGER.info("Redirecting call in {} to GLStateManager.updateDisplay{}", transformedName, mNode.desc);
+                        }
+                    } else if (mNode.name.equals("isCurrent") && mNode.owner.equals(Display) && mNode.desc.equals("()Z")) {
+                        mNode.owner = GLStateManager;
+                        changed = true;
+                        if (LOG_SPAM) {
+                            LOGGER.info("Redirecting call in {} to GLStateManager.isCurrent()", transformedName);
+                        }
+                    } else {
+                        String glsmName = glDescRedirects.get(mNode.owner + " " + mNode.name + mNode.desc);
+                        if (glsmName == null) {
+                            final Map<String, String> redirects = mNode.owner.startsWith(GL_PREFIX) ? glMethodRedirects : methodRedirects.get(mNode.owner);
+                            glsmName = redirects != null ? redirects.get(mNode.name) : null;
+                        }
+                        final String awareOwner = lwjgl3Aware ? awareOwnerRedirects.get(mNode.owner + " " + mNode.name + mNode.desc) : null;
+                        if (awareOwner != null) {
+                            if (LOG_SPAM) {
+                                LOGGER.info("Redirecting aware call in {} from {}.{}{} to {}.{}", transformedName, mNode.owner, mNode.name, mNode.desc, awareOwner, mNode.name);
+                            }
+                            mNode.owner = awareOwner;
+                            changed = true;
+                        } else if (glsmName != null) {
+                            if (LOG_SPAM) {
+                                final String shortOwner = mNode.owner.substring(mNode.owner.lastIndexOf("/") + 1);
+                                LOGGER.info("Redirecting call in {} from {}.{}{} to GLStateManager.{}{}", transformedName, shortOwner, mNode.name, mNode.desc, glsmName, mNode.desc);
+                            }
+                            mNode.owner = GLStateManager;
+                            mNode.name = glsmName;
+                            changed = true;
+                        } else if (lwjgl3Aware && mNode.owner.startsWith(LWJGL_GL_PACKAGE) && hasLwjglTypedDescriptor(mNode.desc) && !isAwareNonDispatching(mNode.owner, mNode.name)) {
+                            reportAwareUnroutable(transformedName, mNode.owner, mNode.name, mNode.desc);
+                        } else if (isDebugCall(mNode.owner, mNode.name)) {
+                            reportDebugPassthrough(transformedName, mNode.owner, mNode.name, mNode.desc);
+                        } else if (isUnmappedGlCall(mNode.owner, mNode.name, mNode.desc)) {
+                            reportUnmapped(transformedName, mNode.owner, mNode.name, mNode.desc);
+                        }
+                    }
+                    if (mNode.getOpcode() == Opcodes.INVOKESPECIAL && mNode.name.equals("<init>")) {
+                        final String redirect = typeRedirects.get(mNode.owner);
+                        if (redirect != null) {
+                            if (LOG_SPAM) {
+                                LOGGER.info("Redirecting <init> in {} from {} to {}", transformedName, mNode.owner, redirect);
+                            }
+                            mNode.owner = redirect;
+                            changed = true;
+                        }
+                    }
+                } else if (node instanceof InvokeDynamicInsnNode dynNode) {
+                    // Redirect method handles in invokedynamic bootstrap arguments
+                    for (int i = 0; i < dynNode.bsmArgs.length; i++) {
+                        if (!(dynNode.bsmArgs[i] instanceof Handle handle)) continue;
+                        String glsmName = glDescRedirects.get(handle.getOwner() + " " + handle.getName() + handle.getDesc());
+                        if (glsmName == null) {
+                            final Map<String, String> redirects = handle.getOwner().startsWith(GL_PREFIX) ? glMethodRedirects : methodRedirects.get(handle.getOwner());
+                            glsmName = redirects != null ? redirects.get(handle.getName()) : null;
+                        }
+                        if (glsmName == null) {
+                            if (isDebugCall(handle.getOwner(), handle.getName())) {
+                                reportDebugPassthrough(transformedName, handle.getOwner(), handle.getName(), handle.getDesc());
+                            } else if (isUnmappedGlCall(handle.getOwner(), handle.getName(), handle.getDesc())) {
+                                reportUnmapped(transformedName, handle.getOwner(), handle.getName(), handle.getDesc());
+                            }
+                            continue;
+                        }
+                        if (LOG_SPAM) {
+                            final String shortOwner = handle.getOwner().substring(handle.getOwner().lastIndexOf("/") + 1);
+                            LOGGER.info("Redirecting invokedynamic handle in {} from {}.{}{} to GLStateManager.{}{}", transformedName, shortOwner, handle.getName(), handle.getDesc(), glsmName, handle.getDesc());
+                        }
+                        dynNode.bsmArgs[i] = new Handle(handle.getTag(), GLStateManager, glsmName, handle.getDesc());
+                        changed = true;
+                    }
+                }
+            }
+        }
+
+        return changed;
+    }
+
+    private static final class RedirectMap<K> extends HashMap<K, K> {
+
+        public static RedirectMap<String> newMap() {
+            return new RedirectMap<>();
+        }
+
+        public RedirectMap<K> add(K name) {
+            this.put(name, name);
+            return this;
+        }
+
+        public RedirectMap<K> add(K name, K newName) {
+            this.put(name, newName);
+            return this;
+        }
+    }
+}

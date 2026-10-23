@@ -1,5 +1,0 @@
-package dev.industrialtechnology.space;
-import java.util.UUID;import com.mojang.authlib.GameProfile;import net.minecraft.world.WorldServer;import net.minecraftforge.common.*;import net.minecraftforge.common.util.FakePlayerFactory;import net.minecraftforge.event.entity.player.PlayerInteractEvent;import cpw.mods.fml.common.eventhandler.Event.Result;
-public final class SpaceProtection {
-    public static boolean interact(TileSpaceMachine t,int x,int y,int z){try{if(!(t.getWorldObj() instanceof WorldServer)||t.owner.isEmpty())return false;net.minecraft.entity.player.EntityPlayerMP p=FakePlayerFactory.get((WorldServer)t.getWorldObj(),new GameProfile(UUID.fromString(t.owner),"[Space machine]"));p.worldObj=t.getWorldObj();p.dimension=t.getWorldObj().provider.dimensionId;p.setPosition(t.xCoord+.5,t.yCoord+.5,t.zCoord+.5);PlayerInteractEvent e=new PlayerInteractEvent(p,PlayerInteractEvent.Action.RIGHT_CLICK_BLOCK,x,y,z,1,t.getWorldObj());return !MinecraftForge.EVENT_BUS.post(e)&&e.useBlock!=Result.DENY;}catch(RuntimeException e){return false;}}
-}

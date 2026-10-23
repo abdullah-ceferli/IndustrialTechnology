@@ -1,4 +1,4 @@
-param([string]$TestName='run-test-production-1.5.0-hbm-verified',[switch]$WithHBM,[int]$Port=25579,[string]$ReleaseJar,[switch]$DisableIdlePolicy)
+param([string]$TestName='run-test-production-1.5.0-hbm-verified',[switch]$WithHBM,[int]$Port=25579,[string]$ReleaseJar,[string]$HbmPath)
 $ErrorActionPreference='Stop'
 $projectPath=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 if($TestName -notmatch '^run-test-[a-zA-Z0-9.-]+$'){throw 'Use a simple run-test-* directory name.'}
@@ -14,12 +14,7 @@ $harnessDestination=Join-Path $testPath "mods/industrialtech-test-harness-$testV
 if([IO.Path]::GetFullPath($harnessSource) -ne [IO.Path]::GetFullPath($harnessDestination)){Copy-Item -LiteralPath $harnessSource -Destination $harnessDestination -Force}
 if(-not $ReleaseJar){$ReleaseJar=Join-Path $projectPath "build/libs/IndustrialTechnology-1.7.10-$testVersion.jar"}
 Copy-Item -LiteralPath $ReleaseJar -Destination (Join-Path $testPath 'mods') -Force
-if($WithHBM){Copy-Item -LiteralPath (Join-Path $projectPath 'run-test-production-1.3.0-hbm-verified/mods/HBM-NTM-.1.0.27_X5808.jar') -Destination (Join-Path $testPath 'mods') -Force}
-if($DisableIdlePolicy){@'
-performance {
- B:pauseOwnedChunkLoadingInUnoccupiedDimensions=false
-}
-'@ | Set-Content -LiteralPath (Join-Path $testPath 'config/industrialtech-space.cfg')}
+if($WithHBM){if(-not $HbmPath){$HbmPath=Join-Path $projectPath 'run-test-production-1.3.0-hbm-verified/mods/HBM-NTM-.1.0.27_X5808.jar'};Copy-Item -LiteralPath $HbmPath -Destination (Join-Path $testPath 'mods') -Force}
 'eula=true' | Set-Content -LiteralPath (Join-Path $testPath 'eula.txt')
 @"
 level-name=integration-world

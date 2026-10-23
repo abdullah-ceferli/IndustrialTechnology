@@ -1,0 +1,4 @@
+PASS: Player saved in the removed Moon dimension joins safely in the Overworld with diamond inventory and XP intact
+PASS: Real survival player places and toggles levers on all six retained lamp faces
+PASS: Client renders retained green lamps and attached levers with matching on/off states and no OpenGL error
+Failed: 0

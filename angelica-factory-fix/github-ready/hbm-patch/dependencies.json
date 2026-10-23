@@ -1,0 +1,17 @@
+[
+  {
+    "file": "angelica-2.2.36.jar",
+    "url": "https://github.com/GTNewHorizons/Angelica/releases/download/2.2.36/angelica-2.2.36.jar",
+    "sha256": "003748117BC1100B0AFCC4911DD386204C22A91B8FA4954710C7EA4E76A63596"
+  },
+  {
+    "file": "asm-debug-all-5.0.3.jar",
+    "url": "https://repo.maven.apache.org/maven2/org/ow2/asm/asm-debug-all/5.0.3/asm-debug-all-5.0.3.jar",
+    "sha256": "2969356AC1E40FE4141948C563690238F5D79D76AEC7FD873536867A331EDE81"
+  },
+  {
+    "file": "fastutil-8.5.18.jar",
+    "url": "https://repo.maven.apache.org/maven2/it/unimi/dsi/fastutil/8.5.18/fastutil-8.5.18.jar",
+    "sha256": "9094AE67D01D0AD246F886F11AD557FC2E79C72CBF3FEED83E1512A8AE90A74A"
+  }
+]

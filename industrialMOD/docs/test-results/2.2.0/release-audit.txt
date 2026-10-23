@@ -1,0 +1,10 @@
+PASS: Final archive exactly matches standalone, HBM X5771 and copied-save upgrade native runtime JARs
+PASS: 146 Java 8 classes; no space implementation, test harness, third-party mod classes or nested JARs
+PASS: Original pre-space subsystem bytecode retained except the two intentional core registration/event classes
+PASS: Original textures/reference retained byte-for-byte; both original green lamp textures retained
+PASS: Version 2.2.0 and current source/docs; exact 66 retired registry names accepted
+PASS: Native HBM dependency matches the installed X5771 JAR; no HBM dependency bundled
+PASS: 409 recorded successful executions; 62 unit checks, native initial/restart, migration and real client checks
+SHA256: 05e5ad24c71233a01f68234153b06e933094ca8f8368623ba18faf21284d67cc
+Size: 337916 bytes
+Failed: 0

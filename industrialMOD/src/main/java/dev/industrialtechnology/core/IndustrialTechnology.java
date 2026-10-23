@@ -17,7 +17,7 @@ import net.minecraftforge.common.MinecraftForge;
 import cpw.mods.fml.common.FMLCommonHandler;
 import org.apache.logging.log4j.Logger;
 
-@Mod(modid = IndustrialTechnology.MODID, name = "Industrial Technology", version = "2.1.0",
+@Mod(modid = IndustrialTechnology.MODID, name = "Industrial Technology", version = "2.2.1",
      acceptedMinecraftVersions = "[1.7.10]", dependencies = "required-after:Forge@[10.13.4.1614,)")
 public final class IndustrialTechnology {
     public static final String MODID = "industrialtech";
@@ -31,13 +31,12 @@ public final class IndustrialTechnology {
     @Mod.EventHandler public void preInit(FMLPreInitializationEvent event) {
         log = event.getModLog();
         ModConfig.load(event.getSuggestedConfigurationFile());
+        RetiredDimensionRecovery recovery = new RetiredDimensionRecovery(event.getSuggestedConfigurationFile());
+        MinecraftForge.EVENT_BUS.register(recovery);
+        FMLCommonHandler.instance().bus().register(recovery);
         ModRegistry.register();
-        dev.industrialtechnology.space.SpaceConfig.load(event.getSuggestedConfigurationFile());
-        dev.industrialtechnology.space.SpaceRegistry.register();
         network = NetworkRegistry.INSTANCE.newSimpleChannel(MODID);
         network.registerMessage(ControlPacket.Handler.class, ControlPacket.class, 0, Side.SERVER);
-        network.registerMessage(dev.industrialtechnology.space.SpaceCommand.Handler.class,dev.industrialtechnology.space.SpaceCommand.class,7,Side.SERVER);
-        network.registerMessage(dev.industrialtechnology.space.SpaceState.Handler.class,dev.industrialtechnology.space.SpaceState.class,8,Side.CLIENT);
         // The common handler delegates to the client proxy: no client class is linked on a server.
         network.registerMessage(SnapshotPacket.Handler.class, SnapshotPacket.class, 1, Side.CLIENT);
         network.registerMessage(dev.industrialtechnology.automation.ScriptUpload.Handler.class,dev.industrialtechnology.automation.ScriptUpload.class,4,Side.SERVER);
@@ -49,10 +48,6 @@ public final class IndustrialTechnology {
     }
     @Mod.EventHandler public void init(FMLInitializationEvent event) {
         ModRegistry.recipes();
-        dev.industrialtechnology.space.SpaceRegistry.recipes();
-        dev.industrialtechnology.space.SpaceDimensions.init();
-        dev.industrialtechnology.space.SpaceEvents spaceEvents=new dev.industrialtechnology.space.SpaceEvents();
-        FMLCommonHandler.instance().bus().register(spaceEvents);MinecraftForge.EVENT_BUS.register(spaceEvents);
         NetworkRegistry.INSTANCE.registerGuiHandler(instance, proxy);
         FMLCommonHandler.instance().bus().register(new ServerWork());
         FMLCommonHandler.instance().bus().register(new MiningScheduler());
@@ -63,9 +58,11 @@ public final class IndustrialTechnology {
         FMLCommonHandler.instance().bus().register(new dev.industrialtechnology.wireless.WirelessScheduler());
         proxy.init();
     }
+    @Mod.EventHandler public void missingMappings(cpw.mods.fml.common.event.FMLMissingMappingsEvent event) {
+        ContentMigration.ignoreRetired(event);
+    }
     @Mod.EventHandler public void serverStarting(FMLServerStartingEvent event) {
         ServerWork.clear();
         MiningScheduler.clear();
-        dev.industrialtechnology.space.Atmosphere.clear();dev.industrialtechnology.space.Airlock.clear();dev.industrialtechnology.space.DimensionActivity.clear();
     }
 }

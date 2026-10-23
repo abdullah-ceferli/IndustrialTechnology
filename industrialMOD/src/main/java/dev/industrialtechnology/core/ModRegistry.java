@@ -17,7 +17,7 @@ import net.minecraftforge.common.MinecraftForge;
 
 public final class ModRegistry {
     public static final Block[] quarries = new Block[3];
-    public static Block loader, redstoneRelay, monitoringStick, automationStick;
+    public static Block loader, redstoneRelay, monitoringStick, automationStick, greenLamp;
     public static Item drill, circuit, gear, terminal, greenStick, yellowStick, blueStick, automationGuide;
     public static final CreativeTabs TAB = new CreativeTabs(IndustrialTechnology.MODID) {
         @Override public Item getTabIconItem() { return Item.getItemFromBlock(quarries[0]); }
@@ -41,6 +41,7 @@ public final class ModRegistry {
         automationGuide=new dev.industrialtechnology.automation.ItemAutomationGuide();GameRegistry.registerItem(automationGuide,"automation_guide");
         drill = new ItemDrill(); GameRegistry.registerItem(drill, "drill");
         circuit = component("circuit"); gear = component("steel_gear");
+        greenLamp=new dev.industrialtechnology.lighting.BlockGreenLamp();GameRegistry.registerBlock(greenLamp,"green_redstone_lamp");
         MinecraftForge.EVENT_BUS.register(new DropCapture());
     }
     private static Item component(String name) {
@@ -49,6 +50,7 @@ public final class ModRegistry {
         GameRegistry.registerItem(item, name); return item;
     }
     public static void recipes() {
+        GameRegistry.addRecipe(new net.minecraftforge.oredict.ShapedOreRecipe(new ItemStack(greenLamp,4),"GGG","DLD","GRG",'G',Blocks.glass,'D',new ItemStack(Items.dye,1,2),'L',Blocks.glowstone,'R',Items.redstone));
         GameRegistry.addShapelessRecipe(new ItemStack(automationGuide),Items.book,Items.redstone,Items.paper);
         GameRegistry.addRecipe(new ItemStack(terminal),"IGI","RDR","IEI",'I',Items.iron_ingot,'G',Items.gold_ingot,'R',Items.redstone,'D',Items.diamond,'E',Items.ender_pearl);
         GameRegistry.addRecipe(new ItemStack(greenStick)," E "," R "," I ",'E',Items.emerald,'R',Items.redstone,'I',Items.iron_ingot);

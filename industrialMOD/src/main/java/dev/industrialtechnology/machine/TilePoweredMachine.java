@@ -25,7 +25,6 @@ public abstract class TilePoweredMachine extends TileMachine implements ISidedIn
     @Override public void updateEntity() {
         super.updateEntity();
         if (worldObj == null || worldObj.isRemote) return;
-        if (!dev.industrialtechnology.space.DimensionActivity.active(worldObj)) return;
         updateInputAverage();
         int previous = saturatedInput;
         if (energy < capacity() - workingReserve()) saturatedInput = 0;
@@ -47,7 +46,7 @@ public abstract class TilePoweredMachine extends TileMachine implements ISidedIn
         inputAverage = sampleSum / 20;
     }
     @Override public int receiveEnergy(ForgeDirection from, int amount, boolean simulate) {
-        if (worldObj == null || worldObj.isRemote || amount <= 0 || !canConnectEnergy(from) || !dev.industrialtechnology.space.DimensionActivity.active(worldObj)) return 0;
+        if (worldObj == null || worldObj.isRemote || amount <= 0 || !canConnectEnergy(from)) return 0;
         long tick = worldObj.getTotalWorldTime();
         int used = receiveTick == tick ? receivedThisTick : 0;
         int accepted = Math.max(0, Math.min(amount, Math.min(capacity() - energy, ModConfig.inputRate - used)));

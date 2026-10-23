@@ -1,0 +1,20 @@
+{
+  "TEST-dev.industrialtechnology.automation.AutomationReferenceTest.xml": 2,
+  "TEST-dev.industrialtechnology.automation.RepeatTimingTest.xml": 7,
+  "TEST-dev.industrialtechnology.automation.ScriptCompilerTest.xml": 12,
+  "TEST-dev.industrialtechnology.automation.ScriptPacketTest.xml": 5,
+  "TEST-dev.industrialtechnology.client.CodeEditorModelTest.xml": 6,
+  "TEST-dev.industrialtechnology.quarry.AreaCursorTest.xml": 5,
+  "TEST-dev.industrialtechnology.quarry.BoundaryGeometryTest.xml": 5,
+  "TEST-dev.industrialtechnology.quarry.MiningRateTest.xml": 3,
+  "TEST-dev.industrialtechnology.wireless.DeviceSearchTest.xml": 4,
+  "TEST-dev.industrialtechnology.wireless.ReactorSettingsTest.xml": 4,
+  "TEST-dev.industrialtechnology.wireless.WirelessCatalogTest.xml": 5,
+  "TEST-dev.industrialtechnology.wireless.WirelessCommandTest.xml": 4,
+  "production-standalone-initial.txt": 139,
+  "production-standalone-restart.txt": 12,
+  "production-hbm5771-initial.txt": 176,
+  "production-hbm5771-restart.txt": 13,
+  "upgrade-from-2.1.0.txt": 4,
+  "lamp-client.txt": 3
+}

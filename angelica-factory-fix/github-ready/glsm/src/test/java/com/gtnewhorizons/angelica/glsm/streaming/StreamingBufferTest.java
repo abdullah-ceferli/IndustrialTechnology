@@ -1,0 +1,253 @@
+package com.gtnewhorizons.angelica.glsm.streaming;
+
+import com.gtnewhorizons.angelica.glsm.GLCompatTest;
+import com.gtnewhorizons.angelica.glsm.RenderSystem;
+import com.gtnewhorizons.angelica.glsm.streaming.StreamingUploader.UploadStrategy;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL15;
+
+import java.nio.ByteBuffer;
+
+import static com.gtnewhorizon.gtnhlib.bytebuf.MemoryUtilities.memAlloc;
+import static com.gtnewhorizon.gtnhlib.bytebuf.MemoryUtilities.memFree;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+@GLCompatTest
+class StreamingBufferTest {
+
+    @ParameterizedTest
+    @EnumSource(UploadStrategy.class)
+    void orphan_dataIntegrity(UploadStrategy strategy) {
+        OrphanStreamingBuffer buf = new OrphanStreamingBuffer();
+        try {
+            ByteBuffer data = memAlloc(64);
+            ByteBuffer readBack = null;
+            try {
+                for (int i = 0; i < 64; i++) data.put((byte) i);
+                data.flip();
+
+                buf.upload(strategy, data);
+
+                // Read back via glGetBufferSubData
+                GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, buf.getBufferId());
+                readBack = memAlloc(64);
+                GL15.glGetBufferSubData(GL15.GL_ARRAY_BUFFER, 0, readBack);
+                GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
+
+                for (int i = 0; i < 64; i++) {
+                    assertEquals((byte) i, readBack.get(i), "Mismatch at byte " + i);
+                }
+            } finally {
+                memFree(data);
+                if (readBack != null) memFree(readBack);
+            }
+        } finally {
+            buf.destroy();
+        }
+    }
+
+    @Test
+    void persistent_uploadAlignment_nonPow2Stride() {
+        Assumptions.assumeTrue(RenderSystem.supportsBufferStorage(), "GL4.4+ required");
+
+        final int stride = 44;
+        PersistentStreamingBuffer buf = PersistentStreamingBuffer.createOrNull(4096);
+        assertNotNull(buf);
+        try {
+            ByteBuffer first = memAlloc(3 * stride);
+            fillPattern(first);
+            first.flip();
+            assertTrue(buf.upload(first, stride) >= 0, "Upload should succeed");
+            memFree(first);
+
+            ByteBuffer second = memAlloc(3 * stride);
+            fillPattern(second);
+            second.flip();
+            int firstVertex = buf.upload(second, stride, 4);
+            assertTrue(firstVertex >= 0, "Upload should succeed");
+            assertEquals(0, firstVertex % 4, "firstVertex must be quad-aligned even for a non-power-of-2 stride");
+            memFree(second);
+        } finally {
+            buf.destroy();
+        }
+    }
+
+    @Test
+    void persistent_dataIntegrity() {
+        Assumptions.assumeTrue(RenderSystem.supportsBufferStorage(), "GL4.4+ required");
+
+        PersistentStreamingBuffer buf = PersistentStreamingBuffer.createOrNull(4096);
+        assertNotNull(buf);
+        try {
+            ByteBuffer data = memAlloc(128);
+            for (int i = 0; i < 128; i++) data.put((byte) i);
+            data.flip();
+
+            int stride = 32;
+            int firstVertex = buf.upload(data, stride);
+            assertTrue(firstVertex >= 0);
+
+            // Read back from persistently mapped buffer (CPU-visible, no fence needed)
+            ByteBuffer mapped = buf.getMappedBuffer();
+            int byteOffset = firstVertex * stride;
+            for (int i = 0; i < 128; i++) {
+                assertEquals((byte) i, mapped.get(byteOffset + i), "Mismatch at byte " + i);
+            }
+            memFree(data);
+        } finally {
+            buf.destroy();
+        }
+    }
+
+    @Test
+    void persistent_ringWraparound() {
+        Assumptions.assumeTrue(RenderSystem.supportsBufferStorage(), "GL4.4+ required");
+
+        // Small ring: 1024 bytes. stride=16, alignUnit=64.
+        PersistentStreamingBuffer buf = PersistentStreamingBuffer.createOrNull(1024);
+        assertNotNull(buf);
+        try {
+            int stride = 16;
+
+            // Fill most of the ring (768 bytes)
+            ByteBuffer data1 = memAlloc(768);
+            fillPattern(data1);
+            data1.flip();
+            int v1 = buf.upload(data1, stride);
+            assertTrue(v1 >= 0);
+            buf.endFrame();
+            memFree(data1);
+
+            // Wait for GPU to finish so fence is signaled
+            GL11.glFinish();
+
+            // Upload again — should wrap to start after reclaim
+            ByteBuffer data2 = memAlloc(512);
+            for (int i = 0; i < 512; i++) data2.put((byte) ((i + 100) & 0xFF));
+            data2.flip();
+            int v2 = buf.upload(data2, stride);
+            assertTrue(v2 >= 0, "Should succeed after reclaim/wrap");
+
+            // Verify data2 integrity
+            ByteBuffer mapped = buf.getMappedBuffer();
+            int offset2 = v2 * stride;
+            for (int i = 0; i < 512; i++) {
+                assertEquals((byte) ((i + 100) & 0xFF), mapped.get(offset2 + i), "Mismatch at byte " + i);
+            }
+
+            buf.endFrame();
+            memFree(data2);
+        } finally {
+            buf.destroy();
+        }
+    }
+
+    @Test
+    void persistent_fenceReclaim() {
+        Assumptions.assumeTrue(RenderSystem.supportsBufferStorage(), "GL4.4+ required");
+
+        PersistentStreamingBuffer buf = PersistentStreamingBuffer.createOrNull(4096);
+        assertNotNull(buf);
+        try {
+            ByteBuffer data = memAlloc(1024);
+            fillPattern(data);
+            data.flip();
+
+            buf.upload(data, 32);
+            assertEquals(4096 - 1024, buf.getRemaining(), "upload consumes its bytes");
+            buf.endFrame();
+
+            data.position(0).limit(512);
+            buf.upload(data, 32);
+            buf.endFrame();
+
+            GL11.glFinish();
+            buf.endFrame();
+            assertEquals(4096, buf.getRemaining(), "all fenced regions reclaimed after completion");
+            memFree(data);
+        } finally {
+            buf.destroy();
+        }
+    }
+
+    @Test
+    void persistent_overflowReturnsNegative() {
+        Assumptions.assumeTrue(RenderSystem.supportsBufferStorage(), "GL4.4+ required");
+
+        // Tiny ring: 256 bytes
+        PersistentStreamingBuffer buf = PersistentStreamingBuffer.createOrNull(256);
+        assertNotNull(buf);
+        try {
+            ByteBuffer data = memAlloc(512);
+            fillPattern(data);
+            data.flip();
+
+            int result = buf.upload(data, 32);
+            assertEquals(-1, result, "Should return -1 when data exceeds total capacity");
+            memFree(data);
+        } finally {
+            buf.destroy();
+        }
+    }
+
+
+    @Test
+    void persistent_createOrNullHonorsForceOrphan() {
+        assertNull(PersistentStreamingBuffer.createOrNull(1024, true));
+    }
+
+    @Test
+    void persistent_thresholdFenceExcludesNewestReservation() {
+        Assumptions.assumeTrue(RenderSystem.supportsBufferStorage(), "GL4.4+ required");
+
+        final GlStreamingRing ring = GlStreamingRing.create(GL15.GL_ARRAY_BUFFER, 1024);
+        assertNotNull(ring);
+        try {
+            assertEquals(0, ring.reserve(256, 16));
+            assertEquals(0, ring.fencesIssued(), "the caller has not drawn the reserved bytes yet");
+            assertEquals(256, ring.reserve(16, 16));
+            assertEquals(1, ring.fencesIssued(), "the next reservation fences earlier draws");
+            ring.endFrame();
+            assertEquals(2, ring.fencesIssued(), "the newest reservation still needs a fence after its draw");
+        } finally {
+            ring.destroy();
+        }
+    }
+
+    @Test
+    void persistent_exhaustionReclaimsPendingWithoutEndFrame() {
+        Assumptions.assumeTrue(RenderSystem.supportsBufferStorage(), "GL4.4+ required");
+
+        PersistentStreamingBuffer buf = PersistentStreamingBuffer.createOrNull(1024);
+        assertNotNull(buf);
+        try {
+            ByteBuffer data = memAlloc(512);
+            fillPattern(data);
+            data.flip();
+
+            assertTrue(buf.upload(data, 32) >= 0);
+            data.position(0).limit(512);
+            assertTrue(buf.upload(data, 32) >= 0);
+            data.position(0).limit(512);
+            assertTrue(buf.upload(data, 32) >= 0, "ring must self-fence and reclaim without endFrame");
+            memFree(data);
+        } finally {
+            buf.destroy();
+        }
+    }
+
+    // --- Utilities ---
+
+    private static void fillPattern(ByteBuffer buf) {
+        for (int i = 0; i < buf.capacity(); i++) {
+            buf.put((byte) (i & 0xFF));
+        }
+    }
+}

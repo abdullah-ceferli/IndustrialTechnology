@@ -1,0 +1,1656 @@
+package com.gtnewhorizons.angelica.client.font;
+
+import com.google.common.collect.ImmutableSet;
+import com.gtnewhorizon.gtnhlib.client.renderer.vao.IndexBuffer;
+import com.gtnewhorizon.gtnhlib.util.font.FontRendering;
+import com.gtnewhorizons.angelica.config.AngelicaConfig;
+import com.gtnewhorizons.angelica.config.FontConfig;
+import com.gtnewhorizons.angelica.glsm.GLContextState;
+import com.gtnewhorizons.angelica.glsm.GLStateManager;
+import com.gtnewhorizons.angelica.glsm.StateSet;
+import com.gtnewhorizons.angelica.glsm.ffp.FFPVertexLighting;
+import com.gtnewhorizons.angelica.glsm.ffp.ShaderManager;
+import com.gtnewhorizons.angelica.glsm.hooks.GLSMConfig;
+import com.gtnewhorizons.angelica.glsm.streaming.PersistentStreamingBuffer;
+import com.gtnewhorizons.angelica.glsm.streaming.StreamingUploader;
+import com.gtnewhorizons.angelica.hudcaching.HUDCaching;
+import com.gtnewhorizons.angelica.rendering.tesr.BatchDrawDefaults;
+import com.gtnewhorizons.angelica.rendering.tesr.ModelPartBatcher;
+import com.gtnewhorizons.angelica.rendering.tesr.TesrBatchRenderer;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import lombok.Setter;
+import net.coderbot.iris.Iris;
+import net.coderbot.iris.gl.program.Program;
+import net.coderbot.iris.gl.program.ProgramBuilder;
+import net.coderbot.iris.layer.GbufferPrograms;
+import net.coderbot.iris.pipeline.DeferredWorldRenderingPipeline;
+import net.coderbot.iris.pipeline.PipelineManager;
+import net.coderbot.iris.uniforms.CapturedRenderingState;
+import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.util.MathHelper;
+import net.minecraft.util.ResourceLocation;
+import org.embeddedt.embeddium.impl.render.shader.ShaderLoader;
+import org.joml.Matrix4f;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL13;
+import org.lwjgl.opengl.GL15;
+
+import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Objects;
+
+import static com.gtnewhorizon.gtnhlib.bytebuf.MemoryUtilities.memAddress0;
+import static com.gtnewhorizon.gtnhlib.bytebuf.MemoryUtilities.memAlloc;
+import static com.gtnewhorizon.gtnhlib.bytebuf.MemoryUtilities.memAllocFloat;
+import static com.gtnewhorizon.gtnhlib.bytebuf.MemoryUtilities.memFree;
+import static com.gtnewhorizon.gtnhlib.bytebuf.MemoryUtilities.memGetByte;
+import static com.gtnewhorizon.gtnhlib.bytebuf.MemoryUtilities.memGetFloat;
+import static com.gtnewhorizon.gtnhlib.bytebuf.MemoryUtilities.memPutByte;
+import static com.gtnewhorizon.gtnhlib.bytebuf.MemoryUtilities.memPutFloat;
+import static com.gtnewhorizon.gtnhlib.bytebuf.MemoryUtilities.memPutShort;
+import static com.gtnewhorizon.gtnhlib.bytebuf.MemoryUtilities.memRealloc;
+import static com.gtnewhorizons.angelica.client.font.ColorCodeUtils.FORMATTING_CHAR;
+import static com.gtnewhorizons.angelica.client.font.ColorCodeUtils.GRADIENT_PAYLOAD;
+import static com.gtnewhorizons.angelica.client.font.ColorCodeUtils.SECTION_X_LENGTH;
+import static com.gtnewhorizons.angelica.client.font.ColorCodeUtils.SECTION_X_PAYLOAD;
+import static com.gtnewhorizons.angelica.client.font.FontStrategist.INVALID_TEXTURE;
+import static com.gtnewhorizons.angelica.client.font.FontStrategist.bindIntTexture;
+
+/**
+ * A batching replacement for {@code FontRenderer}
+ *
+ * @author eigenraven
+ */
+public class BatchingFontRenderer {
+
+    /** The underlying FontRenderer object that's being accelerated */
+    protected FontRenderer underlying;
+    /** Array of width of all the characters in default.png */
+    protected int[] charWidth;
+    /**
+     * Array of RGB triplets defining the 16 standard chat colors followed by 16 darker version of the same colors for
+     * drop shadows.
+     */
+    private final int[] colorCode;
+    /** Location of the primary font atlas to bind. */
+    protected final ResourceLocation locationFontTexture;
+
+    private final int AAMode;
+    private final int AAStrength;
+    private final int fontBrightness;
+    private final int alphaTestRefLocation;
+    private final int mvpMatrixLocation;
+    private final int lightmapLocation;
+    private final int lightmapSamplerLocation;
+    private final int fontShaderId;
+
+    final boolean isSGA;
+    final boolean isSplash;
+
+    /** For use with modded books. Affects calculations and forces some defaults. */
+    @Setter
+    boolean bookMode = false;
+
+    private static class FontAAShader {
+
+        private static Program fontShader = null;
+
+        public static Program getProgram() {
+            if (fontShader == null) {
+                final String vsh = ShaderLoader.getShaderSource("angelica:fontFilter.vsh");
+                final String fsh = ShaderLoader.getShaderSource("angelica:fontFilter.fsh");
+                fontShader = ProgramBuilder.begin("fontFilter", vsh, null, fsh, ImmutableSet.of(0)).build();
+            }
+            return fontShader;
+        }
+    }
+
+    public BatchingFontRenderer(FontRenderer underlying, int[] charWidth, int[] colorCode, ResourceLocation locationFontTexture) {
+        this.underlying = underlying;
+        this.charWidth = charWidth;
+        this.colorCode = colorCode;
+        this.locationFontTexture = locationFontTexture;
+
+        for (int i = 0; i < 64; i++) {
+            batchCommandPool.add(new FontDrawCmd());
+        }
+
+        this.isSGA = Objects.equals(this.locationFontTexture.getResourcePath(), "textures/font/ascii_sga.png");
+        this.isSplash = FontStrategist.isSplashFontRendererActive(underlying);
+
+        FontProviderMC.get(this.isSGA).charWidth = this.charWidth;
+        FontProviderMC.get(this.isSGA).locationFontTexture = this.locationFontTexture;
+
+        fontShaderId = FontAAShader.getProgram().getProgramId();
+        AAMode = GLStateManager.glGetUniformLocation(fontShaderId, "aaMode");
+        AAStrength = GLStateManager.glGetUniformLocation(fontShaderId, "strength");
+        fontBrightness = GLStateManager.glGetUniformLocation(fontShaderId, "fontBrightness");
+        alphaTestRefLocation = GLStateManager.glGetUniformLocation(fontShaderId, "alphaTestRef");
+        mvpMatrixLocation = GLStateManager.glGetUniformLocation(fontShaderId, "u_MVPMatrix");
+        lightmapLocation = GLStateManager.glGetUniformLocation(fontShaderId, "u_Lightmap");
+        lightmapSamplerLocation = GLStateManager.glGetUniformLocation(fontShaderId, "lightmap");
+        if (ebo == null) {
+            ebo = new IndexBuffer();
+            vbo = GLStateManager.glGenBuffers();
+            allocateBuffers();
+        }
+    }
+
+    // === Batched rendering
+
+    private static final int INITIAL_BATCH_SIZE = 2048;
+
+    // Layout in data:
+    // [v, v, t, t, c, c, c, c, tb, tb, tb, tb]
+    // v, t and tb are floats, c is bytes; 36 bytes total
+    private static final int VERTEX_SIZE = 36;
+
+    /** {@code OpenGlHelper.lightmapTexUnit} */
+    private static final int LIGHTMAP_TEX_UNIT = 1;
+    private static final int FULL_BRIGHT_LIGHT = GLSMConfig.packBrightness(240.0f, 240.0f);
+    private static int rawCapacity = INITIAL_BATCH_SIZE * VERTEX_SIZE;
+    private static ByteBuffer vertexData = memAlloc(rawCapacity);
+    private static long vertexDataAddress = memAddress0(vertexData);
+    private static int vboCapacity;
+
+    private static final FloatBuffer FLUSH_MVP = memAllocFloat(16);
+
+    // OpenGL objects (static, can be used between multiple BatchingFontRenderer)
+    private static int vbo;
+    private static IndexBuffer ebo;
+    private static int lightmapSamplerProgram;
+
+    private static final int RING_CAPACITY = 2 * 1024 * 1024;
+    private static PersistentStreamingBuffer streamRing;
+    private static boolean streamingInitialized;
+    private static int pendingBuffer;
+    private static int pendingBase;
+    private static GLContextState vaoContext;
+    private static int vaoBuffer = -1;
+    private static int vaoBase = -1;
+
+    private int batchDepth = 0;
+
+    private static int vertexDataPos = 0;
+    private static int idxWriterIndex = 0;
+
+    private final ObjectArrayList<FontDrawCmd> batchCommands = ObjectArrayList.wrap(new FontDrawCmd[64], 0);
+    private final ObjectArrayList<FontDrawCmd> batchCommandPool = ObjectArrayList.wrap(new FontDrawCmd[64], 0);
+
+    private int blendSrcRGB = GL11.GL_SRC_ALPHA;
+    private int blendDstRGB = GL11.GL_ONE_MINUS_SRC_ALPHA;
+
+    private float lightmapU = 0.0f;
+    private float lightmapV = 0.0f;
+    private boolean lightmapActive = false;
+    private int lightmapTextureId = 0;
+    private int lightmapPackedLight = -1;
+
+    private final TextDrawState drawState = new TextDrawState();
+    private final TextDrawState liveDrawState = new TextDrawState();
+
+    private final Vector3f lightingFactor = new Vector3f(1.0f, 1.0f, 1.0f);
+    private boolean lightingFactorActive = false;
+
+    private static final Vector4f scratchLightmapUv = new Vector4f();
+
+    private int applyLighting(int argb) {
+        if (!lightingFactorActive) return argb;
+        final int red = Math.max(0, Math.min(255, (int) (((argb >> 16) & 0xFF) * lightingFactor.x + 0.5f)));
+        final int green = Math.max(0, Math.min(255, (int) (((argb >> 8) & 0xFF) * lightingFactor.y + 0.5f)));
+        final int blue = Math.max(0, Math.min(255, (int) ((argb & 0xFF) * lightingFactor.z + 0.5f)));
+        return (argb & 0xFF000000) | (red << 16) | (green << 8) | blue;
+    }
+
+    /**
+     * True only for a perspective projection (world-space text: signs, nameplates, etc).
+     * GUI/HUD text uses an orthographic projection and must never be shaded by world lighting -
+     * mods rely on getting back the exact color they requested (e.g. GTNHLib's ColorResource).
+     */
+    private static boolean isWorldSpaceText() {
+        return GLStateManager.getProjectionMatrix().m33() == 0.0f;
+    }
+
+    private void captureLightmapState() {
+        final int unitBinding = GLStateManager.getTextures().getTextureUnitBindings(LIGHTMAP_TEX_UNIT).getBinding();
+
+        final boolean active = isWorldSpaceText() && unitBinding != 0
+            && GLStateManager.getTextures().getTextureUnitStates(LIGHTMAP_TEX_UNIT).isEnabled();
+
+        float u = 0.0f;
+        float v = 0.0f;
+        int texture = 0;
+        if (active) {
+            final GLContextState glCtx = GLStateManager.ctx();
+            scratchLightmapUv.set(glCtx.lastBrightnessX, glCtx.lastBrightnessY, 0.0f, 1.0f).mul(GLStateManager.getTextures().getTextureUnitMatrix(LIGHTMAP_TEX_UNIT));
+            u = scratchLightmapUv.x;
+            v = scratchLightmapUv.y;
+            texture = unitBinding;
+        }
+        final int packedLight = active ? GLSMConfig.packedLastBrightness() : FULL_BRIGHT_LIGHT;
+
+        if (active == lightmapActive && u == lightmapU && v == lightmapV && texture == lightmapTextureId && packedLight == lightmapPackedLight) {
+            return;
+        }
+        sealBatchSegment();
+        lightmapActive = active;
+        lightmapU = u;
+        lightmapV = v;
+        lightmapTextureId = texture;
+        lightmapPackedLight = packedLight;
+    }
+
+    private void captureDrawState() {
+        liveDrawState.captureLive();
+        if (liveDrawState.sameAs(drawState)) return;
+        sealBatchSegment();
+        drawState.set(liveDrawState);
+    }
+
+    private static final class TextSegment {
+        final Matrix4f mvp = new Matrix4f();
+        final Matrix4f modelView = new Matrix4f();
+        BatchingFontRenderer owner;
+        int cmdStart;
+        int cmdEnd;
+        float lightmapU;
+        float lightmapV;
+        boolean lightmapActive;
+        int lightmapTexture;
+        int packedLight;
+        float normalX, normalY, normalZ;
+        int blockEntityId;
+        final TextDrawState drawState = new TextDrawState();
+    }
+
+    // 16-bit EBO index range
+    private static final int QUAD_BUDGET = 65536 / 4;
+
+    private static int deferredVertexPos;
+    private static int deferredIdxPos;
+
+    private int deferredCmdWatermark;
+    private static final ObjectArrayList<TextSegment> deferredSegments = ObjectArrayList.wrap(new TextSegment[16], 0);
+    private static final BatchDrawDefaults DEFERRED_DRAW_DEFAULTS = new BatchDrawDefaults();
+    private static final ObjectArrayList<TextSegment> deferredSegmentPool = ObjectArrayList.wrap(new TextSegment[16], 0);
+
+    private final Matrix4f batchProj = new Matrix4f();
+    private final Matrix4f batchModelView = new Matrix4f();
+    private boolean batchMatrixValid;
+    private final ObjectArrayList<TextSegment> batchSegments = ObjectArrayList.wrap(new TextSegment[16], 0);
+    private int batchSealedEnd;
+    private static BatchingFontRenderer arenaOwner;
+
+    private void allocateBuffers() {
+        populateEBO(rawCapacity / VERTEX_SIZE);
+    }
+
+    private void populateEBO(int capacity) {
+        final int quadCount = capacity * 6;
+        final ByteBuffer data = memAlloc(quadCount * 6 * 2);
+        long ptr = memAddress0(data);
+        for (int i = 0; i < quadCount; i++) {
+            int base = (i * 4);
+
+            // triangle 1
+            memPutShort(ptr, (short) base);
+            memPutShort(ptr + 2, (short) (base + 1));
+            memPutShort(ptr + 4, (short) (base + 2));
+
+            // triangle 2
+            memPutShort(ptr + 6, (short) (base + 2));
+            memPutShort(ptr + 8, (short) (base + 1));
+            memPutShort(ptr + 10, (short) (base + 3));
+            ptr += 12;
+        }
+
+        ebo.upload(data);
+
+        memFree(data);
+
+    }
+
+    private static void initStreaming() {
+        if (streamingInitialized) return;
+        streamingInitialized = true;
+        streamRing = PersistentStreamingBuffer.createOrNull(RING_CAPACITY);
+    }
+
+    public static void endFrame() {
+        if (streamRing != null) {
+            streamRing.endFrame();
+        }
+    }
+
+    private static void uploadVertexData(int limitPos) {
+        initStreaming();
+        vertexData.position(0);
+        vertexData.limit(limitPos);
+        if (streamRing != null) {
+            final int firstVertex = streamRing.upload(vertexData, VERTEX_SIZE);
+            if (firstVertex >= 0) {
+                pendingBuffer = streamRing.getBufferId();
+                pendingBase = firstVertex * VERTEX_SIZE;
+                return;
+            }
+        }
+        GLStateManager.glBindBuffer(GL15.GL_ARRAY_BUFFER, vbo);
+        vboCapacity = StreamingUploader.upload(vertexData, vboCapacity);
+        pendingBuffer = vbo;
+        pendingBase = 0;
+    }
+
+    private void ensureCapacity() {
+        if (vertexDataPos + (4 * VERTEX_SIZE) > rawCapacity) {
+            rawCapacity *= 2;
+            vertexData = memRealloc(vertexData, rawCapacity);
+            vertexDataAddress = memAddress0(vertexData);
+
+            allocateBuffers();
+        }
+    }
+
+    private void pushVtx(float x, float y, int rgba, float u, float v, float uMin, float uMax, float vMin, float vMax) {
+        final long ptr = vertexDataAddress + vertexDataPos;
+        rgba = applyLighting(rgba);
+
+        // v, v
+        memPutFloat(ptr, x);
+        memPutFloat(ptr + 4, y);
+
+        // t, t
+        memPutFloat(ptr + 8, u);
+        memPutFloat(ptr + 12, v);
+
+        // c, c, c, c
+        // 0xAARRGGBB
+        memPutByte(ptr + 16, (byte) ((rgba >> 16) & 0xFF));
+        memPutByte(ptr + 17, (byte) ((rgba >> 8) & 0xFF));
+        memPutByte(ptr + 18, (byte) (rgba & 0xFF));
+        memPutByte(ptr + 19, (byte) ((rgba >> 24) & 0xFF));
+
+        // tb, tb, tb, tb
+        memPutFloat(ptr + 20, uMin);
+        memPutFloat(ptr + 24, uMax);
+        memPutFloat(ptr + 28, vMin);
+        memPutFloat(ptr + 32, vMax);
+
+        vertexDataPos += VERTEX_SIZE;
+    }
+
+    private void pushUntexRect(float x, float y, float w, float h, int rgba) {
+        ensureCapacity();
+        pushVtx(x, y, rgba, 0, 0, 0, 0, 0, 0);
+        pushVtx(x, y + h, rgba, 0, 0, 0, 0, 0, 0);
+        pushVtx(x + w, y, rgba, 0, 0, 0, 0, 0, 0);
+        pushVtx(x + w, y + h, rgba, 0, 0, 0, 0, 0, 0);
+        pushQuadIdx();
+    }
+
+    private static final float[] MAX_AA_REACH = {0f, 6f, 8f};
+
+    private void pushTexRect(float x, float y, float w, float h, float itOff, int rgba, float uStart, float vStart, float uSz, float vSz, boolean flipV) {
+        ensureCapacity();
+
+        final float tBu0 = uStart;
+        final float tBu1 = uStart + uSz;
+        final float tBv0 = vStart;
+        final float tBv1 = vStart + vSz;
+
+        if (FontConfig.fontAAMode > 0 && w > 0 && h > 0) {
+            final float margin = MAX_AA_REACH[FontConfig.fontAAMode] * preprocessAAStrength() + 0.5f;
+            final float marginU = margin * (uSz / w);
+            final float marginV = margin * (vSz / h);
+            itOff *= (h + 2 * margin) / h;
+            x -= margin; w += 2 * margin;
+            y -= margin; h += 2 * margin;
+            uStart -= marginU; uSz += 2 * marginU;
+            vStart -= marginV; vSz += 2 * marginV;
+        }
+
+        float vTop = flipV ? vStart + vSz : vStart;
+        float vBot = flipV ? vStart : vStart + vSz;
+        pushVtx(x + itOff, y, rgba, uStart, vTop, tBu0, tBu1, tBv0, tBv1);
+        pushVtx(x - itOff, y + h, rgba, uStart, vBot, tBu0, tBu1, tBv0, tBv1);
+        pushVtx(x + itOff + w, y, rgba, uStart + uSz, vTop, tBu0, tBu1, tBv0, tBv1);
+        pushVtx(x - itOff + w, y + h, rgba, uStart + uSz, vBot, tBu0, tBu1, tBv0, tBv1);
+        pushQuadIdx();
+    }
+
+    private void pushQuadIdx() {
+        idxWriterIndex += 6;
+    }
+
+    /** Draw layers; see {@link FontDrawCmd#layer}. */
+    private static final int LAYER_BACKGROUND = -1;
+    private static final int LAYER_DEFAULT = 0;
+
+    private void pushDrawCmd(int startIdx, int idxCount, int texture, boolean isUnicode) {
+        pushDrawCmd(startIdx, idxCount, texture, isUnicode, LAYER_DEFAULT);
+    }
+
+    private void pushDrawCmd(int startIdx, int idxCount, int texture, boolean isUnicode, int layer) {
+        arenaOwner = this;
+        // Never coalesce into a command below the watermark - it belongs to a sealed segment.
+        if (batchCommands.size() > batchSealedEnd) {
+            final FontDrawCmd lastCmd = batchCommands.get(batchCommands.size() - 1);
+            final int prevEndVtx = lastCmd.startVtx + lastCmd.idxCount;
+            if (prevEndVtx == startIdx && lastCmd.texture == texture && lastCmd.layer == layer) {
+                // Coalesce into one
+                lastCmd.idxCount += idxCount;
+                return;
+            }
+        }
+        if (batchCommandPool.isEmpty()) {
+            for (int i = 0; i < 64; i++) {
+                batchCommandPool.add(new FontDrawCmd());
+            }
+        }
+        final FontDrawCmd cmd = batchCommandPool.pop();
+        cmd.reset(startIdx, idxCount, texture, isUnicode, layer);
+        batchCommands.add(cmd);
+    }
+
+    private static final class FontDrawCmd {
+
+        public int startVtx;
+        public int idxCount;
+        public boolean isUnicode;
+        public int texture;
+        /**
+         * Sorted ahead of the texture, so lower layers draw first. Sorting by texture
+         * means submission order is not kept, so anything belonging under the glyphs
+         * needs a lower layer rather than an earlier push.
+         */
+        public int layer;
+
+        public void reset(int startVtx, int vtxCount, int texture, boolean isUnicode) {
+            reset(startVtx, vtxCount, texture, isUnicode, LAYER_DEFAULT);
+        }
+
+        public void reset(int startVtx, int vtxCount, int texture, boolean isUnicode, int layer) {
+            this.layer = layer;
+            this.startVtx = startVtx;
+            this.idxCount = vtxCount;
+            this.texture = texture;
+            this.isUnicode = isUnicode;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == this) return true;
+            if (obj == null || obj.getClass() != this.getClass()) return false;
+            var that = (FontDrawCmd) obj;
+            return this.startVtx == that.startVtx && this.idxCount == that.idxCount && this.texture == that.texture;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(startVtx, idxCount, texture);
+        }
+
+        @Override
+        public String toString() {
+            return "FontDrawCmd["
+                + "startVtx="
+                + startVtx
+                + ", "
+                + "vtxCount="
+                + idxCount
+                + ", "
+                + "texture="
+                + texture
+                + ']';
+        }
+
+        public static final Comparator<FontDrawCmd> DRAW_ORDER_COMPARATOR =
+            Comparator.comparingInt((FontDrawCmd fdc) -> fdc.layer)
+                .thenComparingInt(fdc -> fdc.texture == 0 ? Integer.MAX_VALUE : fdc.texture)
+                .thenComparingInt(fdc -> fdc.startVtx);
+    }
+
+    /**
+     * Starts a new batch of font rendering operations. Can be called from within another batch with a matching end, to
+     * allow for easier optimizing of blocks of font rendering code.
+     */
+    public void beginBatch() {
+        if (arenaOwner != null && arenaOwner != this) {
+            arenaOwner.flushBatch();
+        }
+        if (batchDepth > 0) {
+            if (batchCommands.size() == batchSealedEnd) {
+                captureBatchMatrix();
+            } else if (!batchProj.equals(GLStateManager.getProjectionMatrix(), 0.0f) || !batchModelView.equals(GLStateManager.getModelViewMatrix(), 0.0f)) {
+                sealBatchSegment();
+                captureBatchMatrix();
+            }
+        }
+        batchDepth++;
+    }
+
+    private void captureBatchMatrix() {
+        batchProj.set(GLStateManager.getProjectionMatrix());
+        batchModelView.set(GLStateManager.getModelViewMatrix());
+        batchMatrixValid = true;
+    }
+
+    private void resolveMvp(Matrix4f dest) {
+        if (batchMatrixValid) {
+            batchProj.mul(batchModelView, dest);
+        } else {
+            GLStateManager.getProjectionMatrix().mul(GLStateManager.getModelViewMatrix(), dest);
+        }
+    }
+
+    private void resolveModelView(Matrix4f dest) {
+        dest.set(batchMatrixValid ? batchModelView : GLStateManager.getModelViewMatrix());
+    }
+
+    private void sealBatchSegment() {
+        final int end = batchCommands.size();
+        if (end == batchSealedEnd) return;
+        final TextSegment segment = deferredSegmentPool.isEmpty() ? new TextSegment() : deferredSegmentPool.pop();
+        segment.owner = this;
+        segment.cmdStart = batchSealedEnd;
+        segment.cmdEnd = end;
+        resolveMvp(segment.mvp);
+        resolveModelView(segment.modelView);
+        segment.lightmapActive = lightmapActive;
+        segment.lightmapU = lightmapU;
+        segment.lightmapV = lightmapV;
+        segment.lightmapTexture = lightmapTextureId;
+        segment.packedLight = lightmapPackedLight;
+        final Vector3f normal = ShaderManager.getCurrentNormal();
+        segment.normalX = normal.x;
+        segment.normalY = normal.y;
+        segment.normalZ = normal.z;
+        segment.blockEntityId = CapturedRenderingState.INSTANCE.getCurrentRenderedBlockEntity();
+        segment.drawState.set(drawState);
+        batchSegments.add(segment);
+        batchSealedEnd = end;
+    }
+
+    private void recycleBatchSegments() {
+        if (batchSegments.isEmpty()) return;
+        for (int i = 0, n = batchSegments.size(); i < n; i++) {
+            batchSegments.get(i).owner = null;
+        }
+        deferredSegmentPool.addAll(batchSegments);
+        batchSegments.clear();
+    }
+
+    public void endBatch() {
+        if (batchDepth <= 0) {
+            batchDepth = 0;
+            return;
+        }
+        batchDepth--;
+        if (batchDepth == 0) {
+            // We finished any nested batches.
+            if (shouldDeferNow()) {
+                deferBatch();
+            } else {
+                flushBatch();
+            }
+        }
+    }
+
+    private static boolean shouldDeferNow() {
+        if (!GLStateManager.isMainThread()) return false;
+        return (TesrBatchRenderer.INSTANCE.hasPendingGeometry() || ModelPartBatcher.INSTANCE.isActive())
+            && BatchDrawDefaults.drawsToPassFramebuffer();
+    }
+
+    public void beginDeferredBatch() {
+        if (batchDepth == 0 && shouldDeferNow() && deferredIdxPos / 6 > QUAD_BUDGET / 2) {
+            flushDeferredText();
+        }
+        beginBatch();
+    }
+
+    public void endDeferredBatch() {
+        endBatch();
+    }
+
+    public void resetAfterCrash() {
+        discardDeferredText();
+        batchDepth = 0;
+        deferredCmdWatermark = 0;
+        deferredVertexPos = 0;
+        deferredIdxPos = 0;
+        truncateBatchToWatermark();
+        arenaOwner = null;
+        flushLastTexture = 0;
+    }
+
+    private void deferBatch() {
+        sealBatchSegment();
+        if (batchSegments.isEmpty()) {
+            truncateBatchToWatermark();
+            return;
+        }
+        if (idxWriterIndex / 6 > QUAD_BUDGET) {
+            flushBatch();
+            return;
+        }
+        deferredSegments.addAll(batchSegments);
+        batchSegments.clear();
+        deferredCmdWatermark = batchCommands.size();
+        batchSealedEnd = deferredCmdWatermark;
+        deferredVertexPos = vertexDataPos;
+        deferredIdxPos = idxWriterIndex;
+        batchMatrixValid = false;
+    }
+
+    public static void flushDeferredText() {
+        if (deferredSegments.isEmpty()) return;
+
+        DEFERRED_DRAW_DEFAULTS.apply();
+        try {
+            if (deferredSegments.getFirst().owner.shouldDrawThroughPipeline()) {
+                flushDeferredThroughPipeline();
+                return;
+            }
+
+            final boolean locked = GLStateManager.acquireDrawLock();
+            try {
+                GLStateManager.beginForeignDraw();
+                try {
+                    flushDeferredTextInner();
+                } finally {
+                    GLStateManager.endForeignDraw();
+                }
+            } finally {
+                if (locked) GLStateManager.releaseDrawLock();
+            }
+        } finally {
+            DEFERRED_DRAW_DEFAULTS.restore();
+        }
+    }
+
+    private static void flushDeferredThroughPipeline() {
+        final BatchingFontRenderer first = deferredSegments.getFirst().owner;
+        final int prevBlockEntityId = CapturedRenderingState.INSTANCE.getCurrentRenderedBlockEntity();
+
+        final int d = GLStateManager.pushState(StateSet.FONT_PIPELINE);
+        try {
+            GLStateManager.glActiveTexture(GL13.GL_TEXTURE0);
+            GLStateManager.enableTexture();
+            GLStateManager.enableAlphaTest();
+            GLStateManager.enableBlend();
+            GLStateManager.tryBlendFuncSeparate(first.blendSrcRGB, first.blendDstRGB, GL11.GL_ONE, GL11.GL_ZERO);
+
+            final Boolean prevTranslucency = GbufferPrograms.beginTranslucencyDeclaration(Boolean.TRUE);
+            GbufferPrograms.setBlockEntityDefaults();
+
+            GLStateManager.glMatrixMode(GL11.GL_MODELVIEW);
+            GLStateManager.glPushMatrix();
+            try {
+                for (final TextSegment segment : deferredSegments) {
+                    final BatchingFontRenderer owner = segment.owner;
+                    if (segment.cmdStart == segment.cmdEnd) continue;
+
+                    GLStateManager.setModelViewMatrix(segment.modelView);
+                    CapturedRenderingState.INSTANCE.setCurrentBlockEntity(segment.blockEntityId);
+                    segment.drawState.apply();
+
+                    final FontDrawCmd[] cmdsData = owner.batchCommands.elements();
+                    Arrays.sort(cmdsData, segment.cmdStart, segment.cmdEnd, FontDrawCmd.DRAW_ORDER_COMPARATOR);
+
+                    emitRangeThroughPipeline(owner, cmdsData, segment.cmdStart, segment.cmdEnd,
+                        segment.packedLight, segment.normalX, segment.normalY, segment.normalZ);
+                }
+            } finally {
+                GLStateManager.glPopMatrix();
+                CapturedRenderingState.INSTANCE.setCurrentBlockEntity(prevBlockEntityId);
+                GbufferPrograms.endTranslucencyDeclaration(prevTranslucency);
+            }
+        } finally {
+            GLStateManager.popStateTo(d);
+            discardDeferredText();
+        }
+    }
+
+    private static void flushDeferredTextInner() {
+        uploadVertexData(deferredVertexPos);
+
+        final int d = GLStateManager.pushState(StateSet.FONT);
+        try {
+            GLStateManager.glActiveTexture(GL13.GL_TEXTURE0);
+            deferredSegments.get(0).owner.setupFontDrawState();
+            flushLastTexture = INVALID_TEXTURE;
+            resetFlushLightmap();
+            for (final TextSegment segment : deferredSegments) {
+                FLUSH_MVP.clear();
+                segment.mvp.get(FLUSH_MVP);
+                GLStateManager.glUniformMatrix4(segment.owner.mvpMatrixLocation, false, FLUSH_MVP);
+                uploadLightmap(segment.owner.lightmapLocation, segment.lightmapActive, segment.lightmapU,
+                    segment.lightmapV, segment.lightmapTexture);
+                segment.owner.applyDrawState(segment.drawState);
+                drawCommands(segment.owner.batchCommands.elements(), segment.cmdStart, segment.cmdEnd, segment.owner);
+            }
+        } finally {
+            GLStateManager.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
+            GLStateManager.glBindVertexArray(0);
+            GLStateManager.popStateTo(d);
+            discardDeferredText();
+        }
+    }
+
+    private void applyDrawState(TextDrawState state) {
+        state.apply();
+        GLStateManager.glUniform1f(alphaTestRefLocation, state.alphaRef);
+    }
+
+    public static void discardDeferredText() {
+        if (deferredSegments.isEmpty()) return;
+        for (int i = 0, n = deferredSegments.size(); i < n; i++) {
+            final TextSegment segment = deferredSegments.get(i);
+            segment.owner.clearDeferredCommands();
+            segment.owner.recycleBatchSegments();
+            segment.owner.batchSealedEnd = 0;
+            segment.owner.batchMatrixValid = false;
+            segment.owner.resetLightmapState();
+            segment.owner = null;
+        }
+        deferredSegmentPool.addAll(deferredSegments);
+        deferredSegments.clear();
+        deferredVertexPos = 0;
+        deferredIdxPos = 0;
+        vertexDataPos = 0;
+        idxWriterIndex = 0;
+        arenaOwner = null;
+    }
+
+    private void clearDeferredCommands() {
+        if (deferredCmdWatermark == 0) return;
+        for (int i = 0; i < deferredCmdWatermark; i++) {
+            batchCommandPool.add(batchCommands.get(i));
+        }
+        batchCommands.removeElements(0, deferredCmdWatermark);
+        for (int i = 0, n = batchSegments.size(); i < n; i++) {
+            final TextSegment segment = batchSegments.get(i);
+            segment.cmdStart -= deferredCmdWatermark;
+            segment.cmdEnd -= deferredCmdWatermark;
+        }
+        batchSealedEnd = Math.max(0, batchSealedEnd - deferredCmdWatermark);
+        deferredCmdWatermark = 0;
+    }
+
+    private static final Matrix4f scratchMvp = new Matrix4f();
+    private static final Matrix4f scratchModelView = new Matrix4f();
+    private int fontAAModeLast = -1;
+    private int fontAAStrengthLast = -1;
+    private float fontBrightnessLast = -1;
+
+    private void flushBatch() {
+        final boolean locked = GLStateManager.acquireDrawLock();
+        try {
+            if (shouldDrawThroughPipeline()) {
+                flushBatchThroughPipeline();
+            } else {
+                GLStateManager.beginForeignDraw();
+                try {
+                    flushBatchInner();
+                } finally {
+                    GLStateManager.endForeignDraw();
+                }
+            }
+        } finally {
+            if (locked) GLStateManager.releaseDrawLock();
+        }
+    }
+
+    private boolean shouldDrawThroughPipeline() {
+        if (FontConfig.fontAAMode != 0) {
+            return false;
+        }
+
+        if (!GLStateManager.isMainThread()) {
+            return false;
+        }
+
+        final PipelineManager pipelines = Iris.getPipelineManagerNullable();
+        if (pipelines == null) {
+            return false;
+        }
+
+        return !Tessellator.instance.isDrawing
+            && pipelines.getPipelineNullable() instanceof DeferredWorldRenderingPipeline drp
+            && drp.shouldOverrideShaders();
+    }
+
+    private void flushBatchInner() {
+        final int cmdCount = batchCommands.size();
+        final int segmentCount = batchSegments.size();
+        if (segmentCount == 0 && (vertexDataPos == deferredVertexPos || cmdCount == deferredCmdWatermark)) {
+            truncateBatchToWatermark();
+            return;
+        }
+
+        uploadVertexData(vertexDataPos);
+
+        final FontDrawCmd[] cmds = batchCommands.elements();
+        for (int i = 0; i < segmentCount; i++) {
+            final TextSegment segment = batchSegments.get(i);
+            Arrays.sort(cmds, segment.cmdStart, segment.cmdEnd, FontDrawCmd.DRAW_ORDER_COMPARATOR);
+        }
+        Arrays.sort(cmds, batchSealedEnd, cmdCount, FontDrawCmd.DRAW_ORDER_COMPARATOR);
+
+        final int d = GLStateManager.pushState(StateSet.FONT);
+        try {
+            setupFontDrawState();
+            flushLastTexture = INVALID_TEXTURE;
+            resetFlushLightmap();
+            try {
+                for (int i = 0; i < segmentCount; i++) {
+                    final TextSegment segment = batchSegments.get(i);
+                    FLUSH_MVP.clear();
+                    segment.mvp.get(FLUSH_MVP);
+                    GLStateManager.glUniformMatrix4(mvpMatrixLocation, false, FLUSH_MVP);
+                    uploadLightmap(lightmapLocation, segment.lightmapActive, segment.lightmapU, segment.lightmapV, segment.lightmapTexture);
+                    applyDrawState(segment.drawState);
+                    drawCommands(cmds, segment.cmdStart, segment.cmdEnd, this);
+                }
+                if (batchSealedEnd < cmdCount) {
+                    FLUSH_MVP.clear();
+                    resolveMvp(scratchMvp);
+                    scratchMvp.get(FLUSH_MVP);
+                    GLStateManager.glUniformMatrix4(mvpMatrixLocation, false, FLUSH_MVP);
+                    uploadLightmap(lightmapLocation, lightmapActive, lightmapU, lightmapV, lightmapTextureId);
+                    applyDrawState(drawState);
+                    drawCommands(cmds, batchSealedEnd, cmdCount, this);
+                }
+            } finally {
+                GLStateManager.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
+                GLStateManager.glBindVertexArray(0);
+            }
+        } finally {
+            GLStateManager.popStateTo(d);
+        }
+
+        truncateBatchToWatermark();
+    }
+
+    private static float preprocessAAStrength() {
+        return FontConfig.fontAAStrength / 120.f;
+    }
+
+    private void setupFontDrawState() {
+        GLStateManager.enableTexture();
+        GLStateManager.enableAlphaTest();
+        GLStateManager.enableBlend();
+        GLStateManager.tryBlendFuncSeparate(blendSrcRGB, blendDstRGB, GL11.GL_ONE, GL11.GL_ZERO);
+        GLStateManager.glShadeModel(GL11.GL_FLAT);
+
+        GLStateManager.glUseProgram(fontShaderId);
+        if (FontConfig.fontAAMode != fontAAModeLast) {
+            fontAAModeLast = FontConfig.fontAAMode;
+            GLStateManager.glUniform1i(AAMode, FontConfig.fontAAMode);
+        }
+        if (FontConfig.fontAAStrength != fontAAStrengthLast) {
+            fontAAStrengthLast = FontConfig.fontAAStrength;
+            GLStateManager.glUniform1f(AAStrength, preprocessAAStrength());
+        }
+        if (FontConfig.fontBrightness != fontBrightnessLast) {
+            fontBrightnessLast = FontConfig.fontBrightness;
+            GLStateManager.glUniform1f(fontBrightness, 0.625f * FontConfig.fontBrightness + 0.1875f);
+        }
+        if (lightmapSamplerProgram != fontShaderId) {
+            GLStateManager.glUniform1i(lightmapSamplerLocation, LIGHTMAP_TEX_UNIT);
+            lightmapSamplerProgram = fontShaderId;
+        }
+
+        final GLContextState glCtx = GLStateManager.ctx();
+        if (vaoContext != glCtx) {
+            vaoContext = glCtx;
+            vaoBuffer = -1;
+        }
+        int fontVAO = glCtx.fontVao;
+        if (fontVAO == 0) {
+            fontVAO = GLStateManager.glGenVertexArrays();
+            glCtx.fontVao = fontVAO;
+
+            GLStateManager.glBindVertexArray(fontVAO);
+            ebo.bind();
+            GLStateManager.glEnableVertexAttribArray(0);
+            GLStateManager.glEnableVertexAttribArray(1);
+            GLStateManager.glEnableVertexAttribArray(2);
+            GLStateManager.glEnableVertexAttribArray(3);
+        } else {
+            GLStateManager.glBindVertexArray(fontVAO);
+        }
+
+        if (vaoBuffer != pendingBuffer || vaoBase != pendingBase) {
+            GLStateManager.glBindBuffer(GL15.GL_ARRAY_BUFFER, pendingBuffer);
+
+            GLStateManager.glVertexAttribPointer(0, 2, GL11.GL_FLOAT, false, VERTEX_SIZE, pendingBase);
+            GLStateManager.glVertexAttribPointer(1, 2, GL11.GL_FLOAT, false, VERTEX_SIZE, pendingBase + 8);
+            GLStateManager.glVertexAttribPointer(2, 4, GL11.GL_UNSIGNED_BYTE, true, VERTEX_SIZE, pendingBase + 16);
+            GLStateManager.glVertexAttribPointer(3, 4, GL11.GL_FLOAT, false, VERTEX_SIZE, pendingBase + 20);
+
+            vaoBuffer = pendingBuffer;
+            vaoBase = pendingBase;
+        }
+    }
+
+    private static int flushLastTexture;
+
+    private static float flushLastLightmapU;
+    private static float flushLastLightmapV;
+    private static boolean flushLastLightmapActive;
+
+    private static void resetFlushLightmap() {
+        flushLastLightmapU = Float.NaN;
+        flushLastLightmapV = Float.NaN;
+        flushLastLightmapActive = false;
+    }
+
+    private static int boundLightmapTexture() {
+        return GLStateManager.getTextures().getTextureUnitBindings(LIGHTMAP_TEX_UNIT).getBinding();
+    }
+
+    private static void bindLightmapTexture(int texture) {
+        GLStateManager.glActiveTexture(GL13.GL_TEXTURE0 + LIGHTMAP_TEX_UNIT);
+        GLStateManager.glBindTexture(GL11.GL_TEXTURE_2D, texture);
+        GLStateManager.glActiveTexture(GL13.GL_TEXTURE0);
+    }
+
+    private static void uploadLightmap(int uniformLocation, boolean active, float u, float v, int texture) {
+        if (u != flushLastLightmapU || v != flushLastLightmapV || active != flushLastLightmapActive) {
+            GLStateManager.glUniform3f(uniformLocation, u, v, active ? 1.0f : 0.0f);
+            flushLastLightmapU = u;
+            flushLastLightmapV = v;
+            flushLastLightmapActive = active;
+        }
+        if (active && texture != 0 && boundLightmapTexture() != texture) {
+            bindLightmapTexture(texture);
+        }
+    }
+
+    private static void drawCommands(FontDrawCmd[] cmdsData, int from, int to, BatchingFontRenderer owner) {
+        for (int i = from; i < to; i++) {
+            final FontDrawCmd cmd = cmdsData[i];
+            if (flushLastTexture != cmd.texture) {
+                if (flushLastTexture == 0) {
+                    GLStateManager.glEnable(GL11.GL_TEXTURE_2D);
+                } else if (cmd.texture == 0) {
+                    GLStateManager.glDisable(GL11.GL_TEXTURE_2D);
+                }
+                if (cmd.texture != 0) {
+                    bindIntTexture(owner, cmd.texture);
+                }
+                flushLastTexture = cmd.texture;
+            }
+            GLStateManager.glDrawElements(GL11.GL_TRIANGLES, cmd.idxCount, GL11.GL_UNSIGNED_SHORT, (long) cmd.startVtx * 2L);
+        }
+    }
+
+    private void flushBatchThroughPipeline() {
+        final int cmdCount = batchCommands.size();
+        final int segmentCount = batchSegments.size();
+        if (segmentCount == 0 && (vertexDataPos == deferredVertexPos || cmdCount == deferredCmdWatermark)) {
+            truncateBatchToWatermark();
+            return;
+        }
+
+        final int prevBlockEntityId = CapturedRenderingState.INSTANCE.getCurrentRenderedBlockEntity();
+
+        final FontDrawCmd[] cmdsData = batchCommands.elements();
+        for (int i = 0; i < segmentCount; i++) {
+            final TextSegment segment = batchSegments.get(i);
+            Arrays.sort(cmdsData, segment.cmdStart, segment.cmdEnd, FontDrawCmd.DRAW_ORDER_COMPARATOR);
+        }
+        Arrays.sort(cmdsData, batchSealedEnd, cmdCount, FontDrawCmd.DRAW_ORDER_COMPARATOR);
+
+        // The unsealed tail still belongs to the modelview live at flush time; capture it before the segments move it.
+        resolveModelView(scratchModelView);
+
+        final int d = GLStateManager.pushState(StateSet.FONT_PIPELINE);
+        try {
+            GLStateManager.enableTexture();
+            GLStateManager.enableAlphaTest();
+            GLStateManager.enableBlend();
+            GLStateManager.tryBlendFuncSeparate(blendSrcRGB, blendDstRGB, GL11.GL_ONE, GL11.GL_ZERO);
+
+            final Boolean prevTranslucency = GbufferPrograms.beginTranslucencyDeclaration(Boolean.TRUE);
+            GbufferPrograms.setBlockEntityDefaults();
+
+            GLStateManager.glMatrixMode(GL11.GL_MODELVIEW);
+            GLStateManager.glPushMatrix();
+            try {
+                for (int i = 0; i < segmentCount; i++) {
+                    final TextSegment segment = batchSegments.get(i);
+                    if (segment.cmdStart == segment.cmdEnd) continue;
+                    GLStateManager.setModelViewMatrix(segment.modelView);
+                    CapturedRenderingState.INSTANCE.setCurrentBlockEntity(segment.blockEntityId);
+                    segment.drawState.apply();
+                    emitRangeThroughPipeline(this, cmdsData, segment.cmdStart, segment.cmdEnd,
+                        segment.packedLight, segment.normalX, segment.normalY, segment.normalZ);
+                }
+                if (batchSealedEnd < cmdCount) {
+                    GLStateManager.setModelViewMatrix(scratchModelView);
+                    CapturedRenderingState.INSTANCE.setCurrentBlockEntity(prevBlockEntityId);
+                    drawState.apply();
+                    final Vector3f normal = ShaderManager.getCurrentNormal();
+                    emitRangeThroughPipeline(this, cmdsData, batchSealedEnd, cmdCount,
+                        lightmapPackedLight, normal.x, normal.y, normal.z);
+                }
+            } finally {
+                GLStateManager.glPopMatrix();
+                CapturedRenderingState.INSTANCE.setCurrentBlockEntity(prevBlockEntityId);
+                GbufferPrograms.endTranslucencyDeclaration(prevTranslucency);
+            }
+        } finally {
+            GLStateManager.popStateTo(d);
+            truncateBatchToWatermark();
+        }
+    }
+
+    /** Replays one sealed command range through the Tessellator so Iris sees it as ordinary geometry. */
+    private static void emitRangeThroughPipeline(BatchingFontRenderer owner, FontDrawCmd[] cmdsData, int from, int to,
+        int packedLight, float normalX, float normalY, float normalZ) {
+        final Tessellator tessellator = Tessellator.instance;
+        int lastTexture = INVALID_TEXTURE;
+        boolean drawing = false;
+        try {
+            for (int i = from; i < to; i++) {
+                final FontDrawCmd cmd = cmdsData[i];
+                if (lastTexture != cmd.texture) {
+                    if (drawing) {
+                        tessellator.draw();
+                        drawing = false;
+                    }
+                    if (cmd.texture == 0) {
+                        GLStateManager.disableTexture();
+                    } else {
+                        GLStateManager.enableTexture();
+                        bindIntTexture(owner, cmd.texture);
+                    }
+                    lastTexture = cmd.texture;
+                }
+                if (!drawing) {
+                    tessellator.startDrawingQuads();
+                    tessellator.setBrightness(packedLight);
+                    tessellator.setNormal(normalX, normalY, normalZ);
+                    drawing = true;
+                }
+                owner.emitCommand(tessellator, cmd);
+            }
+        } finally {
+            if (drawing) {
+                tessellator.draw();
+            }
+        }
+    }
+
+    private void emitCommand(Tessellator tessellator, FontDrawCmd cmd) {
+        final int firstVertex = cmd.startVtx / 6 * 4;
+        final int quadCount = cmd.idxCount / 6;
+
+        for (int q = 0; q < quadCount; q++) {
+            final long base = vertexDataAddress + (long) (firstVertex + q * 4) * VERTEX_SIZE;
+            emitVertex(tessellator, base);
+            emitVertex(tessellator, base + VERTEX_SIZE);
+            emitVertex(tessellator, base + 3L * VERTEX_SIZE);
+            emitVertex(tessellator, base + 2L * VERTEX_SIZE);
+        }
+    }
+
+    private void emitVertex(Tessellator tessellator, long ptr) {
+        tessellator.setColorRGBA(
+            memGetByte(ptr + 16) & 0xFF,
+            memGetByte(ptr + 17) & 0xFF,
+            memGetByte(ptr + 18) & 0xFF,
+            memGetByte(ptr + 19) & 0xFF);
+        tessellator.addVertexWithUV(memGetFloat(ptr), memGetFloat(ptr + 4), 0.0D,
+            memGetFloat(ptr + 8), memGetFloat(ptr + 12));
+    }
+
+    private void truncateBatchToWatermark() {
+        recycleBatchSegments();
+        for (int i = batchCommands.size() - 1; i >= deferredCmdWatermark; i--) {
+            batchCommandPool.add(batchCommands.get(i));
+        }
+        batchCommands.size(deferredCmdWatermark);
+        batchSealedEnd = deferredCmdWatermark;
+        batchMatrixValid = false;
+        vertexDataPos = deferredVertexPos;
+        idxWriterIndex = deferredIdxPos;
+        resetLightmapState();
+        if (arenaOwner == this) {
+            arenaOwner = null;
+        }
+    }
+
+    private void resetLightmapState() {
+        lightmapActive = false;
+        lightmapU = 0.0f;
+        lightmapV = 0.0f;
+        lightmapTextureId = 0;
+        lightmapPackedLight = -1;
+    }
+
+    public static boolean darkModeRecolorEnabled = false;
+    public static boolean enterRecolorSection(boolean enable) {
+        boolean prev = darkModeRecolorEnabled;
+        darkModeRecolorEnabled = enable;
+        return prev;
+    }
+    public static void exitRecolorSection(boolean prev) {
+        darkModeRecolorEnabled = prev;
+    }
+
+    // Inside a button section, text drawn in one of the button's own three colors is swapped for button_font's color.
+    // Button sections can't be nested: only the on/off flag is restored on exit, not the colors.
+    private static boolean buttonSectionActive = false;
+    private static int buttonEnabledColor, buttonHoveredColor, buttonDisabledColor;
+    public static boolean enterButtonSection(int enabledColor, int hoveredColor, int disabledColor) {
+        boolean prev = buttonSectionActive;
+        buttonSectionActive = true;
+        buttonEnabledColor = enabledColor;
+        buttonHoveredColor = hoveredColor;
+        buttonDisabledColor = disabledColor;
+        return prev;
+    }
+    public static void exitButtonSection(boolean prev) {
+        buttonSectionActive = prev;
+    }
+
+    // === Actual text mesh generation
+
+    public static boolean charInRange(char what, char fromInclusive, char toInclusive) {
+        return (what >= fromInclusive) && (what <= toInclusive);
+    }
+
+    /**
+     * Count visible characters from {@code start} to {@code end}, skipping format codes.
+     * Stops at §r, any color code (§0-f, §x), or any color effect (§q, §g).
+     * Style codes (§k-o) and non-terminating effects (§z wave, §v dinnerbone) are skipped.
+     */
+    private static int countVisibleChars(CharSequence str, int start, int end) {
+        int count = 0;
+        for (int i = start; i < end; i++) {
+            char ch = str.charAt(i);
+            if (ch == FORMATTING_CHAR && i + 1 < end) {
+                char code = Character.toLowerCase(str.charAt(i + 1));
+                if (code == 'r' || (code >= '0' && code <= '9') || (code >= 'a' && code <= 'f')
+                    || code == 'x' || code == 'q' || code == 'g') {
+                    break;
+                }
+                i++;
+            } else {
+                count++;
+            }
+        }
+        return Math.max(count, 1);
+    }
+
+    private static int hsvToRgb(float hue, float sat, float val) {
+        int h = (int) (hue / 60f) % 6;
+        float f = hue / 60f - h;
+        float p = val * (1 - sat);
+        float q = val * (1 - f * sat);
+        float t = val * (1 - (1 - f) * sat);
+        float r, g, b;
+        switch (h) {
+            case 0: r=val; g=t; b=p; break;
+            case 1: r=q; g=val; b=p; break;
+            case 2: r=p; g=val; b=t; break;
+            case 3: r=p; g=q; b=val; break;
+            case 4: r=t; g=p; b=val; break;
+            default: r=val; g=p; b=q; break;
+        }
+        return ((int) (r * 255) << 16) | ((int) (g * 255) << 8) | (int) (b * 255);
+    }
+
+    private static final int RAINBOW_LUT_SIZE = 24;
+    private static final int[] RAINBOW_LUT = new int[RAINBOW_LUT_SIZE];
+
+    static {
+        for (int i = 0; i < RAINBOW_LUT_SIZE; i++) {
+            RAINBOW_LUT[i] = hsvToRgb(i * 15f, 1f, 1f);
+        }
+    }
+
+    public boolean forceDefaults() {
+        return this.bookMode || this.isSGA || this.isSplash;
+    }
+
+    public float getGlyphScaleX() {
+        return forceDefaults() ? 1 : (float) (FontConfig.glyphScale * Math.pow(2, FontConfig.glyphAspect));
+    }
+
+    public float getGlyphScaleY() {
+        return forceDefaults() ? 1 : (float) (FontConfig.glyphScale / Math.pow(2, FontConfig.glyphAspect));
+    }
+
+    public float getGlyphSpacing() {
+        return forceDefaults() ? 0 : FontConfig.glyphSpacing;
+    }
+
+    public float getWhitespaceScale() {
+        return forceDefaults() ? 1 : FontConfig.whitespaceScale;
+    }
+
+    public float getShadowOffset() {
+        return forceDefaults() ? 1 : FontConfig.fontShadowOffset;
+    }
+
+    private static final double WAVE_TIME_SCALE = 5e-9;
+    private static final float WAVE_FREQUENCY = 0.5f;
+
+    public float drawString(final float anchorX, final float anchorY, final int inputColor, final boolean enableShadow,
+                            final boolean unicodeFlag, final CharSequence string, int stringOffset, int stringLength) {
+        // noinspection SizeReplaceableByIsEmpty
+        if (string == null || string.length() == 0) {
+            return anchorX + (enableShadow ? 1.0f : 0.0f);
+        }
+        final int color = buttonSectionActive
+            ? DarkModeUtils.recolorButtonText(inputColor, buttonEnabledColor, buttonHoveredColor, buttonDisabledColor)
+            : inputColor;
+        final int shadowColor = (color & 0xfcfcfc) >> 2 | color & 0xff000000;
+
+        FontProviderMC.get(this.isSGA).charWidth = this.charWidth;
+        FontProviderMC.get(this.isSGA).locationFontTexture = this.locationFontTexture;
+
+        this.beginBatch();
+        this.captureLightmapState();
+        this.captureDrawState();
+        this.lightingFactorActive = isWorldSpaceText() && FFPVertexLighting.modulatesVertexColor(this.lightingFactor);
+        float curX = anchorX;
+        try {
+            final int totalStringLength = string.length();
+            stringOffset = MathHelper.clamp_int(stringOffset, 0, totalStringLength);
+            stringLength = MathHelper.clamp_int(stringLength, 0, totalStringLength - stringOffset);
+            if (stringLength <= 0) {
+                return 0;
+            }
+            final int stringEnd = stringOffset + stringLength;
+
+            int curColor = color;
+            int curShadowColor = shadowColor;
+            boolean curItalic = false;
+            boolean curRandom = false;
+            boolean curBold = false;
+            boolean curStrikethrough = false;
+            boolean curUnderline = false;
+            boolean curRainbow = false;
+            boolean curWave = false;
+            boolean curDinnerbone = false;
+            boolean curGradient = false;
+            long curCustomEffects = 0L;
+            boolean curShadow = false;
+            boolean curShadowCustomColor = false;
+            int curShadowColorOverride = 0;
+            int gradientStartRgb = 0, gradientEndRgb = 0;
+            int gradientCharIndex = 0, gradientTotalChars = 0;
+            float gradientStep = 0f;
+            int rainbowCharIndex = 0;
+            int visibleCharIndex = 0;
+
+            float glyphScaleY = getGlyphScaleY();
+            float glyphScaleX = getGlyphScaleX();
+            float heightNorth = anchorY + (underlying.FONT_HEIGHT - 1.0f) * (0.5f - glyphScaleY / 2);
+
+            final float underlineY = heightNorth + (underlying.FONT_HEIGHT - 1.0f) * glyphScaleY;
+            float underlineStartX = 0.0f;
+            float underlineEndX = 0.0f;
+
+            final float strikethroughY = heightNorth + ((float) (underlying.FONT_HEIGHT / 2) - 1.0f) * glyphScaleY;
+            float strikethroughStartX = 0.0f;
+            float strikethroughEndX = 0.0f;
+
+            for (int charIdx = stringOffset; charIdx < stringEnd; charIdx++) {
+                char chr = string.charAt(charIdx);
+                if (chr == FORMATTING_CHAR && (charIdx + 1) < stringEnd) {
+                    final char fmtCode = Character.toLowerCase(string.charAt(charIdx + 1));
+                    charIdx++;
+
+                    if (curUnderline && underlineStartX != underlineEndX) {
+                        final int ulIdx = idxWriterIndex;
+                        pushUntexRect(underlineStartX, underlineY, underlineEndX - underlineStartX, glyphScaleY, curColor);
+                        pushDrawCmd(ulIdx, 6, 0, false);
+                        underlineStartX = underlineEndX;
+                    }
+                    if (curStrikethrough && strikethroughStartX != strikethroughEndX) {
+                        final int ulIdx = idxWriterIndex;
+                        pushUntexRect(
+                            strikethroughStartX,
+                            strikethroughY,
+                            strikethroughEndX - strikethroughStartX,
+                            glyphScaleY,
+                            curColor);
+                        pushDrawCmd(ulIdx, 6, 0, false);
+                        strikethroughStartX = strikethroughEndX;
+                    }
+
+                    if (fmtCode == 'x' && AngelicaConfig.enableRGBColors && charIdx + SECTION_X_PAYLOAD < stringEnd) {
+                        int rgb = ColorCodeUtils.parseHexPairs(string, charIdx + 1, 6);
+                        if (rgb != -1) {
+                            curRainbow = false;
+                            curGradient = false;
+                            curCustomEffects = 0L;
+                            // Styles normally carry through a hex colour; a text mod that owns
+                            // this grammar can say otherwise, and the widths follow the same call.
+                            if (FontRendering.hexColorResetsStyles()) {
+                                curRandom = false;
+                                curBold = false;
+                                curStrikethrough = false;
+                                curUnderline = false;
+                                curItalic = false;
+                            }
+                            curColor = (curColor & 0xFF000000) | (rgb & 0x00FFFFFF);
+                            curShadowColor = (curShadowColor & 0xFF000000) | ((rgb & 0xFCFCFC) >> 2);
+                            charIdx += SECTION_X_PAYLOAD;
+                            if (darkModeRecolorEnabled) {
+                                curShadow = false;
+                            }
+                        }
+                    } else {
+                        final boolean is09 = charInRange(fmtCode, '0', '9');
+                        final boolean isAF = charInRange(fmtCode, 'a', 'f');
+                        if (is09 || isAF) {
+                            curRandom = false;
+                            curBold = false;
+                            curStrikethrough = false;
+                            curUnderline = false;
+                            curItalic = false;
+                            curRainbow = false;
+                            curGradient = false;
+                            curCustomEffects = 0L;
+                            // wave/dinnerbone NOT reset — they're positional effects, independent of color
+
+                            final int colorIdx = is09 ? (fmtCode - '0') : (fmtCode - 'a' + 10);
+                            final int rgb = this.colorCode[colorIdx];
+                            curColor = (curColor & 0xFF000000) | (rgb & 0x00FFFFFF);
+                            final int shadowRgb = this.colorCode[colorIdx + 16];
+                            curShadowColor = (curShadowColor & 0xFF000000) | (shadowRgb & 0x00FFFFFF);
+                            if (darkModeRecolorEnabled) {
+                                curShadow = false;
+                            }
+                        } else if (fmtCode == 'k') {
+                            curRandom = true;
+                        } else if (fmtCode == 'l') {
+                            curBold = true;
+                        } else if (fmtCode == 'm') {
+                            curStrikethrough = true;
+                            strikethroughStartX = curX - 1.0f;
+                            strikethroughEndX = strikethroughStartX;
+                        } else if (fmtCode == 'n') {
+                            curUnderline = true;
+                            underlineStartX = curX - 1.0f;
+                            underlineEndX = underlineStartX;
+                        } else if (fmtCode == 'o') {
+                            curItalic = true;
+                        } else if (fmtCode == 'q' && AngelicaConfig.enableRainbow) {
+                            curRainbow = true;
+                            curGradient = false;
+                            curCustomEffects = 0L;
+                            rainbowCharIndex = 0;
+                        } else if (fmtCode == 'z' && AngelicaConfig.enableWaveText) {
+                            curWave = !curWave;
+                        } else if (fmtCode == 'v' && AngelicaConfig.enableDinnerboneText) {
+                            curDinnerbone = !curDinnerbone;
+                        } else if (fmtCode == 'u' && AngelicaConfig.enableDropShadow) {
+                            int customRgb = (charIdx + SECTION_X_LENGTH < stringEnd)
+                                ? ColorCodeUtils.parseSectionXAt(string, charIdx + 1)
+                                : -1;
+                            if (customRgb != -1) {
+                                curShadow = true;
+                                curShadowCustomColor = true;
+                                curShadowColorOverride = customRgb;
+                                charIdx += SECTION_X_LENGTH;
+                            } else {
+                                curShadow = !curShadow;
+                                if (!curShadow) curShadowCustomColor = false;
+                            }
+                        } else if (fmtCode == 'g' && AngelicaConfig.enableGradients && charIdx + GRADIENT_PAYLOAD < stringEnd) {
+                            int color1 = ColorCodeUtils.parseSectionXAt(string, charIdx + 1);
+                            int color2 = ColorCodeUtils.parseSectionXAt(string, charIdx + 1 + SECTION_X_LENGTH);
+                            if (color1 != -1 && color2 != -1) {
+                                curGradient = true;
+                                curRainbow = false;
+                                curCustomEffects = 0L;
+                                gradientStartRgb = color1;
+                                gradientEndRgb = color2;
+                                gradientCharIndex = 0;
+                                gradientTotalChars = countVisibleChars(string, charIdx + 1 + GRADIENT_PAYLOAD, stringEnd);
+                                gradientStep = gradientTotalChars > 1 ? 1f / (gradientTotalChars - 1) : 0f;
+                                charIdx += GRADIENT_PAYLOAD;
+                            }
+                        } else if (FontEffectRegistry.isRegistered(fmtCode)) {
+                            // Toggles, like wave and dinnerbone, so a span can be closed
+                            // without a colour or §r. Those still clear it as before.
+                            curCustomEffects ^= FontEffectRegistry.bit(fmtCode);
+                        } else if (fmtCode == 'r') {
+                            curRandom = false;
+                            curBold = false;
+                            curStrikethrough = false;
+                            curUnderline = false;
+                            curItalic = false;
+                            curRainbow = false;
+                            curWave = false;
+                            curDinnerbone = false;
+                            curGradient = false;
+                            curCustomEffects = 0L;
+                            curShadow = false;
+                            curShadowCustomColor = false;
+                            curColor = color;
+                            curShadowColor = shadowColor;
+                        }
+                    } // close else block for non-§x codes
+
+                    continue;
+                }
+
+                if (chr == ColorCodeUtils.ESCAPED_AMPERSAND) { chr = '&'; }
+
+                chr = FontStrategist.replaceCustomGlyph(this, chr, unicodeFlag);
+
+                // ASCII space, NBSP, NNBSP, decided before obfuscation as vanilla does.
+                final boolean whitespace = chr == ' ' || chr == '\u00A0' || chr == '\u202F';
+
+                FontProvider fontProvider = FontStrategist.getFontProvider(this, chr, FontConfig.enableCustomFont, unicodeFlag);
+
+                // Asked of the provider that draws the glyph, so §k keeps to the font in use
+                // and to the width it was measured at, under a custom or unicode font too.
+                if (curRandom && !whitespace) {
+                    chr = fontProvider.getRandomReplacement(chr);
+                }
+
+                heightNorth = anchorY + (underlying.FONT_HEIGHT - 1.0f) * (0.5f - glyphScaleY * fontProvider.getYScaleMultiplier() / 2)
+                    + fontProvider.getBaselineShift() * glyphScaleY;
+                float heightSouth = (underlying.FONT_HEIGHT - 1.0f) * glyphScaleY * fontProvider.getYScaleMultiplier();
+
+                visibleCharIndex++;
+
+                if (whitespace) {
+                    curX += 4 * this.getWhitespaceScale() + (curBold ? 1 : 0);
+                    continue;
+                }
+
+                if (curRainbow) {
+                    int rgbEffect = RAINBOW_LUT[rainbowCharIndex % RAINBOW_LUT_SIZE];
+                    curColor = (curColor & 0xFF000000) | rgbEffect;
+                    curShadowColor = (curShadowColor & 0xFF000000) | ((rgbEffect & 0xFCFCFC) >> 2);
+                    rainbowCharIndex++;
+                }
+                if (curGradient && gradientTotalChars > 0) {
+                    float t = Math.min(gradientCharIndex * gradientStep, 1f);
+                    int gr = (int) ((gradientStartRgb >> 16 & 0xFF) * (1 - t) + (gradientEndRgb >> 16 & 0xFF) * t);
+                    int gg = (int) ((gradientStartRgb >> 8 & 0xFF) * (1 - t) + (gradientEndRgb >> 8 & 0xFF) * t);
+                    int gb = (int) ((gradientStartRgb & 0xFF) * (1 - t) + (gradientEndRgb & 0xFF) * t);
+                    int rgbEffect = (gr << 16) | (gg << 8) | gb;
+                    curColor = (curColor & 0xFF000000) | rgbEffect;
+                    curShadowColor = (curShadowColor & 0xFF000000) | ((rgbEffect & 0xFCFCFC) >> 2);
+                    gradientCharIndex++;
+                }
+
+                final float uStart = fontProvider.getUStart(chr);
+                final float vStart = fontProvider.getVStart(chr);
+                final float xAdvance = fontProvider.getXAdvance(chr) * glyphScaleX;
+                final float glyphW = fontProvider.getGlyphW(chr) * glyphScaleX;
+                final float uSz = fontProvider.getUSize(chr);
+                final float vSz = fontProvider.getVSize(chr);
+                final float itOff = curItalic ? glyphScaleX : 0.0F; // italic offset
+                final float shadowOffset = fontProvider.getShadowOffset();
+                final int shadowCopies = FontConfig.shadowCopies;
+                final int boldCopies = FontConfig.boldCopies;
+                final int texture = fontProvider.getTexture(chr);
+
+                // Wave: Y offset via sine wave
+                float renderY = heightNorth;
+                if (curWave) {
+                    float time = HUDCaching.renderingCacheOverride ? 0f : (float) ((System.nanoTime() & 0xFFFFFFFFFFFFL) * WAVE_TIME_SCALE);
+                    renderY += (float) Math.sin(visibleCharIndex * WAVE_FREQUENCY + time) * AngelicaConfig.waveAmplitude;
+                }
+
+                if (darkModeRecolorEnabled) {
+                    long recolor = DarkModeUtils.computeGuiFontRecolor(curColor);
+                    if (recolor != DarkModeUtils.NO_RECOLOR) {
+                        curColor = DarkModeUtils.unpackColor(recolor);
+                        curShadowColor = (curShadowColor & 0xFF000000) | DarkModeUtils.unpackShadowRgb(recolor);
+                        curShadow = DarkModeUtils.unpackShadow(recolor);
+                    }
+                }
+
+                float renderX = curX;
+                int glyphColor = curColor;
+                int glyphShadowColor = curShadowColor;
+                int glyphBackground = 0;
+                if (curCustomEffects != 0L) {
+                    long fx = curCustomEffects;
+                    while (fx != 0L) {
+                        final CustomGlyphEffect effect = FontEffectRegistry.get(Long.numberOfTrailingZeros(fx));
+                        fx &= fx - 1L;
+                        glyphColor = effect.transformColor(glyphColor, false, visibleCharIndex);
+                        glyphShadowColor = effect.transformColor(glyphShadowColor, true, visibleCharIndex);
+                        renderX += effect.offsetX(visibleCharIndex);
+                        renderY += effect.offsetY(visibleCharIndex);
+                        final int background = effect.backgroundColor(visibleCharIndex);
+                        if (background != 0) glyphBackground = background;
+                    }
+                }
+
+                // Untextured, with its own draw command, like the underline below.
+                if (glyphBackground != 0) {
+                    final int bgIdx = idxWriterIndex;
+                    pushUntexRect(renderX, renderY, glyphW, heightSouth, glyphBackground);
+                    pushDrawCmd(bgIdx, 6, 0, false, LAYER_BACKGROUND);
+                }
+
+                // After the background, so this command covers only what is counted below.
+                final int idxId = idxWriterIndex;
+
+                final boolean drawShadow = enableShadow || curShadow || (darkModeRecolorEnabled && DarkModeUtils.shadowsGlobal());
+                if (drawShadow) {
+                    final int effectiveShadowColor = curShadowCustomColor
+                        ? ((glyphColor & 0xFF000000) | (curShadowColorOverride & 0x00FFFFFF))
+                        : glyphShadowColor;
+                    for (int n = 1; n <= shadowCopies; n++) {
+                        final float shadowOffsetPart = shadowOffset * ((float) n / shadowCopies);
+                        pushTexRect(renderX + shadowOffsetPart, renderY + shadowOffsetPart, glyphW - 1.0f, heightSouth, itOff, effectiveShadowColor, uStart, vStart, uSz, vSz, curDinnerbone);
+
+                        if (curBold) {
+                            pushTexRect(renderX + 2.0f * shadowOffsetPart, renderY + shadowOffsetPart, glyphW - 1.0f, heightSouth, itOff, effectiveShadowColor, uStart, vStart, uSz, vSz, curDinnerbone);
+                        }
+                    }
+                }
+
+                pushTexRect(renderX, renderY, glyphW - 1.0f, heightSouth, itOff, glyphColor, uStart, vStart, uSz, vSz, curDinnerbone);
+
+                if (curBold) {
+                    for (int n = 1; n <= boldCopies; n++) {
+                        final float shadowOffsetPart = shadowOffset * ((float) n / boldCopies);
+                        pushTexRect(renderX + shadowOffsetPart, renderY, glyphW - 1.0f, heightSouth, itOff, glyphColor, uStart, vStart, uSz, vSz, curDinnerbone);
+                    }
+                }
+
+                /*
+                Vertex-per-char counts for different configurations
+                    default:        4
+                    shadow only:    4(1 + shadowCopies)
+                    bold only:      4(1 + boldCopies)
+                    both:           4(1 + 2 * shadowCopies + boldCopies)
+                 */
+                int charCount = 1;
+                if (drawShadow) { charCount += shadowCopies * (curBold ? 2 : 1); }
+                if (curBold) { charCount += boldCopies; }
+                final int vtxCount = 4 * charCount;
+                pushDrawCmd(idxId, vtxCount / 2 * 3, texture, chr > 255);
+
+                curX += (xAdvance + (curBold ? 1.0f : 0.0f)) + getGlyphSpacing();
+                if (bookMode) { curX = (int) curX; }
+                underlineEndX = curX;
+                strikethroughEndX = curX;
+
+                // Flushed per glyph while the colour moves, so the line under the text is the
+                // colour of the glyph above it rather than one flat run.
+                final boolean perGlyphColor = curRainbow || curGradient || curCustomEffects != 0L;
+                if (perGlyphColor && curUnderline && underlineStartX != underlineEndX) {
+                    final int ulIdx = idxWriterIndex;
+                    pushUntexRect(underlineStartX, underlineY, underlineEndX - underlineStartX, glyphScaleY, glyphColor);
+                    pushDrawCmd(ulIdx, 6, 0, false);
+                    underlineStartX = underlineEndX;
+                }
+                if (perGlyphColor && curStrikethrough && strikethroughStartX != strikethroughEndX) {
+                    final int stIdx = idxWriterIndex;
+                    pushUntexRect(strikethroughStartX, strikethroughY, strikethroughEndX - strikethroughStartX, glyphScaleY, glyphColor);
+                    pushDrawCmd(stIdx, 6, 0, false);
+                    strikethroughStartX = strikethroughEndX;
+                }
+            }
+
+            if (curUnderline && underlineStartX != underlineEndX) {
+                final int ulIdx = idxWriterIndex;
+                pushUntexRect(underlineStartX, underlineY, underlineEndX - underlineStartX, glyphScaleY, curColor);
+                pushDrawCmd(ulIdx, 6, 0, false);
+            }
+            if (curStrikethrough && strikethroughStartX != strikethroughEndX) {
+                final int ulIdx = idxWriterIndex;
+                pushUntexRect(
+                    strikethroughStartX,
+                    strikethroughY,
+                    strikethroughEndX - strikethroughStartX,
+                    glyphScaleY,
+                    curColor);
+                pushDrawCmd(ulIdx, 6, 0, false);
+            }
+
+        } finally {
+            this.endBatch();
+        }
+        return curX + (enableShadow ? 1.0f : 0.0f);
+    }
+
+    public float getCharWidthFine(char chr) {
+        if (chr == ColorCodeUtils.ESCAPED_AMPERSAND) { chr = '&'; }
+        if (chr == FORMATTING_CHAR) { return -1; }
+
+        if (chr == ' ' || chr == '\u00A0' || chr == '\u202F') {
+            return 4 * this.getWhitespaceScale();
+        }
+
+        final boolean unicodeFlag = underlying.getUnicodeFlag();
+        chr = FontStrategist.replaceCustomGlyph(this, chr, unicodeFlag);
+        FontProvider fp = FontStrategist.getFontProvider(this, chr, FontConfig.enableCustomFont, unicodeFlag);
+
+        return fp.getXAdvance(chr) * this.getGlyphScaleX();
+    }
+
+    public void overrideBlendFunc(int srcRgb, int dstRgb) {
+        blendSrcRGB = srcRgb;
+        blendDstRGB = dstRgb;
+    }
+
+    public void resetBlendFunc() {
+        blendSrcRGB = GL11.GL_SRC_ALPHA;
+        blendDstRGB = GL11.GL_ONE_MINUS_SRC_ALPHA;
+    }
+}

@@ -1,0 +1,434 @@
+package com.gtnewhorizons.angelica.glsm.ffp;
+
+import com.gtnewhorizon.gtnhlib.client.renderer.vertex.VertexFormatElement;
+
+/**
+ * Generates GLSL 330 core vertex shaders for FFP emulation.
+ * Follows Mesa's ffvertex_prog.c build order.
+ *
+ * Attribute locations are sourced from {@link VertexFormatElement.Usage} to stay in sync with GTNHLib's vertex format setup.
+ */
+public final class VertexShaderGenerator {
+
+    private VertexShaderGenerator() {}
+
+    public static String generate(VertexKey key) {
+        final StringBuilder sb = new StringBuilder(2048);
+        sb.append("#version 330 core\n\n");
+
+        emitAttributes(sb, key);
+        emitUniforms(sb, key);
+        emitOutputs(sb, key);
+
+        sb.append("void main() {\n");
+        if (key.instancing() == Instancing.WEATHER) {
+            sb.append("  ").append(InstancedGlslHelpers.weatherPrologue("u_", "a_", "a_TexCoord0",
+                "vec4 weatherVertex", "vec4 weatherColor", "vec4 weatherTex0", "vec4 weatherTex1", "\n  ")).append('\n');
+        }
+        emitPositionTransform(sb, key);
+        if (key.lightingEnabled()) {
+            emitNormalTransform(sb, key);
+            emitLighting(sb, key);
+        } else {
+            emitColorPassthrough(sb, key);
+        }
+        emitTexCoordPassthrough(sb, key);
+        if (key.lineStipple()) {
+            emitLineStart(sb, key.lineQuads() ? "lineCenter" : "gl_Position");
+        }
+        if (key.fogEnabled()) {
+            emitFogDistance(sb, key);
+        }
+        if (key.clipPlanesEnabled()) {
+            emitClipDistances(sb, key);
+        }
+        sb.append("}\n");
+        return sb.toString();
+    }
+
+    private static void emitAttributes(StringBuilder sb, VertexKey key) {
+        final Instancing kind = key.instancing();
+        sb.append("// Vertex attributes\n");
+        sb.append("layout(location = ").append(VertexFormatElement.Usage.POSITION.getAttributeLocation()).append(") in vec3 a_Position;\n");
+        if (kind == Instancing.PARTICLE || kind == Instancing.WEATHER) {
+            sb.append("layout(location = ").append(VertexFormatElement.Usage.PRIMARY_UV.getAttributeLocation()).append(") in vec2 a_TexCoord0;\n");
+        } else {
+            if (key.hasVertexColor()) {
+                sb.append("layout(location = ").append(VertexFormatElement.Usage.COLOR.getAttributeLocation()).append(") in vec4 a_Color;\n");
+            }
+            if (kind != Instancing.CUBE) {
+                if (key.hasVertexTexCoord()) {
+                    sb.append("layout(location = ").append(VertexFormatElement.Usage.PRIMARY_UV.getAttributeLocation()).append(") in vec2 a_TexCoord0;\n");
+                }
+                if (key.hasVertexLightmap()) {
+                    sb.append("layout(location = ").append(VertexFormatElement.Usage.SECONDARY_UV.getAttributeLocation()).append(") in vec2 a_TexCoord1;\n");
+                }
+            }
+            if (key.hasVertexNormal() || kind == Instancing.CUBE) {
+                sb.append("layout(location = ").append(VertexFormatElement.Usage.NORMAL.getAttributeLocation()).append(") in vec3 a_Normal;\n");
+            } else if (key.lineQuads()) {
+                sb.append("layout(location = ").append(VertexFormatElement.Usage.NORMAL.getAttributeLocation()).append(") in vec3 a_LineOtherEnd;\n");
+            }
+        }
+        for (String d : InstancedGlslHelpers.attributeDecls("a_", kind)) {
+            sb.append(d).append('\n');
+        }
+        sb.append('\n');
+    }
+
+    private static final String PARTICLE_UV = InstancedGlslHelpers.particleUv("a_InstUv", "a_TexCoord0");
+
+    private static String unit0Source(VertexKey key) {
+        return switch (key.instancing()) {
+            case CUBE -> "cubeUv";
+            case PARTICLE -> PARTICLE_UV;
+            case WEATHER -> "weatherTex0";
+            case NONE, TEMPLATE -> key.hasVertexTexCoord() ? "vec4(a_TexCoord0, 0.0, 1.0)" : "u_CurrentTexCoord0";
+        };
+    }
+
+    private static void emitLineStart(StringBuilder sb, String clipPosition) {
+        sb.append("  vec2 ndc = ").append(clipPosition).append(".xy / ").append(clipPosition).append(".w;\n");
+        sb.append("  v_LineStart = u_Viewport.xy + (ndc * 0.5 + 0.5) * u_Viewport.zw;\n\n");
+    }
+
+    private static void emitUniforms(StringBuilder sb, VertexKey key) {
+        sb.append(FFPUniformBlock.GLSL_DECL);
+        sb.append('\n');
+    }
+
+    private static void emitOutputs(StringBuilder sb, VertexKey key) {
+        sb.append("// Outputs\n");
+        sb.append("out vec4 v_Color;\n");
+        sb.append("invariant gl_Position;\n");
+        if (key.instancing().hasInstanceHead()) {
+            sb.append("out vec4 v_Overlay;\n");
+        }
+        if (key.lineStipple()) {
+            sb.append("flat out vec2 v_LineStart;\n");
+        }
+        if (key.separateSpecular()) {
+            sb.append("out vec3 v_SpecularColor;\n");
+        }
+        // Per-unit varying outputs. Each enabled texture unit (and texgen, which targets unit 0) gets its own v_TexCoord<i>.
+        if (key.unitTexCoordEnabled(0) || key.texGenEnabled()) {
+            sb.append("out vec4 v_TexCoord0;\n");
+        }
+        if (key.lightmapEnabled()) {
+            sb.append("out vec4 v_TexCoord1;\n");
+        }
+        if (key.unitTexCoordEnabled(2)) sb.append("out vec4 v_TexCoord2;\n");
+        if (key.unitTexCoordEnabled(3)) sb.append("out vec4 v_TexCoord3;\n");
+        if (key.fogEnabled()) {
+            sb.append("out float v_FogCoord;\n");
+        }
+        sb.append('\n');
+    }
+
+    private static void emitPositionTransform(StringBuilder sb, VertexKey key) {
+        sb.append("  // Position transform\n");
+        if (key.instancing() == Instancing.PARTICLE) {
+            sb.append("  vec4 pos4 = ").append(InstancedGlslHelpers.particlePos("a_InstCenterHalf", "a_Position")).append(";\n");
+        } else if (key.instancing() == Instancing.WEATHER) {
+            sb.append("  vec4 pos4 = weatherVertex;\n");
+        } else {
+            sb.append("  vec4 pos4 = vec4(a_Position, 1.0);\n");
+        }
+        if (key.instancing().hasInstanceHead()) {
+            sb.append("  mat4 instMV = ").append(InstancedGlslHelpers.mat4FromRows("a_InstRow0", "a_InstRow1", "a_InstRow2")).append(";\n");
+            sb.append("  vec4 eyePos = instMV * pos4;\n");
+            sb.append("  gl_Position = u_ProjectionMatrix * eyePos;\n");
+            sb.append("  v_Overlay = a_InstOverlay;\n");
+        } else {
+            sb.append("  gl_Position = u_MVPMatrix * pos4;\n");
+            if (key.lineQuads()) {
+                emitLineQuadWidening(sb);
+            }
+
+            // Eye position needed for lighting, fog, EYE_LINEAR texgen, and clip planes
+            if (key.lightingEnabled() || key.fogEnabled() || texGenNeedsEyePos(key) || key.clipPlanesEnabled()) {
+                sb.append("  vec4 eyePos = u_ModelViewMatrix * pos4;\n");
+            }
+            if (key.lineQuads() && (key.fogEnabled() || key.clipPlanesEnabled())) {
+                sb.append("  vec4 lineEyeOther = u_ModelViewMatrix * vec4(a_LineOtherEnd, 1.0);\n");
+            }
+        }
+        sb.append('\n');
+    }
+
+    private static void emitLineQuadWidening(StringBuilder sb) {
+        sb.append("  int lineCorner = gl_VertexID % 6;\n");
+        sb.append("  bool lineStart = lineCorner == 0 || lineCorner == 1 || lineCorner == 3;\n");
+        sb.append("  vec4 lineOther = u_MVPMatrix * vec4(a_LineOtherEnd, 1.0);\n");
+        sb.append("  vec4 lineC0 = lineStart ? gl_Position : lineOther;\n");
+        sb.append("  vec4 lineC1 = lineStart ? lineOther : gl_Position;\n");
+        sb.append("  vec4 lineCenter = lineC0;\n");
+        sb.append("  float lineT = 0.0;\n");
+        sb.append("  float lineD0 = lineC0.z + lineC0.w;\n");
+        sb.append("  float lineD1 = lineC1.z + lineC1.w;\n");
+        sb.append("  if (lineD0 < 0.0 && lineD1 < 0.0) {\n");
+        sb.append("    gl_Position = vec4(0.0, 0.0, 2.0, 1.0);\n");
+        sb.append("  } else {\n");
+        sb.append("    float lineT0 = lineD0 < 0.0 ? lineD0 / (lineD0 - lineD1) : 0.0;\n");
+        sb.append("    float lineT1 = lineD1 < 0.0 ? lineD0 / (lineD0 - lineD1) : 1.0;\n");
+        sb.append("    lineT = lineStart ? lineT0 : lineT1;\n");
+        sb.append("    vec4 lineP0 = mix(lineC0, lineC1, lineT0);\n");
+        sb.append("    vec4 lineP1 = mix(lineC0, lineC1, lineT1);\n");
+        sb.append("    vec2 lineN0 = lineP0.xy / lineP0.w;\n");
+        sb.append("    vec2 lineN1 = lineP1.xy / lineP1.w;\n");
+        sb.append("    vec2 linePixel = 2.0 / u_ViewportSize;\n");
+        sb.append("    float lineHalfWidth = 0.5 * u_LineWidth;\n");
+        sb.append("    vec2 lineOffset;\n");
+        sb.append("    vec2 lineShift;\n");
+        sb.append("    vec2 lineSpan = abs(lineN1 - lineN0) * u_ViewportSize;\n");
+        sb.append("    if (lineSpan.x > lineSpan.y) {\n");
+        sb.append("      lineOffset = vec2(0.0, lineHalfWidth * linePixel.y);\n");
+        sb.append("      lineShift = vec2(lineN0.x < lineN1.x ? -0.5 : 0.5, -0.125) * linePixel;\n");
+        sb.append("    } else {\n");
+        sb.append("      lineOffset = vec2(lineHalfWidth * linePixel.x, 0.0);\n");
+        sb.append("      lineShift = vec2(0.125, lineN0.y < lineN1.y ? -0.5 : 0.5) * linePixel;\n");
+        sb.append("    }\n");
+        sb.append("    vec4 lineP = lineStart ? lineP0 : lineP1;\n");
+        sb.append("    vec2 lineN = lineStart ? lineN0 : lineN1;\n");
+        sb.append("    gl_Position = vec4((lineN + (lineCorner % 2 == 0 ? lineOffset : -lineOffset) + lineShift) * lineP.w, lineP.z, lineP.w);\n");
+        sb.append("  }\n");
+    }
+
+    private static void emitNormalTransform(StringBuilder sb, VertexKey key) {
+        sb.append("  // Normal transform\n");
+        final String srcNormal = key.hasVertexNormal() && key.instancing() != Instancing.PARTICLE ? "a_Normal" : "u_CurrentNormal";
+        if (key.instancing().hasInstanceHead()) {
+            sb.append("  vec3 normal = normalize(mat3(instMV) * ").append(srcNormal).append(");\n");
+            sb.append('\n');
+            return;
+        }
+        sb.append("  vec3 normal = u_NormalMatrix * ").append(srcNormal).append(";\n");
+
+        if (key.normalizeEnabled()) {
+            sb.append("  normal = normalize(normal);\n");
+        } else if (key.rescaleNormalsEnabled()) {
+            sb.append("  normal *= u_NormalScale;\n");
+        }
+        sb.append('\n');
+    }
+
+    private static void emitLighting(StringBuilder sb, VertexKey key) {
+        sb.append("  // Gouraud lighting\n");
+
+        if (key.colorMaterialEnabled()) {
+            // Color material: vertex color replaces specific material properties per glColorMaterial mode (Mesa ffvertex_prog.c get_material() bitmask approach)
+            sb.append("  vec4 matColor = ");
+            if (key.instancing() == Instancing.PARTICLE) {
+                sb.append("a_InstColor");
+            } else {
+                sb.append(key.hasVertexColor() ? "a_Color" : "u_CurrentColor");
+                if (key.instancing().hasInstanceHead()) {
+                    sb.append(" * a_InstColor");
+                }
+            }
+            sb.append(";\n");
+
+            // Emission source: vertex color for CM_EMISSION, else material uniform
+            final String emSrc = key.cmReplacesEmission() ? "matColor.rgb" : "u_MaterialEmission.rgb";
+            // Ambient source for scene color: vertex color for CM_AMBIENT / CM_AMBIENT_AND_DIFFUSE
+            final String amSrc = key.cmReplacesAmbient() ? "matColor.rgb" : "u_MaterialAmbient.rgb";
+            sb.append("  vec3 sceneColor = ").append(emSrc).append(" + ").append(amSrc).append(" * u_LightModelAmbient.rgb;\n");
+
+            // Alpha from diffuse source (per GL spec)
+            sb.append("  float outAlpha = ").append(key.cmReplacesDiffuse() ? "matColor.a" : "u_MaterialDiffuse.a").append(";\n");
+        } else {
+            // Pre-computed scene color
+            sb.append("  vec3 sceneColor = u_SceneColor.rgb;\n");
+            sb.append("  float outAlpha = u_SceneColor.a;\n");
+        }
+
+        sb.append("  vec3 color0 = sceneColor;\n");
+        if (key.separateSpecular()) {
+            sb.append("  vec3 specAccum = vec3(0.0);\n");
+        }
+
+        // Per-light accumulation
+        for (int i = 0; i < VertexKey.FFP_LIGHT_COUNT; i++) {
+            if (key.lightEnabled(i)) {
+                emitLightContribution(sb, key, i);
+            }
+        }
+
+        sb.append("  v_Color = vec4(clamp(color0, 0.0, 1.0), outAlpha);\n");
+        if (key.separateSpecular()) {
+            sb.append("  v_SpecularColor = clamp(specAccum, 0.0, 1.0);\n");
+        }
+        sb.append('\n');
+    }
+
+    private static void emitLightContribution(StringBuilder sb, VertexKey key, int lightIndex) {
+        final String li = String.valueOf(lightIndex);
+        final boolean directional = key.lightDirectional(lightIndex);
+        final String posUniform = "u_Light" + li + "Position";
+
+        sb.append("  { // Light ").append(li).append('\n');
+
+        // Light vector
+        if (directional) {
+            // Directional: position is already normalized direction
+            sb.append("    vec3 VPpli = normalize(").append(posUniform).append(".xyz);\n");
+        } else {
+            // Positional light
+            sb.append("    vec3 VPpli = ").append(posUniform).append(".xyz - eyePos.xyz;\n");
+            sb.append("    VPpli = normalize(VPpli);\n");
+        }
+
+        // Dot products
+        sb.append("    float NdotVP = max(dot(normal, VPpli), 0.0);\n");
+
+        // Half vector for specular (infinite viewer: H = normalize(L + (0,0,1)))
+        sb.append("    vec3 halfVec = normalize(VPpli + vec3(0.0, 0.0, 1.0));\n");
+        sb.append("    float NdotHV = max(dot(normal, halfVec), 0.0);\n");
+
+        // Specular power
+        sb.append("    float spec = (NdotVP > 0.0 && u_MaterialShininess > 0.0) ? pow(NdotHV, u_MaterialShininess) : 0.0;\n");
+
+        // Accumulate — per-property source depends on color material mode
+        if (key.colorMaterialEnabled()) {
+            final String ambU = "u_Light" + li + "Ambient";
+            final String difU = "u_Light" + li + "Diffuse";
+            final String speU = "u_Light" + li + "Specular";
+            // Ambient product: light.ambient * (vertex color or material)
+            final String ambMat = key.cmReplacesAmbient() ? "matColor.rgb" : "u_MaterialAmbient.rgb";
+            sb.append("    vec3 ambient = ").append(ambU).append(".rgb * ").append(ambMat).append(";\n");
+            // Diffuse product
+            final String difMat = key.cmReplacesDiffuse() ? "matColor.rgb" : "u_MaterialDiffuse.rgb";
+            sb.append("    vec3 diffuse = ").append(difU).append(".rgb * ").append(difMat).append(";\n");
+            // Specular product
+            final String speMat = key.cmReplacesSpecular() ? "matColor.rgb" : "u_MaterialSpecular.rgb";
+            sb.append("    vec3 specular = ").append(speU).append(".rgb * ").append(speMat).append(";\n");
+        } else {
+            sb.append("    vec3 ambient = u_LightProd").append(li).append("Ambient;\n");
+            sb.append("    vec3 diffuse = u_LightProd").append(li).append("Diffuse;\n");
+            sb.append("    vec3 specular = u_LightProd").append(li).append("Specular;\n");
+        }
+
+        sb.append("    color0 += ambient + NdotVP * diffuse;\n");
+        if (key.separateSpecular()) {
+            sb.append("    specAccum += spec * specular;\n");
+        } else {
+            sb.append("    color0 += spec * specular;\n");
+        }
+
+        sb.append("  }\n");
+    }
+
+    private static void emitColorPassthrough(StringBuilder sb, VertexKey key) {
+        sb.append("  // Color passthrough (no lighting)\n");
+        final String src = key.hasVertexColor() ? "a_Color" : "u_CurrentColor";
+        switch (key.instancing()) {
+            case PARTICLE -> sb.append("  v_Color = a_InstColor;\n");
+            case WEATHER -> sb.append("  v_Color = weatherColor;\n");
+            case TEMPLATE, CUBE -> sb.append("  v_Color = ").append(src).append(" * a_InstColor;\n");
+            case NONE -> sb.append("  v_Color = ").append(src).append(";\n");
+        }
+        sb.append('\n');
+    }
+
+    private static void emitTexCoordPassthrough(StringBuilder sb, VertexKey key) {
+        final boolean cube = key.instancing() == Instancing.CUBE;
+        final boolean unit0FromCube = cube && key.unitTexCoordEnabled(0) && !key.texGenEnabled();
+        final boolean unit23FromCube = cube && key.unit23UvFromUnit0() && (key.unitTexCoordEnabled(2) || key.unitTexCoordEnabled(3));
+        if (unit0FromCube || unit23FromCube) {
+            emitCubeTexCoord(sb);
+        }
+
+        if (key.texGenEnabled()) {
+            emitTexGenCoordGeneration(sb, key);
+        } else if (key.unitTexCoordEnabled(0)) {
+            sb.append("  // Texture coordinates - unit 0\n");
+            final String src = unit0Source(key);
+            if (key.unitTexMatEnabled(0)) {
+                sb.append("  v_TexCoord0 = u_TextureMatrix0 * ").append(src).append(";\n");
+            } else {
+                sb.append("  v_TexCoord0 = ").append(src).append(";\n");
+            }
+        }
+
+        if (key.lightmapEnabled()) {
+            final String lightmap = switch (key.instancing()) {
+                case PARTICLE, TEMPLATE -> "a_InstLightmap";
+                case CUBE -> "a_InstLightmapScale.xy";
+                case WEATHER -> "weatherTex1.xy";
+                case NONE -> key.hasVertexLightmap() ? "a_TexCoord1" : "u_CurrentLightmapCoord";
+            };
+            sb.append("  v_TexCoord1 = u_LightmapTextureMatrix * vec4(").append(lightmap).append(", 0.0, 1.0);\n");
+        }
+
+        for (int i = 2; i < VertexKey.MAX_UNITS; i++) {
+            if (!key.unitTexCoordEnabled(i)) continue;
+            final String src = key.unit23UvFromUnit0() ? unit0Source(key) : "u_CurrentTexCoord" + i;
+            if (!key.unit23UvFromUnit0() && key.unitTexMatEnabled(i)) {
+                sb.append("  v_TexCoord").append(i).append(" = u_TextureMatrix").append(i).append(" * ").append(src).append(";\n");
+            } else {
+                sb.append("  v_TexCoord").append(i).append(" = ").append(src).append(";\n");
+            }
+        }
+    }
+
+    private static void emitCubeTexCoord(StringBuilder sb) {
+        sb.append("  // Cube texture net\n");
+        sb.append("  ").append(InstancedGlslHelpers.cubePrelude("", "a_CubeMid", "a_CubeDelta", "a_Normal", "a_CubeTex", "\n  ")).append('\n');
+        sb.append("  vec4 cubeUv = ").append(InstancedGlslHelpers.cubeUv("a_CubeTex", "a_InstLightmapScale", "cubeU.x", "cubeU.y", "cubeV.x", "cubeV.y")).append(";\n\n");
+    }
+
+    /**
+     * Emit per-coordinate texgen code following Mesa's ffvertex_prog.c build order.
+     * OBJ_LINEAR: dot(pos4, objPlane), EYE_LINEAR: dot(eyePos, eyePlane).
+     * Coordinates without texgen use vertex attrib or default (0,0,0,1).
+     */
+    private static void emitTexGenCoordGeneration(StringBuilder sb, VertexKey key) {
+        sb.append("  // TexGen coordinate generation\n");
+        sb.append("  vec4 texGenCoord = vec4(0.0, 0.0, 0.0, 1.0);\n");
+
+        emitTexGenComponent(sb, key.texGenModeS(), "s", "S", key);
+        emitTexGenComponent(sb, key.texGenModeT(), "t", "T", key);
+        emitTexGenComponent(sb, key.texGenModeR(), "p", "R", key);
+        emitTexGenComponent(sb, key.texGenModeQ(), "q", "Q", key);
+
+        // Always apply texture matrix when texgen is active (forced on in VertexKey)
+        sb.append("  v_TexCoord0 = u_TextureMatrix0 * texGenCoord;\n");
+    }
+
+    private static void emitTexGenComponent(StringBuilder sb, int mode, String swizzle, String coordName, VertexKey key) {
+        switch (mode) {
+            case VertexKey.TG_OBJ_LINEAR ->
+                sb.append("  texGenCoord.").append(swizzle).append(" = dot(pos4, u_TexGenObjPlane").append(coordName).append(");\n");
+            case VertexKey.TG_EYE_LINEAR ->
+                sb.append("  texGenCoord.").append(swizzle).append(" = dot(eyePos, u_TexGenEyePlane").append(coordName).append(");\n");
+            // TG_NONE: keep default (0 for s/t/r, 1 for q) — already set in texGenCoord init
+        }
+    }
+
+    private static boolean texGenNeedsEyePos(VertexKey key) {
+        return key.texGenModeS() == VertexKey.TG_EYE_LINEAR
+            || key.texGenModeT() == VertexKey.TG_EYE_LINEAR
+            || key.texGenModeR() == VertexKey.TG_EYE_LINEAR
+            || key.texGenModeQ() == VertexKey.TG_EYE_LINEAR;
+    }
+
+    private static void emitFogDistance(StringBuilder sb, VertexKey key) {
+        sb.append("  // Fog distance\n");
+        final String own = FfpGlsl.fogDistance(key.fogDistanceMode(), "eyePos");
+        final String fog = key.lineQuads() ? acrossLine(own, FfpGlsl.fogDistance(key.fogDistanceMode(), "lineEyeOther")) : own;
+        sb.append("  v_FogCoord = ").append(fog).append(";\n");
+    }
+
+    private static void emitClipDistances(StringBuilder sb, VertexKey key) {
+        sb.append("  // Clip distances\n");
+        for (int i = 0; i < 8; i++) {
+            final String own = "dot(u_ClipPlane[" + i + "], eyePos)";
+            final String distance = key.lineQuads() ? acrossLine(own, "dot(u_ClipPlane[" + i + "], lineEyeOther)") : own;
+            sb.append("  gl_ClipDistance[").append(i).append("] = ").append(distance).append(";\n");
+        }
+    }
+
+    private static String acrossLine(String own, String other) {
+        return "mix(lineStart ? " + own + " : " + other + ", lineStart ? " + other + " : " + own + ", lineT)";
+    }
+}

@@ -1,0 +1,74 @@
+package com.gtnewhorizons.angelica.sdlgpu.shader;
+
+import com.gtnewhorizons.angelica.glsm.shader.GlslVulkanPreprocess;
+import com.gtnewhorizons.angelica.glsm.testutil.TestPaths;
+import com.gtnewhorizons.angelica.sdlgpu.sampler.SamplerLookup;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import org.junit.jupiter.api.Test;
+import org.lwjgl.opengl.GL20;
+import org.lwjgl.util.shaderc.Shaderc;
+
+import java.nio.ByteBuffer;
+import java.util.List;
+
+import static com.gtnewhorizons.angelica.sdlgpu.shader.SpirvTestShaders.compileOrFail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.lwjgl.system.MemoryUtil.memFree;
+
+class FontFilterVertexSamplerTest {
+
+    private static final String FONT_FILTER_VSH = TestPaths.readString("src/main/resources/assets/angelica/shaders/fontFilter.vsh");
+
+    private static String runSdlPipeline(String raw) {
+        final GlslVulkanPreprocess.Result pre = GlslVulkanPreprocess.run(raw, GL20.GL_VERTEX_SHADER, "fontFilter.vsh", true);
+        String src = pre != null ? pre.rewrittenSource() : raw;
+        src = ShaderTransformChain.clipZ(src);
+        src = ShaderTransformChain.stripUnused(src);
+        return src;
+    }
+
+    private static ShaderManager.StageReflection reflect(String source) {
+        final ByteBuffer spirv = compileOrFail(source, Shaderc.shaderc_vertex_shader);
+        try {
+            return ShaderManager.reflectStage(spirv, true);
+        } finally {
+            memFree(spirv);
+        }
+    }
+
+    @Test
+    void samplerSurvivesStrippingAndReflectsOnTheVertexStage() {
+        final String transformed = runSdlPipeline(FONT_FILTER_VSH);
+        assertTrue(transformed.contains("uniform sampler2D lightmap"), "a reference inside a runtime if must keep the declaration; only preprocessor #if hides it");
+
+        final List<String> samplers = reflect(transformed).samplerNames();
+        assertEquals(List.of("lightmap"), samplers, "the vertex stage must expose exactly the lightmap sampler");
+    }
+
+    @Test
+    void looseVec3UniformReflectsWithAStd140Offset() {
+        final List<ShaderManager.UboMember> members = reflect(runSdlPipeline(FONT_FILTER_VSH)).uboMembers();
+
+        final ShaderManager.UboMember lightmap = members.stream()
+            .filter(m -> m.name().endsWith("u_Lightmap"))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("u_Lightmap missing from the default uniform block: " + members));
+
+        assertEquals(3, lightmap.vectorSize(), "u_Lightmap must reflect as a 3-wide vector");
+        assertEquals(1, lightmap.columns(), "u_Lightmap is a vector, not a matrix");
+        assertEquals(0, lightmap.arrayStride(), "a scalar member takes Std140Writer's contiguous path");
+        assertEquals(0, lightmap.offset() % 16, "std140 aligns a vec3 to 16 bytes");
+    }
+
+    @Test
+    void lightmapStartsOnUnitZeroAndHonorsTheFontsExplicitAssignment() {
+        final List<String> samplers = reflect(runSdlPipeline(FONT_FILTER_VSH)).samplerNames();
+        final Object2IntOpenHashMap<String> units = new Object2IntOpenHashMap<>();
+        units.defaultReturnValue(-1);
+
+        assertEquals(0, SamplerLookup.getSamplerTextureUnit(samplers, units, 0), "all samplers start on unit 0");
+        units.put("lightmap", 1);
+        assertEquals(1, SamplerLookup.getSamplerTextureUnit(samplers, units, 0), "the font renderer assigns lightmap explicitly");
+    }
+}

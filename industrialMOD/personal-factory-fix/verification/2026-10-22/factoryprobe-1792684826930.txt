@@ -1,0 +1,77 @@
+Personal Factory Fix 0.2.1; itemduct redundant redraw filter=true
+Seconds 30.00; frames 1865; average 62.2 FPS
+Frame intervals <17/<34/<50/<100/>=100 ms: [1240, 602, 22, 0, 0]
+Render invalidation calls: 7018; sampled: 439
+Itemduct packets=9590; identical=9589; skipped redraw calls=18713; accepted redraws=467
+Sampled region centers (may be neighboring blocks, not the initiating machine):
+4 | -283,10,-428 | block=cofh.thermaldynamics.duct.BlockDuct | tile=cofh.thermaldynamics.duct.item.TileItemDuct
+3 | -289,10,-428 | block=cofh.thermaldynamics.duct.BlockDuct | tile=cofh.thermaldynamics.duct.item.TileItemDuct
+3 | -283,8,-428 | block=cofh.thermaldynamics.duct.BlockDuct | tile=cofh.thermaldynamics.duct.item.TileItemDuct
+3 | -282,8,-428 | block=cofh.thermaldynamics.duct.BlockDuct | tile=cofh.thermaldynamics.duct.item.TileItemDuct
+3 | -425,8,-390 | block=cofh.asmhooks.block.BlockWater | tile=none
+3 | -289,8,-428 | block=cofh.thermaldynamics.duct.BlockDuct | tile=cofh.thermaldynamics.duct.item.TileItemDuct
+2 | -275,27,-572 | block=net.minecraft.block.BlockAir | tile=none
+2 | -424,9,-395 | block=net.minecraft.block.BlockAir | tile=none
+2 | -282,10,-428 | block=cofh.thermaldynamics.duct.BlockDuct | tile=cofh.thermaldynamics.duct.item.TileItemDuct
+2 | -392,5,-419 | block=com.hbm.blocks.gas.BlockGasRadon | tile=none
+2 | -313,27,-567 | block=com.hbm.blocks.gas.BlockGasRadon | tile=none
+2 | -312,28,-566 | block=com.hbm.blocks.gas.BlockGasRadon | tile=none
+2 | -312,25,-328 | block=net.minecraft.block.BlockAir | tile=none
+2 | -414,22,-464 | block=net.minecraft.block.BlockAir | tile=none
+2 | -306,27,-569 | block=com.hbm.blocks.gas.BlockGasRadon | tile=none
+2 | -231,28,-579 | block=com.hbm.blocks.gas.BlockGasAsbestos | tile=none
+2 | -254,24,-348 | block=com.hbm.blocks.gas.BlockGasAsbestos | tile=none
+2 | -233,28,-361 | block=net.minecraft.block.BlockAir | tile=none
+2 | -288,10,-428 | block=cofh.thermaldynamics.duct.BlockDuct | tile=cofh.thermaldynamics.duct.item.TileItemDuct
+2 | -425,9,-390 | block=cofh.asmhooks.block.BlockWater | tile=none
+2 | -312,26,-566 | block=net.minecraft.block.BlockAir | tile=none
+2 | -231,29,-579 | block=net.minecraft.block.BlockAir | tile=none
+2 | -219,13,-411 | block=com.hbm.blocks.gas.BlockGasRadon | tile=none
+2 | -265,26,-577 | block=net.minecraft.block.BlockAir | tile=none
+2 | -290,13,-360 | block=com.hbm.blocks.gas.BlockGasRadon | tile=none
+2 | -284,8,-428 | block=cofh.thermaldynamics.duct.BlockDuct | tile=cofh.thermaldynamics.duct.item.TileItemDuct
+2 | -242,4,-461 | block=net.minecraft.block.BlockAir | tile=none
+2 | -334,15,-377 | block=net.minecraft.block.BlockAir | tile=none
+2 | -276,30,-577 | block=com.hbm.blocks.gas.BlockGasAsbestos | tile=none
+2 | -230,28,-579 | block=com.hbm.blocks.gas.BlockGasAsbestos | tile=none
+2 | -287,8,-428 | block=cofh.thermaldynamics.duct.BlockDuct | tile=cofh.thermaldynamics.duct.item.TileItemDuct
+2 | -276,29,-399 | block=net.minecraft.block.BlockAir | tile=none
+2 | -245,2,-461 | block=net.minecraft.block.BlockAir | tile=none
+2 | -297,20,-417 | block=com.hbm.blocks.gas.BlockGasAsbestos | tile=none
+2 | -254,15,-366 | block=net.minecraft.block.BlockAir | tile=none
+1 | -244,29,-585 | block=com.hbm.blocks.gas.BlockGasAsbestos | tile=none
+1 | -299,27,-579 | block=net.minecraft.block.BlockAir | tile=none
+1 | -328,17,-351 | block=net.minecraft.block.BlockAir | tile=none
+1 | -253,17,-374 | block=com.hbm.blocks.gas.BlockGasRadon | tile=none
+1 | -272,14,-402 | block=com.hbm.blocks.gas.BlockGasAsbestos | tile=none
+Sampled invalidation call stacks:
+388 | net.minecraft.client.renderer.RenderGlobal.func_72725_b(RenderGlobal.java) <- net.minecraft.client.renderer.RenderGlobal.func_147586_a(RenderGlobal.java:1794) <- net.minecraft.world.World.func_147471_g(World.java:607) <- net.minecraft.world.World.markAndNotifyBlock(World.java:483) <- net.minecraft.world.World.func_147465_d(World.java:466) <- net.minecraft.client.multiplayer.WorldClient.func_147492_c(WorldClient.java:260) <- net.minecraft.client.network.NetHandlerPlayClient.func_147287_a(NetHandlerPlayClient.java:595) <- net.minecraft.network.play.server.S22PacketMultiBlockChange.func_148833_a(SourceFile:83) <- net.minecraft.network.play.server.S22PacketMultiBlockChange.func_148833_a(SourceFile:17) <- net.minecraft.network.NetworkManager.func_74428_b(NetworkManager.java:212) <- net.minecraft.client.multiplayer.PlayerControllerMP.func_78765_e(PlayerControllerMP.java:273) <- net.minecraft.client.Minecraft.func_71407_l(Minecraft.java:1602) <- net.minecraft.client.Minecraft.func_71411_J(Minecraft.java:973) <- net.minecraft.client.Minecraft.func_99999_d(Minecraft.java:898) <- net.minecraft.client.main.Main.main(SourceFile:148) <- sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method) <- sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62) <- sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) <- java.lang.reflect.Method.invoke(Method.java:497)
+29 | net.minecraft.client.renderer.RenderGlobal.func_72725_b(RenderGlobal.java) <- net.minecraft.client.renderer.RenderGlobal.func_147586_a(RenderGlobal.java:1794) <- net.minecraft.world.World.func_147471_g(World.java:607) <- sun.reflect.GeneratedMethodAccessor46.invoke(Unknown Source) <- sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) <- java.lang.reflect.Method.invoke(Method.java:497) <- cofh.thermaldynamics.block.TileTDBase.handleTilePacket(TileTDBase.java:988) <- cofh.thermaldynamics.duct.item.TileItemDuct.handleTilePacket(TileItemDuct.java:629) <- cofh.core.network.PacketTile.handlePacket(PacketTile.java:31) <- cofh.core.network.PacketCoFHBase.handleClientSide(PacketCoFHBase.java:404) <- cofh.core.network.PacketHandler.decode(PacketHandler.java:98) <- cofh.core.network.PacketHandler.decode(PacketHandler.java:40) <- io.netty.handler.codec.MessageToMessageCodec$2.decode(MessageToMessageCodec.java:81) <- io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:89) <- io.netty.handler.codec.MessageToMessageCodec.channelRead(MessageToMessageCodec.java:111) <- io.netty.channel.DefaultChannelHandlerContext.invokeChannelRead(DefaultChannelHandlerContext.java:337) <- io.netty.channel.DefaultChannelHandlerContext.fireChannelRead(DefaultChannelHandlerContext.java:323) <- io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:785)
+22 | net.minecraft.client.renderer.RenderGlobal.func_72725_b(RenderGlobal.java) <- net.minecraft.client.renderer.RenderGlobal.func_147586_a(RenderGlobal.java:1794) <- net.minecraft.world.World.func_147471_g(World.java:607) <- net.minecraft.world.World.markAndNotifyBlock(World.java:483) <- net.minecraft.world.World.func_147465_d(World.java:466) <- net.minecraft.client.multiplayer.WorldClient.func_147492_c(WorldClient.java:260) <- net.minecraft.client.network.NetHandlerPlayClient.func_147234_a(NetHandlerPlayClient.java:631) <- net.minecraft.network.play.server.S23PacketBlockChange.func_148833_a(SourceFile:50) <- net.minecraft.network.play.server.S23PacketBlockChange.func_148833_a(SourceFile:11) <- net.minecraft.network.NetworkManager.func_74428_b(NetworkManager.java:212) <- net.minecraft.client.multiplayer.PlayerControllerMP.func_78765_e(PlayerControllerMP.java:273) <- net.minecraft.client.Minecraft.func_71407_l(Minecraft.java:1602) <- net.minecraft.client.Minecraft.func_71411_J(Minecraft.java:973) <- net.minecraft.client.Minecraft.func_99999_d(Minecraft.java:898) <- net.minecraft.client.main.Main.main(SourceFile:148) <- sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method) <- sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62) <- sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) <- java.lang.reflect.Method.invoke(Method.java:497)
+Machine renderer elapsed time, CPU plus driver waits; includes probe overhead:
+3879.95 ms total; 208880 calls; 24.121 ms max | cofh.thermaldynamics.duct.item.TileItemDuctEnder
+370.93 ms total; 18650 calls; 2.798 ms max | dev.industrialtechnology.wireless.TileRedstoneRelay
+320.99 ms total; 18650 calls; 0.503 ms max | com.hbm.tileentity.machine.storage.TileEntityMachineBigAssTank
+239.76 ms total; 13055 calls; 0.346 ms max | com.hbm.tileentity.TileEntityDoorGeneric
+218.35 ms total; 9325 calls; 1.204 ms max | net.minecraft.tileentity.TileEntitySign
+119.51 ms total; 3730 calls; 0.391 ms max | com.hbm.tileentity.machine.TileEntityCrucible
+114.47 ms total; 3730 calls; 0.893 ms max | com.hbm.tileentity.machine.TileEntityMachineAssemblyMachine
+92.27 ms total; 5595 calls; 0.345 ms max | com.hbm.tileentity.machine.oil.TileEntityMachineFractionTower
+72.00 ms total; 5595 calls; 0.265 ms max | com.hbm.tileentity.machine.TileEntityMachineDrain
+70.78 ms total; 3730 calls; 0.374 ms max | com.hbm.tileentity.machine.TileEntityHeaterOven
+63.94 ms total; 22380 calls; 0.318 ms max | com.hbm.tileentity.machine.oil.TileEntityMachineRefinery
+61.52 ms total; 7460 calls; 0.311 ms max | com.hbm.tileentity.machine.TileEntityMachineCompressorCompact
+60.21 ms total; 3730 calls; 0.159 ms max | com.hbm.tileentity.machine.TileEntityFoundryBasin
+59.53 ms total; 1865 calls; 0.299 ms max | com.hbm.tileentity.machine.storage.TileEntityMachineFluidTank
+46.26 ms total; 3730 calls; 0.335 ms max | com.hbm.tileentity.machine.TileEntityFoundryMold
+41.61 ms total; 95115 calls; 0.593 ms max | crazypants.enderio.conduit.TileConduitBundle
+38.75 ms total; 1865 calls; 0.200 ms max | com.hbm.tileentity.machine.TileEntityMachineChemicalPlant
+37.95 ms total; 11190 calls; 0.291 ms max | com.hbm.tileentity.machine.oil.TileEntityMachineHydrotreater
+31.36 ms total; 3730 calls; 0.114 ms max | com.hbm.tileentity.machine.oil.TileEntityMachineVacuumDistill
+29.41 ms total; 7460 calls; 0.141 ms max | com.hbm.tileentity.machine.TileEntityHeaterElectric
+27.88 ms total; 7460 calls; 0.251 ms max | com.hbm.tileentity.machine.TileEntityHeatBoilerIndustrial
+26.63 ms total; 1865 calls; 0.497 ms max | com.hbm.tileentity.machine.TileEntityMachineCompressor
+13.95 ms total; 1865 calls; 0.095 ms max | com.hbm.tileentity.machine.TileEntityElectrolyser
+9.63 ms total; 39165 calls; 0.073 ms max | appeng.parts.layers.LayerIEnergyHandler_TileCableBus
+Diagnostic errors:
+

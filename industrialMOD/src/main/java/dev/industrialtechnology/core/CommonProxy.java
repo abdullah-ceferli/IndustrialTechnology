@@ -10,16 +10,12 @@ import net.minecraft.nbt.NBTTagCompound;
 
 public class CommonProxy implements IGuiHandler {
     public void init() {}
-    public void rocketParticles(dev.industrialtechnology.space.EntitySpaceRocket r) {}
-    public void acceptSpace(int window,NBTTagCompound state) {}
     public void acceptCatalog(dev.industrialtechnology.wireless.WirelessCatalog packet) {}
     public void acceptWireless(int window,NBTTagCompound state) {}
     public void acceptScript(int window,java.util.UUID device,int revision,String text) {}
     public void openAutomationGuide() {}
     public void acceptSnapshot(int x, int y, int z, int window, NBTTagCompound state) {}
     @Override public Object getServerGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
-        if(id==3){net.minecraft.entity.Entity entity=world.getEntityByID(x);return entity instanceof dev.industrialtechnology.space.EntitySpaceRocket&&((dev.industrialtechnology.space.EntitySpaceRocket)entity).owner.equals(player.getUniqueID().toString())?new dev.industrialtechnology.space.SpaceContainer(player,(dev.industrialtechnology.space.EntitySpaceRocket)entity):null;}
-        if(id==2){TileEntity t=world.getTileEntity(x,y,z);return t instanceof dev.industrialtechnology.space.TileSpaceMachine&&((dev.industrialtechnology.space.TileSpaceMachine)t).isUseableByPlayer(player)?new dev.industrialtechnology.space.SpaceContainer(player,(dev.industrialtechnology.space.TileSpaceMachine)t):null;}
         if(id==1)return dev.industrialtechnology.wireless.ItemWirelessTerminal.held(player)&&dev.industrialtechnology.wireless.WirelessAccess.terminal(player,player.getHeldItem(),false)!=null?new dev.industrialtechnology.wireless.TerminalContainer(player):null;
         TileEntity tile = world.getTileEntity(x, y, z);
         return id == 0 && tile instanceof TileMachine ? new MachineContainer(player.inventory, (TileMachine) tile) : null;

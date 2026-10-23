@@ -1,0 +1,49 @@
+package com.gtnewhorizons.angelica.mixins;
+
+import com.gtnewhorizon.gtnhmixins.builders.ITargetMod;
+import com.gtnewhorizon.gtnhmixins.builders.TargetModBuilder;
+import lombok.Getter;
+
+@Getter
+public enum TargetedMod implements ITargetMod {
+
+    ARCHAICFIX("org.embeddedt.archaicfix.ArchaicCore", "archaicfix"),
+    BACKHAND("xonin.backhand.coremod.BackhandLoadingPlugin", "backhand"),
+    CAMPFIRE_BACKPORT(null, "campfirebackport"),
+    CHISEL(null, "chisel"),
+    COFHCORE( "cofh.asm.LoadingPlugin", "CoFHCore"),
+    CUBIC_CHUNKS("com.cardinalstar.cubicchunks.asm.coremod.CubicChunksCoreMod", "cubicchunks"),
+    DYNAMIC_SURROUNDINGS_MIST("org.blockartistry.mod.DynSurround.mixinplugin.DynamicSurroundingsEarlyMixins", "dsurround"),
+    DYNAMIC_SURROUNDINGS_ORIGINAL("org.blockartistry.mod.DynSurround.asm.TransformLoader", "dsurround"),
+    DRAGON_API("Reika.DragonAPI.Auxiliary.DragonAPIASMHandler", "DragonAPI"),
+    DRACONIC_EVOLUTION(null, "DraconicEvolution"),
+    ET_FUTURUM_REQUIEM(null, "etfuturum"),
+    EXTRAUTILS(null, "ExtraUtilities"),
+    FARSEEK("farseek.core.FarseekCoreMod", "farseek"),
+    FALSETWEAKS("com.falsepattern.falsetweaks.asm.CoreLoadingPlugin", "falsetweaks"),
+    LUMI("com.falsepattern.lumi.internal.asm.ASMLoadingPlugin", "lumi"),
+    MINEFACTORY_RELOADED(null, "MineFactoryReloaded"),
+    NTM_SPACE("com.hbm.dim.SolarSystem"),
+    IC2("ic2.core.coremod.IC2core", "IC2"),
+    NATURA(null, "Natura"),
+    OPENBLOCKS(null, "OpenBlocks"),
+    RAILCRAFT(null, "Railcraft"),
+    SECURITYCRAFT(null, "securitycraft"),
+    STARMINER("jp.mc.ancientred.starminer.core.SMPlugin", "modJ_StarMiner"),
+    SUPERNOVA("com.mitchej123.supernova.core.SupernovaCore", "supernova"),
+    THAUMCRAFT(null, "Thaumcraft"),
+    TINKERS_CONSTRUCT(null, "TConstruct"),
+    TWILIGHT_FOREST(null, "TwilightForest"),
+    BIOMES_O_PLENTY(null, "BiomesOPlenty"),
+    CUSTOM_PLAYER_MODELS("com.tom.cpmcore.CPMLoadingPlugin", "customplayermodels"),
+    WITCHERY(null, "witchery");
+
+    private final TargetModBuilder builder;
+
+    TargetedMod(String targetClass) {
+        this.builder = new TargetModBuilder().setTargetClass(targetClass);
+    }
+    TargetedMod(String coreModClass, String modId) {
+        this.builder = new TargetModBuilder().setCoreModClass(coreModClass).setModId(modId);
+    }
+}

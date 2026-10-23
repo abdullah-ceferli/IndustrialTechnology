@@ -1,0 +1,7 @@
+# This outer folder contains personal diagnostics and backups.
+# The complete public source project is in github-ready/.
+*
+!.gitignore
+!GITHUB_UPLOAD.md
+!github-ready/
+!github-ready/**

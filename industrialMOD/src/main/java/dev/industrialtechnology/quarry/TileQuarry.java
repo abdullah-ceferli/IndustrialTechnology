@@ -37,8 +37,6 @@ public class TileQuarry extends TilePoweredMachine {
         super.updateEntity();
         if (worldObj == null || worldObj.isRemote) return;
         ensureMiningHeight();
-        if (!dev.industrialtechnology.space.DimensionActivity.active(worldObj)) { issue = "Suspended: no players in this dimension"; return; }
-        if (issue.equals("Suspended: no players in this dimension")) issue = "";
         metrics.advance(worldObj.getTotalWorldTime());
         if (!cursor.choose(selected)) {
             status = MachineStatus.COMPLETED;

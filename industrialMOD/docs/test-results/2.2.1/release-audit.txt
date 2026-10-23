@@ -1,0 +1,8 @@
+PASS: Only version metadata and the two intended lamp textures differ from the native-tested 2.2.0 release
+PASS: Both lamp tiles are opaque, uniformly green; all original gameplay and attachment bytecode is unchanged
+PASS: Exact distribution JAR matches the native initial/restart runtime copy
+PASS: 216 current successful executions, including the real nighttime Minecraft client
+PASS: Source archive and patch documentation match current files
+SHA256: f9eb5b7a6615011aff940f9423f5e92f36d3bd4146e022ea4c20b418f735e691
+Size: 337591 bytes
+Failed: 0

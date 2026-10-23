@@ -1,23 +1,17 @@
-"""Audit the release payload against performed native servers and recorded regression evidence."""
+"""Check the 2.2.0 removal payload against executed native tests and the pre-space baseline."""
 import hashlib,json,re,struct,zipfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 VERSION=re.search(r"(?m)^version = '([^']+)'",(ROOT/'build.gradle').read_text()).group(1)
-if VERSION=='2.1.0':
-    import audit_shuttle_release
-    audit_shuttle_release.main()
+if VERSION=='2.2.1':
+    import audit_lamp_release
+    audit_lamp_release.main()
     raise SystemExit(0)
-if VERSION=='2.0.1':
-    import audit_space_visual_release
-    audit_space_visual_release.main()
-    raise SystemExit(0)
-if VERSION.startswith('2.'):
-    import audit_space_release
-    audit_space_release.main()
-    raise SystemExit(0)
+assert VERSION=='2.2.0', 'This audit describes the performed 2.2.0 removal verification.'
 release=ROOT/f'build/libs/IndustrialTechnology-1.7.10-{VERSION}.jar'
 reports=ROOT/f'docs/test-results/{VERSION}'
+def digest(path):return hashlib.sha256(path.read_bytes()).hexdigest()
 def payload(path):
     with zipfile.ZipFile(path) as z:
         assert z.testzip() is None,path
@@ -25,24 +19,33 @@ def payload(path):
         assert len(names)==len(set(names)),path
         return {n:z.read(n) for n in names}
 contents=payload(release)
-for mode in ['hbm','standalone']:
-    other=payload(ROOT/f'run-test-production-{VERSION}-{mode}-final/mods'/release.name)
-    differences=[n for n in set(contents)|set(other) if contents.get(n)!=other.get(n)]
-    assert not differences,(mode,sorted(differences))
+baseline=payload(ROOT/'.toolchain/space-baseline-1.6.3/IndustrialTechnology-1.7.10-1.6.3.jar')
 classes={n:b for n,b in contents.items() if n.endswith('.class')}
 assert classes and all(b[:4]==b'\xca\xfe\xba\xbe' and struct.unpack('>H',b[6:8])[0]==52 for b in classes.values())
-assert not any('/test/' in n or n.startswith(('net/minecraft/','cpw/','org/','com/hbm/','codechicken/')) for n in classes)
+assert not any('/space/' in n or '/test/' in n or n.startswith(('net/minecraft/','cpw/','org/','com/hbm/','codechicken/')) for n in classes)
 assert not any(n.endswith('.jar') for n in contents)
-assert json.loads(contents['mcmod.info'].decode('utf-8'))[0]['version']==VERSION
-for folder,count in [('blocks',24),('gui',5),('items',8)]:assert sum('/textures/'+folder+'/' in n and n.endswith('.png') for n in contents)==count
+modified={'dev/industrialtechnology/core/IndustrialTechnology.class','dev/industrialtechnology/core/ModRegistry.class'}
+for n,b in baseline.items():
+    if n.endswith('.class') and n not in modified:assert contents.get(n)==b, 'Original subsystem changed: '+n
+    if n.startswith('assets/') and not n.endswith('lang/en_US.lang'):assert contents.get(n)==b,'Original artwork/reference changed: '+n
+assert not any('SpaceRegistry' in b.decode('latin1') or 'DimensionActivity' in b.decode('latin1') for b in classes.values())
+assert json.loads(contents['mcmod.info'].decode())[0]['version']==VERSION
+for folder,count in [('blocks',26),('gui',5),('items',8)]:assert sum('/textures/'+folder+'/' in n and n.endswith('.png') for n in contents)==count
 for n in ['LICENSE','THIRD_PARTY.md','licenses/CoFH-RF-LGPL-3.0.txt']:assert 'META-INF/'+n in contents
+with zipfile.ZipFile(ROOT/'.toolchain/pre-space-removal-2.1.0/source-and-docs.zip') as z:
+    for texture in ['green_lamp_on.png','green_lamp_off.png']:
+        n='assets/industrialtech/textures/blocks/'+texture
+        assert contents[n]==z.read('src/main/resources/'+n),'Retained lamp artwork changed'
 ref=contents['assets/industrialtech/automation_reference.json']
-assert ref==(ROOT/'src/main/resources/assets/industrialtech/automation_reference.json').read_bytes()
 assert 'Reference SHA256: '+hashlib.sha256(ref).hexdigest() in (ROOT/'AUTOMATION_CODES.md').read_text(encoding='utf-8')
-reference=json.loads(ref);assert reference['timing'][0]['id']=='EVERY'
-assert any('Celsius' in row['text'] for row in reference['intro'])
-assert not any('hbm' in p.name.lower() for p in (ROOT/f'run-test-production-{VERSION}-standalone-final/mods').glob('*.jar'))
-checks=json.loads((reports/'checks.json').read_text());total=0;unit=0
+assert len(json.loads((ROOT/'docs/retired-content-2.2.0.json').read_text()))==66
+runtime=json.loads((reports/'runtime-copies.json').read_text())
+for path,expected in runtime.items():assert digest(ROOT/path)==expected==digest(release),path
+assert len(runtime)==3
+assert not any('hbm' in p.name.lower() for p in (ROOT/'run-test-production-2.2.0-final-standalone/mods').glob('*.jar'))
+hbm=ROOT/'run-test-production-2.2.0-final-hbm5771/mods/HBM-NTM-.1.0.27_X5771.jar'
+assert digest(hbm)==digest(Path(r'D:\programs\Maincraft\Minecraft\game\mods\HBM-NTM-.1.0.27_X5771.jar'))
+checks=json.loads((reports/'checks.json').read_text());total=unit=0
 for name,count in checks.items():
     if name.endswith('.xml'):
         suite=ET.parse(reports/name).getroot();assert int(suite.attrib['tests'])==count
@@ -53,24 +56,21 @@ for name,count in checks.items():
         assert sum(n.startswith('PASS:') for n in lines)==count,(name,count)
     total+=count
 assert unit==62
-expected = [('production-hbm-initial.txt',164),('production-hbm-restart.txt',12),('production-initial.txt',128),('production-restart.txt',11)]
-if VERSION == '1.6.3':expected = [('production-hbm-initial.txt',165),('production-hbm-restart.txt',12),('production-initial.txt',128),('production-restart.txt',11),('reactor-client-integration.txt',27)]
-elif VERSION == '1.6.2':expected += [('reactor-client-integration.txt',19),('code-client-integration.txt',23),('wireless-client-integration.txt',19),('nei-client-integration.txt',6)]
-elif VERSION == '1.6.0':expected = [('production-hbm-initial.txt',153),('production-hbm-restart.txt',11),('production-initial.txt',117),('production-restart.txt',10),('reactor-client-integration.txt',17),('code-client-integration.txt',23),('nei-client-integration.txt',6),('wireless-client-integration.txt',19)]
-for name,count in expected:assert checks[name]==count
-assert f'| Total recorded checks, including duplicate compatibility runs | {total} |' in (ROOT/'docs/TESTING.md').read_text(encoding='utf-8')
-hbm=ROOT/'run-test-production-1.3.0-hbm-verified/mods/HBM-NTM-.1.0.27_X5808.jar'
-hbm_test=ROOT/f'run-test-production-{VERSION}-hbm-final/mods'/hbm.name
-hbm_hash=hashlib.sha256(hbm.read_bytes()).hexdigest();assert hbm_hash==hashlib.sha256(hbm_test.read_bytes()).hexdigest()
-digest=hashlib.sha256(release.read_bytes()).hexdigest()
-(reports/'release-sha256.txt').write_text(f'{digest}  {release.name}\n',encoding='utf-8')
-(reports/'hbm-sha256.txt').write_text(f'{hbm_hash}  {hbm.name}\n',encoding='utf-8')
+assert checks['lamp-client.txt']==3 and checks['upgrade-from-2.1.0.txt']==4
+assert f'| Total recorded successful executions | {total} |' in (ROOT/'docs/TESTING.md').read_text(encoding='utf-8')
+with zipfile.ZipFile(ROOT/f'build/libs/IndustrialTechnology-1.7.10-{VERSION}-sources.jar') as z:
+    for path in (ROOT/'src/main/java').rglob('*.java'):
+        assert z.read(path.relative_to(ROOT/'src/main/java').as_posix())==path.read_bytes(),path
+    assert z.read('PROJECT_HANDOFF.md')==(ROOT/'PROJECT_HANDOFF.md').read_bytes()
+    assert z.read('docs/CHANGES-2.2.0.md')==(ROOT/'docs/CHANGES-2.2.0.md').read_bytes()
 report='\n'.join([
-    'PASS: Final archive entries exactly match both native Forge production-tested release copies',
-    f'PASS: {len(classes)} Java 8 classes; no test harness, Minecraft/Forge/HBM/NEI classes or nested mod JARs',
-    f'PASS: Version {VERSION}; existing 24 block, 5 GUI and 8 item textures preserved',
-    'PASS: Shared book/Help/Markdown reference preserves EVERY and documents separate depletion and Celsius readings',
-    'PASS: Native HBM test dependency exactly matches the originally installed X5808 production JAR',
-    f'PASS: {total} recorded checks from the reports listed in checks.json',
-    f'SHA256: {digest}',f'Size: {release.stat().st_size} bytes','Failed: 0'])+'\n'
+    'PASS: Final archive exactly matches standalone, HBM X5771 and copied-save upgrade native runtime JARs',
+    f'PASS: {len(classes)} Java 8 classes; no space implementation, test harness, third-party mod classes or nested JARs',
+    'PASS: Original pre-space subsystem bytecode retained except the two intentional core registration/event classes',
+    'PASS: Original textures/reference retained byte-for-byte; both original green lamp textures retained',
+    'PASS: Version 2.2.0 and current source/docs; exact 66 retired registry names accepted',
+    'PASS: Native HBM dependency matches the installed X5771 JAR; no HBM dependency bundled',
+    f'PASS: {total} recorded successful executions; 62 unit checks, native initial/restart, migration and real client checks',
+    'SHA256: '+digest(release),f'Size: {release.stat().st_size} bytes','Failed: 0'])+'\n'
+(reports/'release-sha256.txt').write_text(digest(release)+'  '+release.name+'\n',encoding='utf-8')
 (reports/'release-audit.txt').write_text(report,encoding='utf-8');print(report)

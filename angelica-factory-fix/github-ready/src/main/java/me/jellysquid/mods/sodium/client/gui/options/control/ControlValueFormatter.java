@@ -1,0 +1,67 @@
+package me.jellysquid.mods.sodium.client.gui.options.control;
+
+import me.jellysquid.mods.sodium.client.gui.FrameRateOptions;
+import net.minecraft.client.resources.I18n;
+
+import java.util.Locale;
+
+public interface ControlValueFormatter {
+    static ControlValueFormatter guiScale() {
+        return (v) -> (v == 0) ? I18n.format("options.guiScale.auto") : I18n.format(v + "x");
+    }
+
+    static ControlValueFormatter fpsLimit() {
+        return (v) -> (v == FrameRateOptions.MAX_FRAMERATE) ? I18n.format("options.framerateLimit.max") : I18n.format("options.framerate", v);
+    }
+    static ControlValueFormatter droppedItemLimitLimit() {
+        return (v) -> (v == 2048) ? I18n.format("options.droppedItems.max") : I18n.format("options.droppedItems", v);
+    }
+
+    static ControlValueFormatter brightness() {
+        return (v) -> {
+            if (v == 0) {
+                return I18n.format("options.gamma.min");
+            } else if (v == 100) {
+                return I18n.format("options.gamma.max");
+            } else {
+                return v + "%";
+            }
+        };
+    }
+
+    String format(int value);
+
+    static ControlValueFormatter percentage() {
+        return (v) -> v + "%";
+    }
+
+    static ControlValueFormatter multiplier() {
+        return (v) -> v + "x";
+    }
+
+    static ControlValueFormatter seconds() {
+        return (v) -> v + "s";
+    }
+
+    static ControlValueFormatter quantity(String name) {
+        return (v) -> I18n.format(name, v);
+    }
+
+    static ControlValueFormatter quantityOrDisabled(String name, String disableText) {
+        return (v) -> I18n.format(v == 0 ? disableText : name, v);
+    }
+
+    static ControlValueFormatter number() {
+        return String::valueOf;
+    }
+
+    static ControlValueFormatter shadowGraphAngleDelta() {
+        return (v) -> v == 0
+            ? I18n.format("options.angelica.shadowGraphAngleDelta.always")
+            : String.format(Locale.ROOT, "%.3f°", v * 0.001f);
+    }
+
+    static ControlValueFormatter shadowGraphHorizonScale() {
+        return (v) -> v == 100 ? I18n.format("options.angelica.shadowGraphHorizonScale.off") : v + "%";
+    }
+}

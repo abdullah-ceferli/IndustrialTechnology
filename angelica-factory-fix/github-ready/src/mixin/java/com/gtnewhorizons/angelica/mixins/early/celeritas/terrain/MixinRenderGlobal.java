@@ -1,0 +1,369 @@
+package com.gtnewhorizons.angelica.mixins.early.celeritas.terrain;
+
+import com.gtnewhorizons.angelica.client.rendering.AngelicaFogService;
+import com.gtnewhorizons.angelica.compat.mojang.Camera;
+import com.gtnewhorizons.angelica.compat.mojang.GameModeUtil;
+import com.gtnewhorizons.angelica.event.RenderChunkEvent;
+import com.gtnewhorizons.angelica.experimental.surround.Surround;
+import com.gtnewhorizons.angelica.glsm.GLStateManager;
+import com.gtnewhorizons.angelica.glsm.profiling.Tracy;
+import com.gtnewhorizons.angelica.mixins.interfaces.IRenderGlobalExt;
+import com.gtnewhorizons.angelica.rendering.AngelicaRenderQueue;
+import com.gtnewhorizons.angelica.rendering.RenderingState;
+import com.gtnewhorizons.angelica.rendering.celeritas.BlockRenderLayer;
+import com.gtnewhorizons.angelica.rendering.celeritas.CeleritasSetup;
+import com.gtnewhorizons.angelica.rendering.celeritas.CeleritasWorldRenderer;
+import com.gtnewhorizons.angelica.rendering.tesr.ModelPartBatcher;
+import com.gtnewhorizons.angelica.rendering.tesr.TesrBatchRenderer;
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import net.coderbot.iris.Iris;
+import net.coderbot.iris.layer.GbufferPrograms;
+import net.coderbot.iris.pipeline.HandRenderer;
+import net.coderbot.iris.pipeline.WorldRenderingPhase;
+import net.coderbot.iris.pipeline.WorldRenderingPipeline;
+import net.coderbot.iris.shadows.ShadowRenderingState;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.WorldClient;
+import net.minecraft.client.renderer.GLAllocation;
+import net.minecraft.client.renderer.RenderGlobal;
+import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.client.renderer.culling.ICamera;
+import net.minecraft.client.renderer.texture.TextureManager;
+import net.minecraft.client.renderer.texture.TextureMap;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.tileentity.TileEntity;
+import org.embeddedt.embeddium.impl.gl.device.RenderDevice;
+import org.embeddedt.embeddium.impl.render.terrain.SimpleWorldRenderer;
+import org.embeddedt.embeddium.impl.render.viewport.Viewport;
+import org.embeddedt.embeddium.impl.render.viewport.ViewportProvider;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL13;
+import org.objectweb.asm.Opcodes;
+import org.spongepowered.asm.mixin.Final;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Constant;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyConstant;
+import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import java.util.Collections;
+import java.util.List;
+
+import static org.joml.Math.lerp;
+
+/**
+ * RenderGlobal mixin for celeritas integration.
+ * Redirects chunk rendering to CeleritasWorldRenderer/AngelicaRenderSectionManager.
+ */
+@Mixin(value = RenderGlobal.class, priority = 900)
+public class MixinRenderGlobal implements IRenderGlobalExt {
+    @Unique private static final long P_BLOCK_ENTITIES_RENDERED = Tracy.plotHandle("blockEntitiesRendered");
+    @Unique private static final Tracy.ZoneId Z_MT_QUEUE = Tracy.zoneId("mtQueue", Tracy.COLOR_TERRAIN);
+
+    @Shadow public Minecraft mc;
+    @Shadow public WorldClient theWorld;
+    @Shadow @Final private TextureManager renderEngine;
+
+    @Unique private static final String SECTION_SOLID = "draw_chunk_layer_solid";
+    @Unique private static final String SECTION_CUTOUT_MIPPED = "draw_chunk_layer_cutout_mipped";
+    @Unique private static final String SECTION_TRANSLUCENT = "draw_chunk_layer_translucent";
+    @Unique private static final String SECTION_SHADOW_SOLID = "shadow_draw_chunk_layer_solid";
+    @Unique private static final String SECTION_SHADOW_CUTOUT_MIPPED = "shadow_draw_chunk_layer_cutout_mipped";
+    @Unique private static final String SECTION_SHADOW_TRANSLUCENT = "shadow_draw_chunk_layer_translucent";
+    @Unique private CeleritasWorldRenderer celeritas$renderer;
+    @Unique private int celeritas$frame;
+    @Unique private float celeritas$lastFov;
+    @Unique private int celeritas$lastThirdPersonView = -1;
+
+    @Unique
+    private boolean angelica$isSpectatorMode() {
+        return GameModeUtil.isSpectator();
+    }
+
+    @Redirect(method = "<init>(Lnet/minecraft/client/Minecraft;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GLAllocation;generateDisplayLists(I)I", ordinal = 0))
+    private int celeritas$minimizeDisplayListAllocation(int count) {
+        // Minimize allocation - celeritas replaces WorldRenderer with its own rendering system
+        return GLAllocation.generateDisplayLists(3);
+    }
+
+    @Redirect(method = "loadRenderers", at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/RenderGlobal;renderDistanceChunks:I", opcode = Opcodes.GETFIELD, ordinal = 0))
+    private int celeritas$nullifyBuiltChunkStorage(RenderGlobal self) {
+        // Minimize resource allocation
+        return 0;
+    }
+
+    @ModifyConstant(method = "loadRenderers", constant = @Constant(intValue = 16, ordinal = 0), require = 1)
+    private int celeritas$nullifyBuiltChunkStorage2(int constant) {
+        // Minimize resource allocation
+        return 1;
+    }
+
+    @Inject(method = "<init>", at = @At("RETURN"))
+    private void celeritas$initRenderer(Minecraft mc, CallbackInfo ci) {
+        this.celeritas$renderer = CeleritasWorldRenderer.create(mc);
+    }
+
+    @Inject(method = "Lnet/minecraft/client/renderer/RenderGlobal;setWorldAndLoadRenderers(Lnet/minecraft/client/multiplayer/WorldClient;)V", at = @At("RETURN"))
+    private void celeritas$setWorldAndLoadRenderers(WorldClient world, CallbackInfo ci) {
+        RenderDevice.enterManagedCode();
+        try {
+            this.celeritas$renderer.setWorld(world);
+        } finally {
+            RenderDevice.exitManagedCode();
+        }
+
+        if (world != null && mc.renderViewEntity != null) {
+            final Entity e = mc.renderViewEntity;
+            Camera.INSTANCE.getPos().set(e.posX, e.posY + e.getEyeHeight(), e.posZ);
+            e.lastTickPosX = e.posX;
+            e.lastTickPosY = e.posY;
+            e.lastTickPosZ = e.posZ;
+        }
+    }
+
+    @Inject(method = "onStaticEntitiesChanged", at = @At("RETURN"))
+    private void onTerrainUpdateScheduled(CallbackInfo ci) {
+        this.celeritas$renderer.scheduleTerrainUpdate();
+    }
+
+    /**
+     * @author celeritas
+     * @reason Redirect to our renderer with Iris phase support
+     */
+    @Overwrite
+    public int sortAndRender(EntityLivingBase entity, int pass, double partialTicks) {
+
+        final WorldRenderingPipeline pipeline;
+        if (!Iris.enabled) {
+            pipeline = null;
+        } else {
+            pipeline = Iris.getPipelineManager().getPipelineNullable();
+            if (pass == 0) {
+                pipeline.setPhase(WorldRenderingPhase.TERRAIN_SOLID);
+            } else if (pass == 1) {
+                if (!ShadowRenderingState.areShadowsCurrentlyBeingRendered()) {
+                    iris$beginTranslucents(pipeline, Camera.INSTANCE);
+                }
+                pipeline.setPhase(WorldRenderingPhase.TERRAIN_TRANSLUCENT);
+                this.renderEngine.bindTexture(TextureMap.locationBlocksTexture);
+            }
+        }
+
+        RenderDevice.enterManagedCode();
+
+        RenderHelper.disableStandardItemLighting();
+
+        GLStateManager.glActiveTexture(GL13.GL_TEXTURE0);
+        GLStateManager.glBindTexture(GL11.GL_TEXTURE_2D, this.mc.getTextureMapBlocks().getGlTextureId());
+        GLStateManager.glEnable(GL11.GL_TEXTURE_2D);
+
+        GLStateManager.glEnable(GL11.GL_ALPHA_TEST);
+        GLStateManager.glEnable(GL11.GL_FOG);
+
+        this.mc.entityRenderer.enableLightmap(partialTicks);
+
+        final double camX = lerp(entity.lastTickPosX, entity.posX, partialTicks);
+        // Minecraft's setupCameraTransform bakes -eyeHeight into the modelview, which would normally
+        // require feet here; CeleritasWorldRenderer.createChunkRenderMatrices compensates this by
+        // post-multiplying the chunk-shader modelview with translate(0, +eyeHeight, 0).
+        // Otherwise, we get issues with Iris shaders getting normals at a shifted y-position.
+        final double camY = lerp(entity.lastTickPosY, entity.posY, partialTicks) + entity.getEyeHeight();
+        final double camZ = lerp(entity.lastTickPosZ, entity.posZ, partialTicks);
+
+        final boolean shadow = ShadowRenderingState.areShadowsCurrentlyBeingRendered();
+        try {
+            if (pass == 0) {
+                mc.mcProfiler.endStartSection(shadow ? SECTION_SHADOW_SOLID : SECTION_SOLID);
+                iris$setTerrainPhase(pipeline, WorldRenderingPhase.TERRAIN_SOLID);
+                this.celeritas$renderer.drawChunkLayer(BlockRenderLayer.SOLID, camX, camY, camZ);
+                mc.mcProfiler.endStartSection(shadow ? SECTION_SHADOW_CUTOUT_MIPPED : SECTION_CUTOUT_MIPPED);
+                iris$setTerrainPhase(pipeline, WorldRenderingPhase.TERRAIN_CUTOUT_MIPPED);
+                this.celeritas$renderer.drawChunkLayer(BlockRenderLayer.CUTOUT_MIPPED, camX, camY, camZ);
+            } else {
+                mc.mcProfiler.endStartSection(shadow ? SECTION_SHADOW_TRANSLUCENT : SECTION_TRANSLUCENT);
+                this.celeritas$renderer.drawChunkLayer(BlockRenderLayer.TRANSLUCENT, camX, camY, camZ);
+                RenderChunkEvent.post();
+            }
+        } finally {
+            RenderDevice.exitManagedCode();
+        }
+
+        this.mc.entityRenderer.disableLightmap(partialTicks);
+
+        if (pipeline != null) pipeline.setPhase(WorldRenderingPhase.NONE);
+
+        return 0;
+    }
+
+    /**
+     * @author celeritas
+     * @reason Redirect terrain setup to our renderer
+     */
+    @Overwrite
+    public void clipRenderersByFrustum(ICamera camera, float partialTicks) {
+        RenderDevice.enterManagedCode();
+
+        try {
+            final Entity viewEntity = this.mc.renderViewEntity;
+            final float fogDistance = AngelicaFogService.INSTANCE.getFogCutoff();
+
+            final double camX = lerp(viewEntity.lastTickPosX, viewEntity.posX, partialTicks);
+            final double camY = lerp(viewEntity.lastTickPosY, viewEntity.posY, partialTicks) + viewEntity.getEyeHeight();
+            final double camZ = lerp(viewEntity.lastTickPosZ, viewEntity.posZ, partialTicks);
+
+            final float currentFov = RenderingState.INSTANCE.getFov();
+            if (currentFov != this.celeritas$lastFov) {
+                this.celeritas$renderer.scheduleTerrainUpdate();
+                this.celeritas$lastFov = currentFov;
+            }
+
+            final int currentThirdPerson = this.mc.gameSettings.thirdPersonView;
+            if (currentThirdPerson != this.celeritas$lastThirdPersonView) {
+                this.celeritas$renderer.scheduleTerrainUpdate();
+                this.celeritas$lastThirdPersonView = currentThirdPerson;
+            }
+
+            final SimpleWorldRenderer.CameraState cameraState = new SimpleWorldRenderer.CameraState(
+                camX, camY, camZ,
+                viewEntity.rotationPitch, viewEntity.rotationYaw, fogDistance
+            );
+            final Viewport viewport = ((ViewportProvider) camera).sodium$createViewport();
+            if (this.celeritas$renderer.isInShadowPass()) {
+                this.celeritas$renderer.setupShadowTerrain(viewport, cameraState, this.celeritas$frame++, angelica$isSpectatorMode());
+            } else {
+                this.celeritas$renderer.setupTerrain(viewport, cameraState, this.celeritas$frame++, angelica$isSpectatorMode(), false);
+            }
+        } finally {
+            RenderDevice.exitManagedCode();
+        }
+    }
+
+    /**
+     * @author celeritas
+     * @reason Redirect to our renderer
+     */
+    @Overwrite
+    public void markBlocksForUpdate(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+        this.celeritas$renderer.scheduleRebuildForBlockArea(minX, minY, minZ, maxX, maxY, maxZ, false);
+    }
+
+    @Unique
+    public void angelica$reload() {
+        CeleritasSetup.ensureInitialized();
+        RenderDevice.enterManagedCode();
+        try {
+            this.celeritas$renderer.reload();
+        } finally {
+            RenderDevice.exitManagedCode();
+        }
+    }
+
+    @Inject(method = "loadRenderers", at = @At("RETURN"))
+    private void onReload(CallbackInfo ci) {
+        if (this.celeritas$renderer.getWorld() != this.theWorld) return;
+        angelica$reload();
+    }
+
+
+
+    @Surround(method = "renderEntities", id = "blockEntities",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/RenderHelper;enableStandardItemLighting()V", ordinal = 0))
+    private void celeritas$enterBlockEntities() {}
+
+    @Surround.Return("blockEntities")
+    private void celeritas$renderTileEntities(@Surround.Local(argsOnly = true) float partialTicks) {
+        if (Iris.enabled) {
+            GbufferPrograms.beginBlockEntities();
+            GbufferPrograms.setBlockEntityDefaults();
+        }
+        final int blockEntitiesRendered = this.celeritas$renderer.renderBlockEntities(partialTicks);
+        if (Tracy.ENABLED) Tracy.plotInt(P_BLOCK_ENTITIES_RENDERED, blockEntitiesRendered);
+        if (Iris.enabled) {
+            GbufferPrograms.endBlockEntities();
+        }
+    }
+
+    @ModifyExpressionValue(method = "renderEntities", at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/RenderGlobal;tileEntities:Ljava/util/List;", opcode = Opcodes.GETFIELD))
+    private List<TileEntity> celeritas$skipVanillaTileEntities(List<TileEntity> original) {
+        return Collections.emptyList();
+    }
+
+    /**
+     * @author celeritas
+     * @reason Redirect to our renderer
+     */
+    @Overwrite
+    public String getDebugInfoRenders() {
+        return this.celeritas$renderer.getChunksDebugString();
+    }
+
+
+
+
+
+    /**
+     * @author celeritas
+     * @reason Process render queue with 5ms budget, track metrics
+     */
+    @Overwrite
+    public boolean updateRenderers(EntityLivingBase e, boolean b) {
+        final int BUDGET_NS = 5 * 1000 * 1000;
+        final long startTime = System.nanoTime();
+        int tasksRan = 0;
+
+        long longestTaskNs = 0;
+
+        if (Tracy.ENABLED) Tracy.beginZone(Z_MT_QUEUE);
+        try {
+            long taskStart = startTime;
+            while (taskStart - startTime < BUDGET_NS) {
+                if (AngelicaRenderQueue.processTasks(1) == 0)
+                    break;
+                tasksRan++;
+                final long taskEnd = System.nanoTime();
+                final long elapsed = taskEnd - taskStart;
+                if (elapsed > longestTaskNs) longestTaskNs = elapsed;
+                taskStart = taskEnd;
+            }
+        } finally {
+            if (Tracy.ENABLED) Tracy.endZone();
+        }
+
+        AngelicaRenderQueue.recordFrameStats(tasksRan, System.nanoTime() - startTime, longestTaskNs);
+        return true;
+    }
+
+    @Unique
+    private static void iris$setTerrainPhase(WorldRenderingPipeline pipeline, WorldRenderingPhase phase) {
+        if (pipeline != null) {
+            pipeline.setPhase(phase);
+        }
+    }
+
+    @Unique
+    private void iris$beginTranslucents(WorldRenderingPipeline pipeline, Camera camera) {
+        pipeline.beginHand();
+        HandRenderer.INSTANCE.renderSolid(camera.getPartialTicks(), camera, mc.renderGlobal, pipeline);
+        mc.mcProfiler.endStartSection("iris_pre_translucent");
+        pipeline.beginTranslucents();
+        ModelPartBatcher.INSTANCE.flushEntitiesAfterDeferred();
+        TesrBatchRenderer.INSTANCE.flushAfterDeferred();
+    }
+
+    @Redirect(method = "renderEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/Entity;isInRangeToRender3d(DDD)Z"))
+    private boolean isInRange(Entity e, double x, double y, double z) {
+        return e.isInRangeToRender3d(x, y, z) && celeritas$renderer.isEntityVisible(e);
+    }
+
+
+    @Override
+    public void angelica$scheduleTerrainUpdate() {
+        this.celeritas$renderer.scheduleTerrainUpdate();
+    }
+
+}

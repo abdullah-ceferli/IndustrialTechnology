@@ -1,0 +1,917 @@
+package me.jellysquid.mods.sodium.client.gui;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.function.BiConsumer;
+import java.util.function.Supplier;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.I18n;
+import net.minecraft.client.settings.GameSettings;
+import net.minecraft.util.MathHelper;
+
+import com.cardinalstar.cubicchunks.api.compat.CubicChunksVideoSettings;
+import com.google.common.collect.ImmutableList;
+import com.gtnewhorizons.angelica.client.gui.AtlasPackScreen;
+import com.gtnewhorizons.angelica.compat.ModStatus;
+import com.gtnewhorizons.angelica.config.AngelicaConfig;
+import com.gtnewhorizons.angelica.rendering.FpsReducer;
+import com.gtnewhorizons.angelica.rendering.celeritas.MultiDrawModeResolver;
+import com.gtnewhorizons.angelica.rendering.culling.GpuCulling;
+import com.gtnewhorizons.angelica.config.GpuCullingMode;
+import com.gtnewhorizons.angelica.glsm.GLStateManager;
+import cpw.mods.fml.common.Optional.Method;
+import com.gtnewhorizons.angelica.glsm.streaming.StreamingUploader;
+import jss.notfine.config.NotFineConfig;
+import jss.notfine.core.Settings;
+import jss.notfine.core.SettingsManager;
+import me.flashyreese.mods.reeses_sodium_options.client.gui.ReeseSodiumVideoOptionsScreen;
+import me.jellysquid.mods.sodium.client.gui.options.OptionFlag;
+import me.jellysquid.mods.sodium.client.gui.options.OptionGroup;
+import me.jellysquid.mods.sodium.client.gui.options.OptionImpact;
+import me.jellysquid.mods.sodium.client.gui.options.OptionImpl;
+import me.jellysquid.mods.sodium.client.gui.options.OptionPage;
+import me.jellysquid.mods.sodium.client.gui.options.SubScreenOption;
+import me.jellysquid.mods.sodium.client.gui.options.control.ControlValueFormatter;
+import me.jellysquid.mods.sodium.client.gui.options.control.CyclingControl;
+import me.jellysquid.mods.sodium.client.gui.options.control.SliderControl;
+import me.jellysquid.mods.sodium.client.gui.options.control.TickBoxControl;
+import me.jellysquid.mods.sodium.client.gui.options.named.BiomeBlendMode;
+import me.jellysquid.mods.sodium.client.gui.options.named.GraphicsMode;
+import me.jellysquid.mods.sodium.client.gui.options.named.GraphicsQuality;
+import me.jellysquid.mods.sodium.client.gui.options.named.LightingQuality;
+import me.jellysquid.mods.sodium.client.gui.options.named.MultiDrawMode;
+import me.jellysquid.mods.sodium.client.gui.options.named.ParticleMode;
+import me.jellysquid.mods.sodium.client.gui.options.named.TexelSampling;
+import me.jellysquid.mods.sodium.client.gui.options.named.TextureFilterMode;
+import me.jellysquid.mods.sodium.client.gui.options.storage.AngelicaOptionsStorage;
+import me.jellysquid.mods.sodium.client.gui.options.storage.CubicChunksOptionStorage;
+import me.jellysquid.mods.sodium.client.gui.options.storage.MinecraftOptionsStorage;
+import me.jellysquid.mods.sodium.client.gui.options.storage.SodiumOptionsStorage;
+import net.coderbot.iris.Iris;
+import net.coderbot.iris.gui.option.IrisVideoSettings;
+import net.coderbot.iris.pipeline.ShadowRenderer;
+import org.embeddedt.embeddium.impl.render.chunk.occlusion.AsyncOcclusionMode;
+
+public class SodiumGameOptionPages {
+    private static final SodiumOptionsStorage sodiumOpts = new SodiumOptionsStorage();
+    private static final MinecraftOptionsStorage vanillaOpts = new MinecraftOptionsStorage();
+    private static final AngelicaOptionsStorage angelicaOpts = new AngelicaOptionsStorage();
+
+    private static final int MIN_RENDER_AHEAD = 0;
+    private static final int MAX_RENDER_AHEAD = 9;
+
+    private static <T> BiConsumer<SodiumGameOptions, T> reducerBinding(BiConsumer<SodiumGameOptions, T> setter) {
+        return (opts, value) -> {
+            setter.accept(opts, value);
+            FpsReducer.markConfigChanged();
+        };
+    }
+
+    public static OptionPage general() {
+        final List<OptionGroup> groups = new ArrayList<>();
+        final OptionGroup.Builder firstGroupBuilder = OptionGroup.createBuilder();
+
+        firstGroupBuilder.add(OptionImpl.createBuilder(int.class, vanillaOpts)
+                .setName(I18n.format("options.renderDistance"))
+                .setTooltip(I18n.format("sodium.options.view_distance.tooltip"))
+                .setControl(option -> new SliderControl(option, 2, (int) GameSettings.Options.RENDER_DISTANCE.getValueMax(), 1, ControlValueFormatter.quantity("options.chunks")))
+                .setBinding((options, value) -> options.renderDistanceChunks = value, options -> options.renderDistanceChunks)
+                .setImpact(OptionImpact.HIGH)
+                .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                .build());
+
+
+        if (ModStatus.isCubicChunksLoaded) {
+            firstGroupBuilder.add(getCCVerticalViewDistance());
+        }
+
+        if(Iris.enabled) {
+
+            final OptionImpl<GameSettings, Integer> maxShadowDistanceSlider = OptionImpl.createBuilder(int.class, vanillaOpts)
+                .setName(I18n.format("options.iris.shadowDistance"))
+                .setTooltip(I18n.format("options.iris.shadowDistance.sodium_tooltip"))
+                .setControl(option -> new SliderControl(option, 0, 32, 1, ControlValueFormatter.quantity("options.chunks")))
+                .setBinding((options, value) -> {
+                        IrisVideoSettings.shadowDistance = value;
+                        try {
+                            Iris.getIrisConfig().save();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    },
+                    options -> IrisVideoSettings.getOverriddenShadowDistance(IrisVideoSettings.shadowDistance))
+                .setImpact(OptionImpact.HIGH)
+                .setEnabled(true)
+                .build();
+
+            maxShadowDistanceSlider.iris$dynamicallyEnable(IrisVideoSettings::isShadowDistanceSliderEnabled);
+            firstGroupBuilder.add(maxShadowDistanceSlider).build();
+        }
+
+        firstGroupBuilder.add(OptionImpl.createBuilder(int.class, vanillaOpts)
+                .setName(I18n.format("options.gamma"))
+                .setTooltip(I18n.format("sodium.options.brightness.tooltip"))
+                .setControl(opt -> new SliderControl(opt, 0, 100, 1, ControlValueFormatter.brightness()))
+                .setBinding((opts, value) -> opts.gammaSetting = value * 0.01F, (opts) -> (int) (opts.gammaSetting / 0.01F))
+                .build());
+        groups.add(firstGroupBuilder.build());
+
+        int maxGuiScale = Math.max(3, Math.min(Minecraft.getMinecraft().displayWidth / 320, Minecraft.getMinecraft().displayHeight / 240));
+        final FrameRateOptions frameRate = FrameRateOptions.create(vanillaOpts, sodiumOpts);
+        groups.add(OptionGroup.createBuilder()
+                .add(OptionImpl.createBuilder(int.class, vanillaOpts)
+                        .setName(I18n.format("options.guiScale"))
+                        .setTooltip(I18n.format("sodium.options.gui_scale.tooltip"))
+                        .setControl(option -> new SliderControl(option, 0, maxGuiScale, 1, ControlValueFormatter.guiScale()))
+                        .setBinding((opts, value) -> {
+                            opts.guiScale = value;
+                            // Resizing our window
+                            if(Minecraft.getMinecraft().currentScreen instanceof ReeseSodiumVideoOptionsScreen oldGui) {
+                                Minecraft.getMinecraft().displayGuiScreen(new ReeseSodiumVideoOptionsScreen(oldGui.prevScreen));
+                            }
+                        }, opts -> opts.guiScale)
+                        .build())
+                .add(OptionImpl.createBuilder(boolean.class, vanillaOpts)
+                        .setName(I18n.format("options.fullscreen"))
+                        .setTooltip(I18n.format("sodium.options.fullscreen.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setBinding((opts, value) -> {
+                            opts.fullScreen = value;
+
+                            final Minecraft client = Minecraft.getMinecraft();
+
+                            if (client.isFullScreen() != opts.fullScreen) {
+                                client.toggleFullscreen();
+
+                                // The client might not be able to enter full-screen mode
+                                opts.fullScreen = client.isFullScreen();
+                            }
+                        }, (opts) -> opts.fullScreen)
+                        .build())
+                .add(frameRate.vsync())
+                .add(frameRate.maxFramerate())
+                .build());
+
+        groups.add(OptionGroup.createBuilder()
+                .add(OptionImpl.createBuilder(boolean.class, vanillaOpts)
+                        .setName(I18n.format("options.viewBobbing"))
+                        .setTooltip(I18n.format("sodium.options.view_bobbing.tooltip"))
+                        .setControl(TickBoxControl::new)
+                    .setBinding((opts, value) -> opts.viewBobbing = value, opts -> opts.viewBobbing)
+                        .build())
+                .add(Settings.BOBVIEW_MODE.option)
+                .add(Settings.DYNAMIC_FOV.option)
+                .add(Settings.HURT_SHAKE.option)
+                .add(Settings.MODE_WATER.option)
+                .add(Settings.MODE_DROPPED_ITEMS.option)
+                .build());
+
+        return new OptionPage(I18n.format("stat.generalButton"), ImmutableList.copyOf(groups));
+    }
+
+    public static OptionPage quality() {
+        final List<OptionGroup> groups = new ArrayList<>();
+
+        final OptionImpl<GameSettings, Integer> mipmapLevels = OptionImpl.createBuilder(int.class, vanillaOpts)
+            .setName(I18n.format("options.mipmapLevels"))
+            .setTooltip(I18n.format("sodium.options.mipmap_levels.tooltip"))
+            .setControl(option -> new SliderControl(option, 0, 4, 1, ControlValueFormatter.multiplier()))
+            .setBinding((opts, value) -> opts.mipmapLevels = value, opts -> opts.mipmapLevels)
+            .setImpact(OptionImpact.MEDIUM)
+            .setFlags(OptionFlag.REQUIRES_ASSET_RELOAD)
+            .build();
+
+        final OptionImpl<SodiumGameOptions, TextureFilterMode> textureFilterMode =
+            OptionImpl.createBuilder(TextureFilterMode.class, sodiumOpts)
+                .setName(I18n.format("sodium.options.texture_filtering.name"))
+                .setTooltip(I18n.format("sodium.options.texture_filtering.tooltip"))
+                .setControl(option -> new CyclingControl<>(option, TextureFilterMode.class,
+                    TextureFilterMode.selectableValues(SodiumGameOptions.anisotropySupported())))
+                .setBinding((opts, value) -> opts.quality.textureFilterMode = value,
+                    opts -> SodiumGameOptions.resolveFilterMode(opts.quality.textureFilterMode))
+                .setImpact(OptionImpact.MEDIUM)
+                .setFlags(OptionFlag.REQUIRES_ASSET_RELOAD, OptionFlag.REQUIRES_RENDERER_RELOAD)
+                .build();
+
+        final OptionImpl<SodiumGameOptions, TexelSampling> texelSampling =
+            OptionImpl.createBuilder(TexelSampling.class, sodiumOpts)
+                .setName(I18n.format("sodium.options.texel_sampling.name"))
+                .setTooltip(I18n.format("sodium.options.texel_sampling.tooltip"))
+                .setControl(option -> new CyclingControl<>(option, TexelSampling.class))
+                .setBinding((opts, value) -> opts.quality.texelSampling = value,
+                    opts -> opts.quality.texelSampling)
+                .setImpact(OptionImpact.LOW)
+                // Only this mode needs a rerender
+                .setFlags(() -> textureFilterMode.getValue() == TextureFilterMode.NONE
+                    ? EnumSet.of(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                    : EnumSet.noneOf(OptionFlag.class))
+                .build();
+
+        final OptionImpl<SodiumGameOptions, Integer> biomeBlendRadius = OptionImpl.createBuilder(int.class, sodiumOpts)
+            .setName(I18n.format("options.biomeBlendRadius"))
+            .setTooltip(I18n.format("sodium.options.biome_blend.tooltip"))
+            .setControl(option -> new SliderControl(option, 0, 7, 1, ControlValueFormatter.quantityOrDisabled("sodium.options.biome_blend.value", "sodium.options.none")))
+            .setBinding((opts, value) -> opts.quality.biomeBlendRadius = value, opts -> opts.quality.biomeBlendRadius)
+            .setImpact(OptionImpact.LOW)
+            .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+            .build();
+
+        final OptionImpl<SodiumGameOptions, BiomeBlendMode> biomeBlendMode = OptionImpl.createBuilder(BiomeBlendMode.class, sodiumOpts)
+            .setName(I18n.format("sodium.options.biome_blend_mode.name"))
+            .setTooltip(I18n.format("sodium.options.biome_blend_mode.tooltip"))
+            .setControl(option -> new CyclingControl<>(option, BiomeBlendMode.class))
+            .setBinding((opts, value) -> opts.quality.biomeBlendMode = value, opts -> opts.quality.biomeBlendMode)
+            .setImpact(OptionImpact.LOW)
+            .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+            .build();
+        biomeBlendMode.iris$dynamicallyEnable(() -> biomeBlendRadius.getValue() > 0);
+
+        groups.add(OptionGroup.createBuilder()
+                .add(OptionImpl.createBuilder(GraphicsMode.class, vanillaOpts)
+                        .setName(I18n.format("options.graphics"))
+                        .setTooltip(I18n.format("sodium.options.graphics_quality.tooltip"))
+                        .setControl(option -> new CyclingControl<>(option, GraphicsMode.class))
+                        .setBinding(
+                                (opts, value) -> {
+                                    opts.fancyGraphics = value.isFancy();
+                                    SettingsManager.graphicsUpdated();
+                                    },
+                                opts -> GraphicsMode.fromBoolean(opts.fancyGraphics))
+                        .setImpact(OptionImpact.HIGH)
+                        .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                        .build())
+                .build());
+
+        groups.add(OptionGroup.createBuilder()
+                .add(Settings.MODE_CLOUDS.option)
+                .add(Settings.DOWNFALL_DISTANCE.option)
+                .add(Settings.MODE_LEAVES.option)
+                .add(OptionImpl.createBuilder(ParticleMode.class, vanillaOpts)
+                        .setName(I18n.format("options.particles"))
+                        .setTooltip(I18n.format("sodium.options.particle_quality.tooltip"))
+                        .setControl(opt -> new CyclingControl<>(opt, ParticleMode.class))
+                        .setBinding((opts, value) -> opts.particleSetting = value.ordinal(), (opts) -> ParticleMode.fromOrdinal(opts.particleSetting))
+                        .setImpact(OptionImpact.LOW)
+                        .build())
+                .add(Settings.PARTICLES_ENC_TABLE.option)
+                .add(Settings.PARTICLES_VOID.option)
+                .add(OptionImpl.createBuilder(GraphicsQuality.class, sodiumOpts)
+                    .setName(I18n.format("sodium.options.grass_quality.name"))
+                    .setTooltip(I18n.format("sodium.options.grass_quality.tooltip"))
+                    .setControl(option -> new CyclingControl<>(option, GraphicsQuality.class))
+                    .setBinding((opts, value) -> opts.quality.grassQuality = value, opts -> opts.quality.grassQuality)
+                    .setImpact(OptionImpact.MEDIUM)
+                    .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                    .build())
+                .add(OptionImpl.createBuilder(LightingQuality.class, vanillaOpts)
+                        .setName(I18n.format("options.ao"))
+                        .setTooltip(I18n.format("sodium.options.smooth_lighting.tooltip"))
+                        .setControl(option -> new CyclingControl<>(option, LightingQuality.class))
+                        .setBinding((opts, value) -> opts.ambientOcclusion = value.getVanilla(), opts -> LightingQuality.fromOrdinal(opts.ambientOcclusion))
+                        .setImpact(OptionImpact.MEDIUM)
+                        .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                        .build())
+                .add(OptionImpl.createBuilder(boolean.class, sodiumOpts)
+                    .setName(I18n.format("sodium.options.celeritas_smooth_lighting.name"))
+                    .setTooltip(I18n.format("sodium.options.celeritas_smooth_lighting.tooltip"))
+                    .setControl(TickBoxControl::new)
+                    .setBinding((opts, value) -> opts.quality.useCeleritasSmoothLighting = value, opts -> opts.quality.useCeleritasSmoothLighting)
+                    .setImpact(OptionImpact.LOW)
+                    .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                    .build())
+                .add(textureFilterMode)
+                .add(texelSampling)
+                .add(anisotropicFilteringSlider(vanillaOpts, textureFilterMode::getValue),
+                    SodiumGameOptions.anisotropySupported())
+                .add(biomeBlendRadius)
+                .add(biomeBlendMode)
+                // TODO
+                /*.add(OptionImpl.createBuilder(int.class, vanillaOpts)
+                        .setName(new TranslatableText("options.entityDistanceScaling"))
+                        .setTooltip(new TranslatableText("sodium.options.entity_distance.tooltip"))
+                        .setControl(option -> new SliderControl(option, 50, 500, 25, ControlValueFormatter.percentage()))
+                        .setBinding((opts, value) -> opts.entityDistanceScaling = value / 100.0F, opts -> Math.round(opts.entityDistanceScaling * 100.0F))
+                        .setImpact(OptionImpact.MEDIUM)
+                        .build()
+                )*/
+                .add(Settings.MODE_SHADOWS.option)
+                .add(Settings.MODE_VIGNETTE.option)
+                .build());
+
+
+        groups.add(OptionGroup.createBuilder()
+                .add(mipmapLevels)
+                .build());
+        groups.add(OptionGroup.createBuilder()
+        .add(Settings.MODE_GLINT_INV.option)
+            .add(Settings.MODE_GLINT_WORLD.option)
+            .build());
+
+        return new OptionPage(I18n.format("sodium.options.pages.quality"), ImmutableList.copyOf(groups));
+    }
+
+    public static OptionPage advanced() {
+        final List<OptionGroup> groups = new ArrayList<>();
+
+        groups.add(OptionGroup.createBuilder()
+                .add(OptionImpl.createBuilder(boolean.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.use_vertex_objects.name"))
+                        .setTooltip(I18n.format("sodium.options.use_vertex_objects.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setBinding((opts, value) -> opts.advanced.useVertexArrayObjects = value, opts -> opts.advanced.useVertexArrayObjects)
+                        .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                        .setImpact(OptionImpact.LOW)
+                        .build())
+                .add(OptionImpl.createBuilder(MultiDrawMode.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.multidraw_mode.name"))
+                        .setTooltip(I18n.format("sodium.options.multidraw_mode.tooltip"))
+                        .setControl(o -> {
+                            MultiDrawMode[] allowed = MultiDrawModeResolver.indirectSupported() ? MultiDrawMode.values() : new MultiDrawMode[]{MultiDrawMode.DIRECT, MultiDrawMode.INDIVIDUAL};
+                            return new CyclingControl<>(o, MultiDrawMode.class, allowed);
+                        })
+                        .setBinding((opts, value) -> opts.advanced.multiDrawMode = value, opts -> opts.advanced.multiDrawMode)
+                        .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                        .setImpact(OptionImpact.VARIES)
+                        .setEnabled(GLStateManager.capabilities != null)
+                        .build())
+                .add(OptionImpl.createBuilder(StreamingUploader.UploadStrategy.class, sodiumOpts)
+                    .setName(I18n.format("sodium.options.upload_method.name"))
+                    .setTooltip(I18n.format("sodium.options.upload_method.tooltip"))
+                    .setControl(o -> new CyclingControl<>(o, StreamingUploader.UploadStrategy.class, new String[]{
+                        I18n.format("sodium.options.upload_method.buffer_data"),
+                        I18n.format("sodium.options.upload_method.buffer_subdata"),
+                        I18n.format("sodium.options.upload_method.map_buffer") }))
+                    .setBinding((opts, value) -> opts.advanced.streamingUploadStrategy = value, opts -> opts.advanced.streamingUploadStrategy)
+                    .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                    .setImpact(OptionImpact.VARIES)
+                    .build())
+                .add(OptionImpl.createBuilder(boolean.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.enable_deferred_batching.name"))
+                        .setTooltip(I18n.format("sodium.options.enable_deferred_batching.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setBinding((opts, value) -> opts.advanced.enableDeferredBatching = value, opts -> opts.advanced.enableDeferredBatching)
+                        .setImpact(OptionImpact.MEDIUM)
+                        .build())
+                .build());
+
+        groups.add(OptionGroup.createBuilder()
+                .add(OptionImpl.createBuilder(boolean.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.use_block_face_culling.name"))
+                        .setTooltip(I18n.format("sodium.options.use_block_face_culling.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setImpact(OptionImpact.MEDIUM)
+                        .setBinding((opts, value) -> opts.performance.useBlockFaceCulling = value, opts -> opts.performance.useBlockFaceCulling)
+                        .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                        .build()
+                )
+                .add(OptionImpl.createBuilder(boolean.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.use_compact_vertex_format.name"))
+                        .setTooltip(I18n.format("sodium.options.use_compact_vertex_format.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setImpact(OptionImpact.MEDIUM)
+                        .setBinding((opts, value) -> opts.performance.useCompactVertexFormat = value, opts -> opts.performance.useCompactVertexFormat)
+                        .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                        .build()
+                )
+                .add(OptionImpl.createBuilder(boolean.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.use_fog_occlusion.name"))
+                        .setTooltip(I18n.format("sodium.options.use_fog_occlusion.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setBinding((opts, value) -> opts.performance.useFogOcclusion = value, opts -> opts.performance.useFogOcclusion)
+                        .setImpact(OptionImpact.MEDIUM)
+                        .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                        .build()
+                )
+                .add(OptionImpl.createBuilder(boolean.class, sodiumOpts)
+                    .setName(I18n.format("sodium.options.translucency_sorting.name"))
+                    .setTooltip(I18n.format("sodium.options.translucency_sorting.tooltip"))
+                    .setControl(TickBoxControl::new)
+                    .setBinding((opts, value) -> opts.performance.translucencySorting = value, opts -> opts.performance.translucencySorting)
+                    .setImpact(OptionImpact.MEDIUM)
+                    .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                    .build()
+                )
+                .add(OptionImpl.createBuilder(boolean.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.use_entity_culling.name"))
+                        .setTooltip(I18n.format("sodium.options.use_entity_culling.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setImpact(OptionImpact.MEDIUM)
+                        .setBinding((opts, value) -> opts.performance.useEntityCulling = value, opts -> opts.performance.useEntityCulling)
+                        .build()
+                )
+                .add(OptionImpl.createBuilder(boolean.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.section_gated_tesr_culling.name"))
+                        .setTooltip(I18n.format("sodium.options.section_gated_tesr_culling.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setImpact(OptionImpact.MEDIUM)
+                        .setBinding((opts, value) -> opts.performance.sectionGatedTesrCulling = value, opts -> opts.performance.sectionGatedTesrCulling)
+                        .build()
+                )
+                .add(OptionImpl.createBuilder(boolean.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.use_particle_culling.name"))
+                        .setTooltip(I18n.format("sodium.options.use_particle_culling.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setImpact(OptionImpact.MEDIUM)
+                        .setBinding((opts, value) -> opts.advanced.useParticleCulling = value, opts -> opts.advanced.useParticleCulling)
+                        .build()
+                )
+                .add(OptionImpl.createBuilder(boolean.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.animate_only_visible_textures.name"))
+                        .setTooltip(I18n.format("sodium.options.animate_only_visible_textures.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setImpact(OptionImpact.MEDIUM)
+                        .setBinding((opts, value) -> opts.performance.animateOnlyVisibleTextures = value, opts -> opts.performance.animateOnlyVisibleTextures)
+                        .build()
+                )
+                .add(OptionImpl.createBuilder(boolean.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.use_render_pass_optimization.name"))
+                        .setTooltip(I18n.format("sodium.options.use_render_pass_optimization.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setImpact(OptionImpact.MEDIUM)
+                        .setBinding((opts, value) -> opts.performance.useRenderPassOptimization = value, opts -> opts.performance.useRenderPassOptimization)
+                        .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                        .build()
+                )
+                .add(OptionImpl.createBuilder(boolean.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.use_occlusion_culling.name"))
+                        .setTooltip(I18n.format("sodium.options.use_occlusion_culling.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setImpact(OptionImpact.EXTREME)
+                        .setBinding((opts, value) -> opts.performance.useOcclusionCulling = value, opts -> opts.performance.useOcclusionCulling)
+                        .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                        .build()
+                )
+                .add(OptionImpl.createBuilder(AsyncOcclusionMode.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.async_occlusion_mode.name"))
+                        .setTooltip(I18n.format("sodium.options.async_occlusion_mode.tooltip"))
+                        .setControl(o -> new CyclingControl<>(o, AsyncOcclusionMode.class, new String[]{
+                            I18n.format("sodium.options.none"),
+                            I18n.format("sodium.options.async_occlusion_mode.only_shadow"),
+                            I18n.format("sodium.options.async_occlusion_mode.everything") }))
+                        .setImpact(OptionImpact.MEDIUM)
+                        .setBinding((opts, value) -> opts.performance.asyncOcclusionMode = value, opts -> opts.performance.asyncOcclusionMode)
+                        .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                        .build()
+                )
+                .build());
+
+        groups.add(OptionGroup.createBuilder()
+                .add(OptionImpl.createBuilder(boolean.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.allow_direct_memory_access.name"))
+                        .setTooltip(I18n.format("sodium.options.allow_direct_memory_access.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setImpact(OptionImpact.HIGH)
+                        .setBinding((opts, value) -> opts.advanced.allowDirectMemoryAccess = value, opts -> opts.advanced.allowDirectMemoryAccess)
+                        .build()
+                )
+                .build());
+
+        groups.add(OptionGroup.createBuilder()
+                .add(OptionImpl.createBuilder(boolean.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.ignore_driver_blacklist.name"))
+                        .setTooltip(I18n.format("sodium.options.ignore_driver_blacklist.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setBinding((opts, value) -> opts.advanced.ignoreDriverBlacklist = value, opts -> opts.advanced.ignoreDriverBlacklist)
+                        .build()
+                )
+                .build());
+
+        final OptionImpl<AngelicaConfig, GpuCullingMode> gpuCullingMode =
+                OptionImpl.createBuilder(GpuCullingMode.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.gpuCullingMode"))
+                        .setTooltip(I18n.format("options.angelica.gpuCullingMode.tooltip"))
+                        .setControl(o -> new CyclingControl<>(o, GpuCullingMode.class, new GpuCullingMode[]{
+                                GpuCullingMode.CPU_ONLY, GpuCullingMode.COMPUTE}))
+                        .setBinding((opts, value) -> {
+                                AngelicaConfig.gpuCullingMode = value;
+                                AngelicaConfig.applyGpuCullingMode();
+                            }, opts -> AngelicaConfig.gpuCullingMode)
+                        .setImpact(OptionImpact.HIGH)
+                        .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                        .setEnabled(true)
+                        .build();
+        gpuCullingMode.iris$dynamicallyEnable(GpuCulling::isAvailable);
+        groups.add(OptionGroup.createBuilder()
+                .add(gpuCullingMode)
+                .build());
+
+        return new OptionPage(I18n.format("sodium.options.pages.advanced"), ImmutableList.copyOf(groups));
+    }
+
+    public static OptionPage performance() {
+        final List<OptionGroup> groups = new ArrayList<>();
+
+        groups.add(OptionGroup.createBuilder()
+                .add(OptionImpl.createBuilder(boolean.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.threadedChunkBuilding"))
+                        .setTooltip(I18n.format("options.angelica.threadedChunkBuilding.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setImpact(OptionImpact.HIGH)
+                        .setBinding((opts, value) -> AngelicaConfig.enableThreadedChunkBuilding = value, opts -> AngelicaConfig.enableThreadedChunkBuilding)
+                        .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                        .build()
+                )
+                .add(OptionImpl.createBuilder(int.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.chunk_update_threads.name"))
+                        .setTooltip(I18n.format("sodium.options.chunk_update_threads.tooltip"))
+                        .setControl(o -> new SliderControl(o, 0, Runtime.getRuntime().availableProcessors(), 1, ControlValueFormatter.quantityOrDisabled("sodium.options.threads.value", "sodium.options.default")))
+                        .setImpact(OptionImpact.HIGH)
+                        .setBinding((opts, value) -> opts.performance.chunkBuilderThreads = value, opts -> opts.performance.chunkBuilderThreads)
+                        .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                        .build()
+                )
+                .add(OptionImpl.createBuilder(boolean.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.always_defer_chunk_updates.name"))
+                        .setTooltip(I18n.format("sodium.options.always_defer_chunk_updates.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setImpact(OptionImpact.HIGH)
+                        .setBinding((opts, value) -> opts.performance.alwaysDeferChunkUpdates = value, opts -> opts.performance.alwaysDeferChunkUpdates)
+                        .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                        .build())
+                .add(OptionImpl.createBuilder(boolean.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.use_no_error_context.name"))
+                        .setTooltip(I18n.format("sodium.options.use_no_error_context.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setImpact(OptionImpact.LOW)
+                        .setBinding((opts, value) -> opts.performance.useNoErrorGLContext = value, opts -> opts.performance.useNoErrorGLContext)
+                        .setFlags(OptionFlag.REQUIRES_GAME_RESTART)
+                        .build())
+                .add(OptionImpl.createBuilder(boolean.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.aggressiveChunkLoading"))
+                        .setTooltip(I18n.format("options.angelica.aggressiveChunkLoading.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setImpact(OptionImpact.LOW)
+                        .setBinding((opts, value) -> AngelicaConfig.useVanillaChunkTracking = value, opts -> AngelicaConfig.useVanillaChunkTracking)
+                        .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                        .build())
+                .add(OptionImpl.createBuilder(int.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.cpu_render_ahead_limit.name"))
+                        .setTooltip(I18n.format("sodium.options.cpu_render_ahead_limit.tooltip"))
+                        .setControl(o -> new SliderControl(o, MIN_RENDER_AHEAD, MAX_RENDER_AHEAD, 1, ControlValueFormatter.quantity("sodium.options.cpu_render_ahead_limit.value")))
+                        .setImpact(OptionImpact.MEDIUM)
+                        .setBinding((opts, value) -> opts.performance.cpuRenderAheadLimit = value, opts -> opts.performance.cpuRenderAheadLimit)
+                        .setEnabled(GLStateManager.capabilities != null && GLStateManager.capabilities.OpenGL32)
+                        .build())
+
+                .build());
+
+        groups.add(OptionGroup.createBuilder()
+                .add(OptionImpl.createBuilder(boolean.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.parallelAtlasDecode"))
+                        .setTooltip(I18n.format("options.angelica.parallelAtlasDecode.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setImpact(OptionImpact.LOW)
+                        .setBinding((opts, value) -> AngelicaConfig.enableParallelAtlasDecode = value, opts -> AngelicaConfig.enableParallelAtlasDecode)
+                        .setFlags(OptionFlag.REQUIRES_ASSET_RELOAD)
+                        .build())
+                .add(OptionImpl.createBuilder(boolean.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.parallelAtlasMipmaps"))
+                        .setTooltip(I18n.format("options.angelica.parallelAtlasMipmaps.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setImpact(OptionImpact.LOW)
+                        .setBinding((opts, value) -> AngelicaConfig.enableParallelAtlasMipmaps = value, opts -> AngelicaConfig.enableParallelAtlasMipmaps)
+                        .setFlags(OptionFlag.REQUIRES_ASSET_RELOAD)
+                        .build())
+                .add(OptionImpl.createBuilder(boolean.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.batchedAtlasUpload"))
+                        .setTooltip(I18n.format("options.angelica.batchedAtlasUpload.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setImpact(OptionImpact.LOW)
+                        .setBinding((opts, value) -> AngelicaConfig.enableBatchedAtlasUpload = value, opts -> AngelicaConfig.enableBatchedAtlasUpload)
+                        .setFlags(OptionFlag.REQUIRES_ASSET_RELOAD)
+                        .build())
+                .add(OptionImpl.createBuilder(int.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.workerThreads"))
+                        .setTooltip(I18n.format("options.angelica.workerThreads.tooltip"))
+                        .setControl(o -> new SliderControl(o, 0, 32, 1, ControlValueFormatter.quantityOrDisabled("sodium.options.threads.value", "sodium.options.default")))
+                        .setImpact(OptionImpact.MEDIUM)
+                        .setBinding((opts, value) -> AngelicaConfig.workerThreadCount = value, opts -> AngelicaConfig.workerThreadCount)
+                        .setFlags(OptionFlag.REQUIRES_GAME_RESTART)
+                        .build())
+                .add(new SubScreenOption(I18n.format("options.angelica.atlasPacks"), I18n.format("options.angelica.atlasPacks.tooltip"), AtlasPackScreen::new))
+                .build());
+
+        if (Iris.enabled) {
+            final OptionImpl<AngelicaConfig, Integer> shadowGraphAngleDelta =
+                OptionImpl.createBuilder(int.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.shadowGraphAngleDelta"))
+                        .setTooltip(I18n.format("options.angelica.shadowGraphAngleDelta.tooltip"))
+                        .setControl(o -> new SliderControl(o, 0, 100, 1, ControlValueFormatter.shadowGraphAngleDelta()))
+                        .setImpact(OptionImpact.MEDIUM)
+                        .setBinding((opts, value) -> AngelicaConfig.shadowGraphAngleDelta = value * 0.001f,
+                            opts -> Math.round(AngelicaConfig.shadowGraphAngleDelta * 1000.0f))
+                        .build();
+            shadowGraphAngleDelta.iris$dynamicallyEnable(ShadowRenderer::shadowGraphGateIsNotBypassed);
+
+            final OptionImpl<AngelicaConfig, Integer> shadowGraphHorizonScale =
+                OptionImpl.createBuilder(int.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.shadowGraphHorizonScale"))
+                        .setTooltip(I18n.format("options.angelica.shadowGraphHorizonScale.tooltip"))
+                        .setControl(o -> new SliderControl(o, 0, 100, 1, ControlValueFormatter.shadowGraphHorizonScale()))
+                        .setImpact(OptionImpact.LOW)
+                        .setBinding((opts, value) -> AngelicaConfig.shadowGraphHorizonScale = value * 0.01f,
+                            opts -> Math.round(AngelicaConfig.shadowGraphHorizonScale * 100.0f))
+                        .build();
+            shadowGraphHorizonScale.iris$dynamicallyEnable(
+                () -> ShadowRenderer.shadowGraphGateIsNotBypassed() && shadowGraphAngleDelta.getValue() != 0);
+
+            groups.add(OptionGroup.createBuilder()
+                .add(shadowGraphAngleDelta)
+                .add(shadowGraphHorizonScale)
+                .build());
+        }
+
+        groups.add(OptionGroup.createBuilder()
+                .add(OptionImpl.createBuilder(boolean.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.hudCaching"))
+                        .setTooltip(I18n.format("options.angelica.hudCaching.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setImpact(OptionImpact.MEDIUM)
+                        .setBinding((opts, value) -> AngelicaConfig.hudCachingActive = value, opts -> AngelicaConfig.hudCachingActive)
+                        .setEnabled(AngelicaConfig.enableHudCaching)
+                        .build())
+                .add(OptionImpl.createBuilder(int.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.droppedItemLimit"))
+                        .setTooltip(I18n.format("options.angelica.droppedItemLimit.tooltip"))
+                        .setControl(option -> new SliderControl(option, 32, 2048, 32, ControlValueFormatter.droppedItemLimitLimit()))
+                        .setBinding((options, value) -> AngelicaConfig.droppedItemLimit = value, options -> AngelicaConfig.droppedItemLimit)
+                        .setImpact(OptionImpact.MEDIUM)
+                        .build())
+                .add(OptionImpl.createBuilder(int.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.mobSpawnerRenderDistance"))
+                        .setTooltip(I18n.format("options.angelica.mobSpawnerRenderDistance.tooltip"))
+                        .setControl(option -> new SliderControl(option, 0, 64, 1, ControlValueFormatter.number()))
+                        .setBinding((options, value) -> AngelicaConfig.mobSpawnerRenderDistance = value, options -> (int) AngelicaConfig.mobSpawnerRenderDistance)
+                        .setImpact(OptionImpact.MEDIUM)
+                        .build())
+                .add(OptionImpl.createBuilder(int.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.itemdisplaylistcount"))
+                        .setTooltip(I18n.format("options.angelica.itemdisplaylistcount.tooltip"))
+                        .setControl(o -> new SliderControl(o, 256, 1024, 16, ControlValueFormatter.number()))
+                        .setImpact(OptionImpact.MEDIUM)
+                        .setBinding((opts, value) -> AngelicaConfig.itemRendererCacheSize = value, options -> AngelicaConfig.itemRendererCacheSize)
+                        .build())
+                .build());
+
+        return new OptionPage(I18n.format("sodium.options.pages.performance"), ImmutableList.copyOf(groups));
+    }
+
+    public static OptionPage fpsReducer() {
+        final List<OptionGroup> groups = new ArrayList<>();
+
+        final FrameRateOptions frameRate = FrameRateOptions.create(vanillaOpts, sodiumOpts);
+        groups.add(OptionGroup.createBuilder()
+                .add(frameRate.vsync())
+                .add(frameRate.maxFramerate())
+                .build());
+
+        groups.add(OptionGroup.createBuilder()
+                .add(OptionImpl.createBuilder(boolean.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.fps_reducer_enabled.name"))
+                        .setTooltip(I18n.format("sodium.options.fps_reducer_enabled.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setBinding(reducerBinding((opts, value) -> opts.reducer.enabled = value),
+                            options -> options.reducer.enabled)
+                        .setImpact(OptionImpact.LOW)
+                        .build())
+                .add(OptionImpl.createBuilder(int.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.unfocused_fps_limit.name"))
+                        .setTooltip(I18n.format("sodium.options.unfocused_fps_limit.tooltip"))
+                        .setControl(option -> new SliderControl(option, FrameRateOptions.MIN_FRAMERATE, FrameRateOptions.MAX_FRAMERATE, 1, ControlValueFormatter.fpsLimit()))
+                        .setBinding(reducerBinding((opts, value) -> opts.reducer.unfocusedFpsLimit = value),
+                            options -> options.reducer.unfocusedFpsLimit)
+                        .setImpact(OptionImpact.LOW)
+                        .build())
+                .add(OptionImpl.createBuilder(int.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.unfocused_volume.name"))
+                        .setTooltip(I18n.format("sodium.options.unfocused_volume.tooltip"))
+                        .setControl(option -> new SliderControl(option, 0, 100, 1, ControlValueFormatter.percentage()))
+                        .setBinding(reducerBinding((opts, value) -> opts.reducer.unfocusedVolume = value),
+                            options -> options.reducer.unfocusedVolume)
+                        .setImpact(OptionImpact.LOW)
+                        .build())
+                .add(OptionImpl.createBuilder(int.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.minimized_volume.name"))
+                        .setTooltip(I18n.format("sodium.options.minimized_volume.tooltip"))
+                        .setControl(option -> new SliderControl(option, 0, 100, 1, ControlValueFormatter.percentage()))
+                        .setBinding(reducerBinding((opts, value) -> opts.reducer.minimizedVolume = value),
+                            options -> options.reducer.minimizedVolume)
+                        .setImpact(OptionImpact.LOW)
+                        .build())
+                .build());
+
+        groups.add(OptionGroup.createBuilder()
+                .add(OptionImpl.createBuilder(int.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.idle_timeout.name"))
+                        .setTooltip(I18n.format("sodium.options.idle_timeout.tooltip"))
+                        .setControl(option -> new SliderControl(option, 0, 30, 1, ControlValueFormatter.quantityOrDisabled("sodium.options.idle_timeout.value", "sodium.options.idle_timeout.off")))
+                        .setBinding(reducerBinding((opts, value) -> opts.reducer.idleTimeoutMinutes = value),
+                            options -> options.reducer.idleTimeoutMinutes)
+                        .setImpact(OptionImpact.LOW)
+                        .build())
+                .add(OptionImpl.createBuilder(int.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.idle_fps_limit.name"))
+                        .setTooltip(I18n.format("sodium.options.idle_fps_limit.tooltip"))
+                        .setControl(option -> new SliderControl(option, FrameRateOptions.MIN_FRAMERATE, FrameRateOptions.MAX_FRAMERATE, 1, ControlValueFormatter.fpsLimit()))
+                        .setBinding(reducerBinding((opts, value) -> opts.reducer.idleFpsLimit = value),
+                            options -> options.reducer.idleFpsLimit)
+                        .setImpact(OptionImpact.LOW)
+                        .build())
+                .add(OptionImpl.createBuilder(int.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.idle_volume.name"))
+                        .setTooltip(I18n.format("sodium.options.idle_volume.tooltip"))
+                        .setControl(option -> new SliderControl(option, 0, 100, 1, ControlValueFormatter.percentage()))
+                        .setBinding(reducerBinding((opts, value) -> opts.reducer.idleVolume = value),
+                            options -> options.reducer.idleVolume)
+                        .setImpact(OptionImpact.LOW)
+                        .build())
+                .build());
+
+        groups.add(OptionGroup.createBuilder()
+                .add(OptionImpl.createBuilder(boolean.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.limit_menu_fps.name"))
+                        .setTooltip(I18n.format("sodium.options.limit_menu_fps.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setBinding(reducerBinding((opts, value) -> opts.reducer.limitMenuFrameRate = value),
+                            options -> options.reducer.limitMenuFrameRate)
+                        .setImpact(OptionImpact.LOW)
+                        .build())
+                .build());
+
+        return new OptionPage(I18n.format("sodium.options.pages.fps_reducer"), ImmutableList.copyOf(groups));
+    }
+
+    public static OptionImpl<GameSettings, Integer> anisotropicFilteringSlider(MinecraftOptionsStorage storage,
+        Supplier<TextureFilterMode> mode) {
+        final int min = SodiumGameOptions.minAnisotropyLevel();
+        final int max = Math.max(SodiumGameOptions.maxAnisotropyLevel(), min + 1);
+        final OptionImpl<GameSettings, Integer> option = OptionImpl.createBuilder(int.class, storage)
+            .setName(I18n.format("sodium.options.anisotropic_filtering.name"))
+            .setTooltip(I18n.format("sodium.options.anisotropic_filtering.tooltip"))
+            .setControl(opt -> new SliderControl(opt, min, max, 1, value -> (1 << value) + "x"))
+            .setBinding(
+                (opts, value) -> opts.anisotropicFiltering = 1 << MathHelper.clamp_int(value, min, max),
+                opts -> MathHelper.clamp_int(Integer.numberOfTrailingZeros(Math.max(opts.anisotropicFiltering, 1)), min, max))
+            .setImpact(OptionImpact.MEDIUM)
+            .setFlags(OptionFlag.REQUIRES_ASSET_RELOAD)
+            .build();
+
+        option.iris$dynamicallyEnable(() -> mode.get().usesAnisotropy() && SodiumGameOptions.hasAnisotropyRange());
+
+        return option;
+    }
+
+    @Method(modid = "cubicchunks")
+    private static OptionImpl<?, ?> getCCVerticalViewDistance() {
+        CubicChunksOptionStorage storage = new CubicChunksOptionStorage();
+
+        return OptionImpl.createBuilder(int.class, storage)
+            .setName(I18n.format("sodium.options.cc.vertical_view_distance.name"))
+            .setTooltip(I18n.format("sodium.options.cc.vertical_view_distance.tooltip"))
+            .setControl(option -> new SliderControl(
+                option,
+                CubicChunksVideoSettings.getMinVerticalViewDistance(),
+                CubicChunksVideoSettings.getMaxVerticalViewDistance(),
+                1,
+                ControlValueFormatter.quantity("options.chunks")))
+            .setBinding(
+                (options, value) -> options.verticalViewDistance = value,
+                options -> options.verticalViewDistance)
+            .setImpact(OptionImpact.HIGH)
+            .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+            .build();
+    }
+
+    public static OptionPage appearance() {
+        final List<OptionGroup> groups = new ArrayList<>();
+
+        groups.add(OptionGroup.createBuilder()
+                .add(Settings.MODE_SKY.option)
+                .add(Settings.MODE_SUN_MOON.option)
+                .add(Settings.RENDER_DISTANCE_CLOUDS.option)
+                .add(Settings.CLOUD_HEIGHT.option)
+                .add(Settings.CLOUD_SCALE.option)
+                .add(Settings.MODE_CLOUD_TRANSLUCENCY.option)
+                .add(Settings.MODE_STARS.option)
+                .add(Settings.TOTAL_STARS.option)
+                .add(Settings.HORIZON.option)
+                .add(Settings.MODE_LIGHT_FLICKER.option)
+                .build());
+
+        groups.add(OptionGroup.createBuilder()
+                .add(Settings.TERRAIN_FOG.option)
+                .add(Settings.FOG_NEAR_DISTANCE.option)
+                .add(Settings.VOID_FOG.option)
+                .build());
+
+        groups.add(OptionGroup.createBuilder()
+                .add(Settings.MODE_GUI_BACKGROUND.option)
+                .add(Settings.GUI_BACKGROUND.option)
+                .add(OptionImpl.createBuilder(boolean.class, vanillaOpts)
+                        .setName(I18n.format("options.showCape"))
+                        .setTooltip(I18n.format("sodium.options.show_cape.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setBinding((opts, value) -> opts.showCape = value, opts -> opts.showCape)
+                        .build())
+                .add(OptionImpl.createBuilder(boolean.class, vanillaOpts)
+                        .setName(I18n.format("options.anaglyph"))
+                        .setTooltip(I18n.format("sodium.options.anaglyph.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setBinding((opts, value) -> opts.anaglyph = value, opts -> opts.anaglyph)
+                        .setImpact(OptionImpact.HIGH)
+                        .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                        .setEnabled(NotFineConfig.allowToggle3DAnaglyph)
+                        .build())
+                .add(OptionImpl.createBuilder(boolean.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.disablef3"))
+                        .setTooltip(I18n.format("options.angelica.disablef3.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setBinding((opts, value) -> AngelicaConfig.disableF3Additions = value, opts -> AngelicaConfig.disableF3Additions)
+                        .build())
+                .add(OptionImpl.createBuilder(boolean.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.verbosef3"))
+                        .setTooltip(I18n.format("options.angelica.verbosef3.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setBinding((opts, value) -> AngelicaConfig.verboseF3 = value, opts -> AngelicaConfig.verboseF3)
+                        .build())
+                .build());
+
+        if (AngelicaConfig.enableZoom) {
+            groups.add(OptionGroup.createBuilder()
+                .add(Settings.ZOOM_SMOOTH.option)
+                .add(Settings.ZOOM_SMOOTH_SPEED.option)
+                .add(Settings.ZOOM_CINEMATIC.option)
+                .build());
+        }
+
+        return new OptionPage(I18n.format("sodium.options.pages.appearance"), ImmutableList.copyOf(groups));
+    }
+
+    public static OptionPage text() {
+        final List<OptionGroup> groups = new ArrayList<>();
+
+        groups.add(OptionGroup.createBuilder()
+                .add(OptionImpl.createBuilder(boolean.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.texteffects.rgb_colors"))
+                        .setTooltip(I18n.format("options.angelica.texteffects.rgb_colors.tooltip", "\\&#RRGGBB"))
+                        .setControl(TickBoxControl::new)
+                        .setBinding((opts, value) -> AngelicaConfig.enableRGBColors = value,
+                                    opts -> AngelicaConfig.enableRGBColors)
+                        .build())
+                .add(OptionImpl.createBuilder(boolean.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.texteffects.gradients"))
+                        .setTooltip(I18n.format("options.angelica.texteffects.gradients.tooltip") + " \\&g\\&#start\\&#end")
+                        .setControl(TickBoxControl::new)
+                        .setBinding((opts, value) -> AngelicaConfig.enableGradients = value,
+                                    opts -> AngelicaConfig.enableGradients)
+                        .build())
+                .add(OptionImpl.createBuilder(boolean.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.texteffects.rainbow"))
+                        .setTooltip(I18n.format("options.angelica.texteffects.rainbow.tooltip") + " \\&q")
+                        .setControl(TickBoxControl::new)
+                        .setBinding((opts, value) -> AngelicaConfig.enableRainbow = value,
+                                    opts -> AngelicaConfig.enableRainbow)
+                        .build())
+                .add(OptionImpl.createBuilder(boolean.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.texteffects.wave_text"))
+                        .setTooltip(I18n.format("options.angelica.texteffects.wave_text.tooltip") + " \\&z")
+                        .setControl(TickBoxControl::new)
+                        .setBinding((opts, value) -> AngelicaConfig.enableWaveText = value,
+                                    opts -> AngelicaConfig.enableWaveText)
+                        .build())
+                .add(OptionImpl.createBuilder(int.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.texteffects.wave_amplitude"))
+                        .setTooltip(I18n.format("options.angelica.texteffects.wave_amplitude.tooltip"))
+                        .setControl(option -> new SliderControl(option, 10, 80, 5, v -> (v / 10) + "." + (v % 10)))
+                        .setBinding((opts, value) -> AngelicaConfig.waveAmplitude = value / 10f, opts -> Math.round(AngelicaConfig.waveAmplitude * 10f))
+                        .build())
+                .add(OptionImpl.createBuilder(boolean.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.texteffects.dinnerbone_text"))
+                        .setTooltip(I18n.format("options.angelica.texteffects.dinnerbone_text.tooltip") + " \\&v")
+                        .setControl(TickBoxControl::new)
+                        .setBinding((opts, value) -> AngelicaConfig.enableDinnerboneText = value,
+                                    opts -> AngelicaConfig.enableDinnerboneText)
+                        .build())
+                .add(OptionImpl.createBuilder(boolean.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.texteffects.drop_shadow"))
+                        .setTooltip(I18n.format("options.angelica.texteffects.drop_shadow.tooltip", "\\&u") + " \\&u\\&#RRGGBB")
+                        .setControl(TickBoxControl::new)
+                        .setBinding((opts, value) -> AngelicaConfig.enableDropShadow = value,
+                                    opts -> AngelicaConfig.enableDropShadow)
+                        .build())
+                .add(OptionImpl.createBuilder(boolean.class, angelicaOpts)
+                        .setName(I18n.format("options.angelica.texteffects.ampersand_conversion"))
+                        .setTooltip(I18n.format("options.angelica.texteffects.ampersand_conversion.tooltip", "\\&"))
+                        .setControl(TickBoxControl::new)
+                        .setBinding((opts, value) -> AngelicaConfig.enableAmpersandConversion = value,
+                                    opts -> AngelicaConfig.enableAmpersandConversion)
+                        .build())
+                .build());
+
+        return new OptionPage(I18n.format("sodium.options.pages.text"), ImmutableList.copyOf(groups));
+    }
+
+}

@@ -1,0 +1,724 @@
+package com.gtnewhorizons.angelica.glsm.backend;
+
+import com.gtnewhorizon.gtnhlib.bytebuf.MemoryUtilities;
+import com.gtnewhorizons.angelica.glsm.GLESFormatRemap;
+import com.gtnewhorizons.angelica.glsm.GLStateManager;
+import com.gtnewhorizons.angelica.glsm.RenderSystem;
+import com.gtnewhorizons.angelica.glsm.texture.TextureStaging;
+import org.lwjgl.LWJGLException;
+import org.lwjgl.opengl.Display;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL12;
+import org.lwjgl.opengl.GL20;
+
+import java.nio.ByteBuffer;
+import java.nio.DoubleBuffer;
+import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
+import java.nio.ShortBuffer;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.locks.LockSupport;
+import java.util.function.Predicate;
+
+/**
+ * Abstract rendering backend.
+ */
+public abstract class RenderBackend {
+
+    public void onPostWindowCreate(long window) {}
+
+    public abstract void init();
+    public abstract void shutdown();
+    public abstract boolean isAvailable();
+    public abstract String getName();
+
+    /** Returns true if the current thread has a valid render context. */
+    public abstract boolean hasContext();
+
+    /** Returns true if the calling thread may issue render commands. */
+    public boolean hasContextOnThread() { return hasContext(); }
+
+    /** Returns true if the calling thread owns the "GL Context" */
+    public abstract boolean isCurrent();
+
+    /** Higher priority backends are preferred. */
+    public int getPriority() { return 0; }
+
+    public boolean supportsFileDrop() { return false; }
+
+    public void startFileDrop() {}
+
+    public void stopFileDrop() {}
+
+    public List<String> pollDroppedFiles() { return Collections.emptyList(); }
+
+    public boolean isIndirectRequired() { return false; }
+    public boolean supportsGeometryShaders() { return true; }
+    public boolean isSDLGPU() { return false; }
+
+    public boolean framebufferCompletenessIsMeaningful() { return true; }
+    public void onPersistentBufferWrite(int glId, long offset, long size) {}
+    public boolean isBufferImmutable(int glId) { return false; }
+
+    public boolean isAnisotropicSupported() { return true; }
+
+    public boolean supportsGpuDrivenCulling() { return RenderSystem.supportsCompute(); }
+
+    public void beginComputeDispatchBatch() {}
+
+    public void endComputeDispatchBatch() {}
+
+    public abstract int getMinGLSLVersion();
+
+    public abstract void flush();
+    public abstract void finish();
+
+    private final ByteBuffer[] clientStagingCache = new ByteBuffer[16];
+    private VSyncMode effectiveVSyncMode = VSyncMode.ON;
+    private VSyncMode preferredTearFreeMode;
+
+    public final void setVSyncEnabled(boolean enabled) {
+        setVSyncMode(enabled ? preferredTearFreeMode() : VSyncMode.OFF);
+    }
+
+    public final void setVSyncMode(VSyncMode preferred) {
+        setVSyncPreference(preferred);
+        final VSyncMode mode = applyVSyncMode(preferred);
+        vsyncHonored = applyHonored();
+        publishVSyncMode(mode);
+    }
+
+    public final void setVSyncPreference(VSyncMode preferred) {
+        if (preferred.tearFree()) preferredTearFreeMode = preferred;
+    }
+
+    public final VSyncMode preferredTearFreeMode() {
+        return resolveTearFreeMode(preferredTearFreeMode, this::supportsVSyncMode);
+    }
+
+    static VSyncMode resolveTearFreeMode(VSyncMode preferred, Predicate<VSyncMode> supported) {
+        if (preferred != null && preferred.tearFree() && supported.test(preferred)) return preferred;
+        return VSyncMode.ON;
+    }
+
+    protected abstract VSyncMode applyVSyncMode(VSyncMode preferred);
+
+    protected boolean applyHonored() { return true; }
+
+    private boolean vsyncHonored = true;
+
+    public final boolean vsyncHonored() { return vsyncHonored; }
+
+    public boolean supportsVSyncMode(VSyncMode mode) { return mode != VSyncMode.MAILBOX; }
+
+    protected final void publishVSyncMode(VSyncMode mode) {
+        effectiveVSyncMode = mode;
+        bumpDisplayGeneration();
+    }
+
+    public final VSyncMode getEffectiveVSyncMode() { return effectiveVSyncMode; }
+
+    private int displayGeneration;
+
+    public final int displayGeneration() { return displayGeneration; }
+
+    protected final void bumpDisplayGeneration() { displayGeneration++; }
+
+    private static final long REFRESH_POLL_NANOS = 1_000_000_000L;
+    private static final long MIN_PLAUSIBLE_PERIOD_NANOS = 1_000_000L;
+    private static final long MAX_PLAUSIBLE_PERIOD_NANOS = 50_000_000L;
+
+    private long refreshPollNanos;
+    private long cachedRefreshPeriodNanos;
+
+    public final long refreshPeriodNanos() {
+        final long now = System.nanoTime();
+        if (refreshPollNanos == 0L || now - refreshPollNanos >= REFRESH_POLL_NANOS) {
+            refreshPollNanos = now;
+            final long fresh = plausiblePeriodNanos(queryRefreshPeriodNanos());
+            if (fresh != cachedRefreshPeriodNanos) bumpDisplayGeneration();
+            cachedRefreshPeriodNanos = fresh;
+        }
+        return cachedRefreshPeriodNanos;
+    }
+
+    protected long queryRefreshPeriodNanos() { return 0L; }
+
+    static long plausiblePeriodNanos(long periodNanos) {
+        return (periodNanos >= MIN_PLAUSIBLE_PERIOD_NANOS && periodNanos <= MAX_PLAUSIBLE_PERIOD_NANOS) ? periodNanos : 0L;
+    }
+
+    public static long periodFromRational(int numerator, int denominator, float fallbackHz) {
+        if (numerator > 0 && denominator > 0) {
+            final long scaledDenominator = 1_000_000_000L * denominator;
+            return (scaledDenominator + numerator / 2) / numerator;
+        }
+        return fallbackHz > 0.0f ? Math.round(1_000_000_000.0 / fallbackHz) : 0L;
+    }
+
+    private static final int[] TRUNCATED_NTSC_HZ = {23, 29, 59, 71, 119, 143, 239};
+
+    private static boolean isTruncatedNtscRate(int hz) {
+        for (int candidate : TRUNCATED_NTSC_HZ) {
+            if (candidate == hz) return true;
+        }
+        return false;
+    }
+
+    public static long periodFromIntegerHz(int hz) {
+        if (hz <= 0) return 0L;
+        if (isTruncatedNtscRate(hz)) {
+            final long denominator = (hz + 1) * 1000L;
+            return Math.round(1_000_000_000.0 * 1001 / denominator);
+        }
+        return Math.round(1_000_000_000.0 / hz);
+    }
+
+    public static int hzFromPeriod(long periodNanos) {
+        return periodNanos <= 0L ? 0 : (int) Math.round(1_000_000_000.0 / periodNanos);
+    }
+
+    public boolean hasSwapchainBackpressure() { return false; }
+
+    public static final class GateSample {
+        public long durationNanos;
+        public long endNanos;
+        public long gpuWaitNanos;
+    }
+
+    static final class GateRecorder {
+
+        private long gateDurationNanos;
+        private long gateEndNanos;
+        private long gpuWaitNanos;
+
+        synchronized void recordGate(long durationNanos, long endNanos) {
+            if (gateEndNanos != 0L && gateDurationNanos >= durationNanos) return;
+            gateDurationNanos = durationNanos;
+            gateEndNanos = endNanos;
+        }
+
+        synchronized void recordGpuWait(long nanos) {
+            gpuWaitNanos += nanos;
+        }
+
+        synchronized void readGateSample(GateSample out) {
+            final long end = gateEndNanos;
+            out.durationNanos = end == 0L ? 0L : gateDurationNanos;
+            out.endNanos = end;
+            out.gpuWaitNanos = gpuWaitNanos;
+            gpuWaitNanos = 0L;
+            gateEndNanos = 0L;
+        }
+    }
+
+    private final GateRecorder gateRecorder = new GateRecorder();
+
+    public boolean wantsDisplayUpdateGateTiming() { return true; }
+
+    public final void recordGate(long durationNanos, long endNanos) {
+        gateRecorder.recordGate(durationNanos, endNanos);
+    }
+
+    public final void recordGpuWait(long nanos) {
+        gateRecorder.recordGpuWait(nanos);
+    }
+
+    public final void readGateSample(GateSample out) {
+        gateRecorder.readGateSample(out);
+    }
+
+    public void awaitPresent() {}
+
+    public void parkNanos(long nanos) {
+        LockSupport.parkNanos(nanos);
+    }
+
+    public void pumpDisplayMessages() {
+        Display.processMessages();
+    }
+
+    private boolean presentSuppressed;
+
+    public final void setPresentSuppressed(boolean suppressed) { presentSuppressed = suppressed; }
+
+    public final boolean isPresentSuppressed() { return presentSuppressed; }
+
+    public void onFrameBegin() {
+        if (GLStateManager.takeStateSeedPending()) {
+            GLStateManager.replayStateToBackend();
+        }
+    }
+
+    public void invalidateStateMirror() {}
+
+    public void onFrameEnd() {}
+
+    /** Fired by lwjgl3ify Display before a mutation that recreates the swapchain. */
+    public void onPreSwapchainInvalidatingChange(Object change) { bumpDisplayGeneration(); }
+
+    public boolean handleMakeCurrent(Object drawable) { return false; }
+    public boolean handleReleaseContext(Object drawable) { return false; }
+    public boolean handleSwapBuffers() { return false; }
+    public void onRenderThreadReleased(Thread thread) {}
+
+    public void updateDisplayFromWorkerThread(boolean processMessages) throws LWJGLException {
+        GLStateManager.swapBuffers();
+        if (processMessages) {
+            pumpDisplayMessages();
+        }
+    }
+
+    public String getTransferDebugInfo() { return null; }
+
+    public long beginVoxelizationBatch(int ssboBinding) { return 0L; }
+    public void voxelizeRegion(long pass, boolean rebindVertexBuffer, float x, float y, float z, int rangeBase, int rangeCount, int vertexTotal) {}
+    public void endVoxelizationBatch(long pass) {}
+
+    public void setVertexWriteReplay(int graphicsProgram, VertexWriteReplaySetup setup) {}
+
+    public boolean supportsComputeImageAtomics() { return true; }
+
+    public boolean supportsComputeImageAtomics(int width, int height, int depth) { return supportsComputeImageAtomics(); }
+
+    public abstract void enable(int cap);
+    public abstract void enablei(int cap, int index);
+    public abstract void disable(int cap);
+    public abstract void disablei(int cap, int index);
+    public abstract void blendFuncSeparatei(int buf, int srcRGB, int dstRGB, int srcAlpha, int dstAlpha);
+    public abstract void blendFunc(int sfactor, int dfactor);
+    public abstract void blendFuncSeparate(int srcRGB, int dstRGB, int srcAlpha, int dstAlpha);
+    public abstract void blendEquation(int mode);
+    public abstract void blendEquationSeparate(int modeRGB, int modeAlpha);
+    public abstract void blendColor(float red, float green, float blue, float alpha);
+    public abstract void depthFunc(int func);
+    public abstract void depthMask(boolean flag);
+    public abstract void colorMask(boolean red, boolean green, boolean blue, boolean alpha);
+    public abstract void cullFace(int mode);
+    public abstract void frontFace(int mode);
+    public abstract void polygonMode(int face, int mode);
+    public abstract void polygonOffset(float factor, float units);
+    public void polygonOffsetClamp(float factor, float units, float clamp) { throw new UnsupportedOperationException(getName() + ": polygon offset clamp unsupported"); }
+    public abstract void stencilFunc(int func, int ref, int mask);
+    public abstract void stencilOp(int sfail, int dpfail, int dppass);
+    public abstract void stencilMask(int mask);
+    public abstract void stencilFuncSeparate(int face, int func, int ref, int mask);
+    public abstract void stencilOpSeparate(int face, int sfail, int dpfail, int dppass);
+    public abstract void stencilMaskSeparate(int face, int mask);
+    public abstract void viewport(int x, int y, int width, int height);
+    public abstract void depthRange(double nearVal, double farVal);
+    public abstract void scissor(int x, int y, int width, int height);
+    public abstract void clearColor(float red, float green, float blue, float alpha);
+    public abstract void clearDepth(double depth);
+    public abstract void clearStencil(int s);
+    public abstract void clear(int mask);
+    public abstract void lineWidth(float width);
+    public abstract void pointSize(float size);
+    public abstract void logicOp(int opcode);
+    public abstract void hint(int target, int mode);
+
+    public abstract void drawArrays(int mode, int first, int count);
+    public abstract void drawElements(int mode, int count, int type, long indices);
+    public void drawElements(int mode, ByteBuffer indices) {}
+    public void drawElements(int mode, IntBuffer indices) {}
+    public void drawElements(int mode, ShortBuffer indices) {}
+    public void drawElements(int mode, int count, int type, ByteBuffer indices) {}
+    public abstract void multiDrawElementsIndirect(int mode, int type, long indirect, int drawcount, int stride);
+    public void multiDrawArraysIndirectCount(int mode, long indirect, long drawcount, int maxdrawcount, int stride) { throw new UnsupportedOperationException(getName() + ": indirect draw-count buffers unsupported"); }
+    public void multiDrawElementsIndirectCount(int mode, int type, long indirect, long drawcount, int maxdrawcount, int stride) { throw new UnsupportedOperationException(getName() + ": indirect draw-count buffers unsupported"); }
+    public abstract void copyBufferSubData(int readTarget, int writeTarget, long readOffset, long writeOffset, long size);
+    public abstract void drawElementsInstanced(int mode, int count, int type, long indices, int primcount);
+    public abstract void drawArraysInstanced(int mode, int first, int count, int primcount);
+    public void provokingVertex(int provokeMode) {}
+    public abstract void drawElementsBaseVertex(int mode, int count, int type, long indices, int baseVertex);
+    public abstract void multiDrawElementsBaseVertex(int mode, long pCount, int type, long pIndices, int drawcount, long pBaseVertex);
+    public void drawRangeElements(int mode, int start, int end, int count, int type, long indices) {
+        drawElements(mode, count, type, indices);
+    }
+    public void drawRangeElementsBaseVertex(int mode, int start, int end, int count, int type, long indices, int baseVertex) {
+        drawElementsBaseVertex(mode, count, type, indices, baseVertex);
+    }
+    public abstract void multiDrawArrays(int mode, IntBuffer firsts, IntBuffer counts);
+    public abstract void primitiveRestartIndex(int index);
+    public abstract void pointParameterf(int pname, float param);
+    public abstract void pointParameteri(int pname, int param);
+    public abstract void drawBuffer(int mode);
+    public abstract void dispatchCompute(int numGroupsX, int numGroupsY, int numGroupsZ);
+    public abstract void dispatchComputeIndirect(long offset);
+
+    public abstract int genTextures();
+    public abstract void genTextures(IntBuffer textures);
+    public abstract void deleteTextures(int texture);
+    public abstract void bindTexture(int target, int texture);
+    public abstract void activeTexture(int texture);
+    public abstract void texImage2D(int target, int level, int internalFormat, int width, int height, int border, int format, int type, ByteBuffer pixels);
+    public abstract void texImage2D(int target, int level, int internalFormat, int width, int height, int border, int format, int type, DoubleBuffer pixels);
+    public abstract void texImage2D(int target, int level, int internalFormat, int width, int height, int border, int format, int type, FloatBuffer pixels);
+    public abstract void texImage2D(int target, int level, int internalFormat, int width, int height, int border, int format, int type, IntBuffer pixels);
+    public abstract void texImage2D(int target, int level, int internalFormat, int width, int height, int border, int format, int type, long pixelBufferOffset);
+    public abstract void texSubImage2D(int target, int level, int xoffset, int yoffset, int width, int height, int format, int type, ByteBuffer pixels);
+    public abstract void texSubImage2D(int target, int level, int xoffset, int yoffset, int width, int height, int format, int type, IntBuffer pixels);
+    public abstract void copyTexSubImage2D(int target, int level, int xoffset, int yoffset, int x, int y, int width, int height);
+    public void texImage1D(int target, int level, int internalFormat, int width, int border, int format, int type, ByteBuffer pixels) {}
+    public void texImage3D(int target, int level, int internalFormat, int width, int height, int depth, int border, int format, int type, ByteBuffer pixels) {}
+    public void texImage3D(int target, int level, int internalFormat, int width, int height, int depth, int border, int format, int type, IntBuffer pixels) {}
+    public void texSubImage1D(int target, int level, int xoffset, int width, int format, int type, ByteBuffer pixels) {}
+    public void texSubImage2D(int target, int level, int xoffset, int yoffset, int width, int height, int format, int type, long pboOffset) {}
+
+    public TextureStaging beginTextureStaging(int level, int x, int y, int width, int height) {
+        final int size = Math.multiplyExact(Math.multiplyExact(width, height), 4);
+        ByteBuffer buffer = null;
+        for (int i = 0; i < clientStagingCache.length; i++) {
+            final ByteBuffer cached = clientStagingCache[i];
+            if (cached != null && cached.capacity() == size) {
+                clientStagingCache[i] = null;
+                buffer = cached;
+                break;
+            }
+        }
+        if (buffer == null) buffer = MemoryUtilities.memAlloc(size);
+        buffer.clear();
+        return new ClientTextureStaging(buffer, level, x, y, width, height);
+    }
+
+    public boolean commitTextureStaging(TextureStaging staging) {
+        final int type = RenderSystem.isGLES() ? GLESFormatRemap.remapPixelType(GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV) : GL12.GL_UNSIGNED_INT_8_8_8_8_REV;
+        try {
+            final ClientTextureStaging s = (ClientTextureStaging) staging;
+            texSubImage2D(GL11.GL_TEXTURE_2D, s.level(), s.x(), s.y(), s.width(), s.height(), GL12.GL_BGRA, type, s.buffer());
+        } finally {
+            recycleClientStaging(staging.buffer());
+        }
+        return true;
+    }
+
+    public void abandonTextureStaging(TextureStaging staging) {
+        recycleClientStaging(staging.buffer());
+    }
+
+    public void trimTextureStaging() {
+        for (int i = 0; i < clientStagingCache.length; i++) {
+            MemoryUtilities.memFree(clientStagingCache[i]);
+            clientStagingCache[i] = null;
+        }
+    }
+
+    private record ClientTextureStaging(ByteBuffer buffer, int level, int x, int y, int width, int height) implements TextureStaging {
+        @Override
+        public boolean bgra() {
+            return true;
+        }
+    }
+
+    private void recycleClientStaging(ByteBuffer buffer) {
+        int victim = -1;
+        for (int i = 0; i < clientStagingCache.length; i++) {
+            final ByteBuffer cached = clientStagingCache[i];
+            if (cached == null) {
+                clientStagingCache[i] = buffer;
+                return;
+            }
+            if (cached.capacity() < buffer.capacity() && (victim < 0 || cached.capacity() < clientStagingCache[victim].capacity())) {
+                victim = i;
+            }
+        }
+        if (victim < 0) {
+            MemoryUtilities.memFree(buffer);
+            return;
+        }
+        MemoryUtilities.memFree(clientStagingCache[victim]);
+        clientStagingCache[victim] = buffer;
+    }
+    public void texSubImage3D(int target, int level, int xoffset, int yoffset, int zoffset, int width, int height, int depth, int format, int type, ByteBuffer pixels) {}
+    public void copyTexImage1D(int target, int level, int internalFormat, int x, int y, int width, int border) {}
+    public void copyTexImage2D(int target, int level, int internalFormat, int x, int y, int width, int height, int border) {}
+    public void copyTexSubImage1D(int target, int level, int xoffset, int x, int y, int width) {}
+    public void copyTexSubImage3D(int target, int level, int xoffset, int yoffset, int zoffset, int x, int y, int width, int height) {}
+    public abstract void texParameteri(int target, int pname, int param);
+    public abstract void texParameterf(int target, int pname, float param);
+    public abstract void texParameteriv(int target, int pname, IntBuffer params);
+    public abstract void texParameterfv(int target, int pname, FloatBuffer params);
+    public abstract int getTexParameteri(int target, int pname);
+    public abstract float getTexParameterf(int target, int pname);
+    public abstract int getTexLevelParameteri(int target, int level, int pname);
+    public abstract void generateMipmap(int target);
+    public abstract void pixelStorei(int pname, int param);
+    public void sampleCoverage(float value, boolean invert) {}
+
+
+    public abstract int genSamplers();
+    public abstract void deleteSamplers(int sampler);
+    public abstract void bindSampler(int unit, int sampler);
+    public abstract void samplerParameteri(int sampler, int pname, int param);
+    public abstract void samplerParameterf(int sampler, int pname, float param);
+
+    public abstract int genFramebuffers();
+    public abstract void deleteFramebuffers(int framebuffer);
+    public abstract void bindFramebuffer(int target, int framebuffer);
+    public abstract void framebufferTexture2D(int target, int attachment, int textarget, int texture, int level);
+    public abstract void framebufferTexture1D(int target, int attachment, int textarget, int texture, int level);
+    public abstract void framebufferTexture3D(int target, int attachment, int textarget, int texture, int level, int zoffset);
+    public abstract void framebufferTextureLayer(int target, int attachment, int texture, int level, int layer);
+    public abstract void framebufferTexture(int target, int attachment, int texture, int level);
+    public abstract int genRenderbuffers();
+    public abstract void deleteRenderbuffers(int renderbuffer);
+    public abstract void bindRenderbuffer(int target, int renderbuffer);
+    public abstract void renderbufferStorage(int target, int internalformat, int width, int height);
+    public abstract void renderbufferStorageMultisample(int target, int samples, int internalformat, int width, int height);
+    public abstract void framebufferRenderbuffer(int target, int attachment, int renderbuffertarget, int renderbuffer);
+    public abstract int checkFramebufferStatus(int target);
+    public abstract void blitFramebuffer(int srcX0, int srcY0, int srcX1, int srcY1, int dstX0, int dstY0, int dstX1, int dstY1, int mask, int filter);
+    public abstract void drawBuffers(int buffer);
+    public abstract void drawBuffers(IntBuffer bufs);
+    public abstract void readBuffer(int mode);
+    public abstract void readPixels(int x, int y, int width, int height, int format, int type, ByteBuffer pixels);
+    public abstract void readPixels(int x, int y, int width, int height, int format, int type, FloatBuffer pixels);
+    public abstract void readPixels(int x, int y, int width, int height, int format, int type, IntBuffer pixels);
+    public abstract void readPixels(int x, int y, int width, int height, int format, int type, long pixelBufferOffset);
+    public abstract void getTexImage(int target, int level, int format, int type, ByteBuffer pixels);
+    public abstract void getTexImage(int target, int level, int format, int type, IntBuffer pixels);
+    public abstract void getTexImage(int target, int level, int format, int type, long pixelBufferOffset);
+    public abstract int getFramebufferAttachmentParameteri(int target, int attachment, int pname);
+
+    public abstract int createShader(int type);
+    public abstract void deleteShader(int shader);
+    public abstract void shaderSource(int shader, CharSequence source);
+    public abstract void compileShader(int shader);
+    public void specializeShader(int shader, CharSequence entryPoint, IntBuffer constantIndex, IntBuffer constantValue) { throw new UnsupportedOperationException(getName() + ": externally supplied SPIR-V binaries unsupported"); }
+    public abstract int createProgram();
+    public abstract void deleteProgram(int program);
+    public abstract void attachShader(int program, int shader);
+    public abstract void detachShader(int program, int shader);
+    public abstract void linkProgram(int program);
+    public abstract void useProgram(int program);
+    public abstract String getShaderInfoLog(int shader, int maxLength);
+    public String getShaderInfoLog(int shader) {
+        return getShaderInfoLog(shader, getShaderi(shader, GL20.GL_INFO_LOG_LENGTH));
+    }
+    public abstract void getShaderInfoLog(int shader, IntBuffer length, ByteBuffer infoLog);
+    public abstract String getProgramInfoLog(int program, int maxLength);
+    public String getProgramInfoLog(int program) {
+        return getProgramInfoLog(program, getProgrami(program, GL20.GL_INFO_LOG_LENGTH));
+    }
+    public abstract void getProgramInfoLog(int program, IntBuffer length, ByteBuffer infoLog);
+    public abstract int getShaderi(int shader, int pname);
+    public abstract int getProgrami(int program, int pname);
+    public abstract void getProgramiv(int program, int pname, IntBuffer params);
+    public abstract String getActiveUniform(int program, int index, int maxLength, IntBuffer sizeType);
+    public abstract void getActiveUniform(int program, int index, IntBuffer length, IntBuffer size, IntBuffer type, ByteBuffer name);
+    public abstract void getActiveAttrib(int program, int index, IntBuffer length, IntBuffer size, IntBuffer type, ByteBuffer name);
+    public abstract String getActiveAttrib(int program, int index, int maxLength, IntBuffer sizeType);
+    public abstract void bindAttribLocation(int program, int index, CharSequence name);
+    public void bindFragDataLocation(int program, int colorNumber, CharSequence name) {}
+    public abstract int getAttribLocation(int program, CharSequence name);
+    public abstract int getAttribLocation(int program, ByteBuffer name);
+    public abstract int getUniformLocation(int program, CharSequence name);
+    public abstract int getUniformLocation(int program, ByteBuffer name);
+    public boolean isShader(int obj) { return false; }
+    public boolean isProgram(int obj) { return false; }
+    public boolean supportsProgramBinary() { return false; }
+    public void programParameteri(int program, int pname, int value) {}
+    public void getProgramBinary(int program, IntBuffer length, IntBuffer binaryFormat, ByteBuffer binary) {}
+    public void programBinary(int program, int binaryFormat, ByteBuffer binary) {}
+    public void validateProgram(int program) {}
+    public void getAttachedShaders(int program, IntBuffer count, IntBuffer shaders) {
+        if (count != null) count.put(0, 0);
+    }
+    public String getShaderSource(int shader, int maxLength) { return ""; }
+    public abstract void getShaderSource(int shader, IntBuffer length, ByteBuffer source);
+
+    public abstract void uniform1i(int location, int v0);
+    public abstract void uniform1f(int location, float v0);
+    public void uniform1fv(int location, FloatBuffer values) {}
+    public void uniform3fv(int location, float[] values) {}
+    public void uniform4fv(int location, float[] values) {}
+    public abstract void uniform2f(int location, float v0, float v1);
+    public abstract void uniform2i(int location, int v0, int v1);
+    public abstract void uniform3f(int location, float v0, float v1, float v2);
+    public abstract void uniform3i(int location, int v0, int v1, int v2);
+    public abstract void uniform4f(int location, float v0, float v1, float v2, float v3);
+    public abstract void uniform4i(int location, int v0, int v1, int v2, int v3);
+    public abstract void uniform2(int location, FloatBuffer value);
+    public abstract void uniform3(int location, FloatBuffer value);
+    public abstract void uniform4(int location, FloatBuffer value);
+    public abstract void uniform1iv(int location, IntBuffer value);
+    public abstract void uniform2iv(int location, IntBuffer value);
+    public abstract void uniform3iv(int location, IntBuffer value);
+    public abstract void uniform4iv(int location, IntBuffer value);
+    public abstract void uniformMatrix3(int location, boolean transpose, FloatBuffer value);
+    public abstract void uniformMatrix4(int location, boolean transpose, FloatBuffer value);
+    public void uniformMatrix2(int location, boolean transpose, FloatBuffer matrices) {}
+    public void getUniformfv(int program, int location, FloatBuffer params) {}
+    public void getUniformiv(int program, int location, IntBuffer params) {}
+
+    public abstract void vertexAttrib2f(int index, float v0, float v1);
+    public abstract void vertexAttrib3f(int index, float v0, float v1, float v2);
+    public abstract void vertexAttrib4f(int index, float v0, float v1, float v2, float v3);
+
+    public abstract int genBuffers();
+    public abstract void deleteBuffers(int buffer);
+    public abstract void deleteBuffers(IntBuffer buffers);
+    public abstract void bindBuffer(int target, int buffer);
+    public abstract void bindBufferBase(int target, int index, int buffer);
+    public abstract void bindBufferRange(int target, int index, int buffer, long offset, long size);
+    public abstract int getUniformBlockIndex(int program, CharSequence name);
+    public abstract void uniformBlockBinding(int program, int blockIndex, int binding);
+    public abstract int getIndexedBufferBinding(int target, int index);
+    public abstract int getIntegerIndexed(int pname, int index);
+    public abstract void bufferData(int target, long size, int usage);
+    public abstract void bufferData(int target, ByteBuffer data, int usage);
+    public abstract void bufferData(int target, FloatBuffer data, int usage);
+    public abstract void bufferData(int target, ShortBuffer data, int usage);
+    public abstract void bufferData(int target, IntBuffer data, int usage);
+    public abstract void bufferData(int target, DoubleBuffer data, int usage);
+    public abstract void bufferData(int target, int[] data, int usage);
+    public abstract void bufferData(int target, float[] data, int usage);
+    public abstract void bufferSubData(int target, long offset, ByteBuffer data);
+    public abstract void bufferSubData(int target, long offset, ShortBuffer data);
+    public abstract void bufferSubData(int target, long offset, IntBuffer data);
+    public abstract void bufferSubData(int target, long offset, FloatBuffer data);
+    public abstract void bufferSubData(int target, long offset, DoubleBuffer data);
+    public abstract ByteBuffer mapBuffer(int target, int access);
+    public abstract ByteBuffer mapBuffer(int target, int access, long length, ByteBuffer old_buffer);
+    public abstract boolean unmapBuffer(int target);
+    public abstract void bufferStorage(int target, ByteBuffer data, int flags);
+    public abstract void bufferStorage(int target, long size, int flags);
+    public abstract void getBufferSubData(int target, long offset, ByteBuffer data);
+    public abstract void getBufferSubData(int target, long offset, ShortBuffer data);
+    public abstract void getBufferSubData(int target, long offset, IntBuffer data);
+    public abstract void getBufferSubData(int target, long offset, FloatBuffer data);
+    public abstract void getBufferSubData(int target, long offset, DoubleBuffer data);
+    public abstract int getBufferParameteri(int target, int pname);
+    public abstract boolean isBuffer(int buffer);
+    public abstract ByteBuffer mapBufferRange(int target, long offset, long length, int access);
+    public abstract void flushMappedBufferRange(int target, long offset, long length);
+    public long mapBufferRangeAddress(int target, long offset, long length, int access) {
+        final ByteBuffer buf = mapBufferRange(target, offset, length, access);
+        return buf == null ? 0L : MemoryUtilities.memAddress0(buf);
+    }
+
+    public abstract boolean isTexture(int texture);
+    public abstract boolean isFramebuffer(int framebuffer);
+    public abstract boolean isRenderbuffer(int renderbuffer);
+    public abstract boolean isSampler(int sampler);
+    public abstract boolean isQuery(int query);
+
+    public abstract int genVertexArrays();
+    public abstract void deleteVertexArrays(int array);
+    public abstract void bindVertexArray(int array);
+    public abstract boolean isVertexArray(int array);
+    public abstract void vertexAttribPointer(int index, int size, int type, boolean normalized, int stride, long pointer);
+    public void vertexAttribPointer(int index, int size, int type, boolean normalized, int stride, ByteBuffer pointer) {
+        vertexAttribPointer(index, size, type, normalized, stride, MemoryUtilities.memAddress0(pointer));
+    }
+    public void vertexAttribIPointer(int index, int size, int type, int stride, ByteBuffer pointer) {
+        vertexAttribIPointer(index, size, type, stride, MemoryUtilities.memAddress0(pointer));
+    }
+    public abstract void vertexAttribIPointer(int index, int size, int type, int stride, long pointer);
+    public abstract void enableVertexAttribArray(int index);
+    public abstract void disableVertexAttribArray(int index);
+    public abstract void vertexAttribDivisor(int index, int divisor);
+    public abstract void bindVertexBuffer(int bindingindex, int buffer, long offset, int stride);
+    public abstract void vertexAttribFormat(int attribindex, int size, int type, boolean normalized, int relativeoffset);
+    public abstract void vertexAttribIFormat(int attribindex, int size, int type, int relativeoffset);
+    public abstract void vertexAttribBinding(int attribindex, int bindingindex);
+
+    public abstract int createTextures(int target);
+    public abstract void bindTextureUnit(int unit, int texture);
+    public abstract void textureParameteri(int texture, int target, int pname, int param);
+    public abstract void textureParameterf(int texture, int target, int pname, float param);
+    public abstract void textureParameteriv(int texture, int target, int pname, IntBuffer params);
+    public abstract void texStorage2D(int target, int levels, int internalFormat, int width, int height);
+    public abstract void generateTextureMipmap(int texture);
+    public abstract void textureImage2DEXT(int texture, int target, int level, int internalformat, int width, int height, int border, int format, int type, ByteBuffer pixels);
+    public abstract void textureImage2DEXT(int texture, int target, int level, int internalformat, int width, int height, int border, int format, int type, IntBuffer pixels);
+    public abstract void textureSubImage2D(int texture, int level, int xoffset, int yoffset, int width, int height, int format, int type, ByteBuffer pixels);
+    public abstract void textureSubImage2D(int texture, int level, int xoffset, int yoffset, int width, int height, int format, int type, IntBuffer pixels);
+    public abstract int createFramebuffers();
+    public abstract void namedFramebufferTexture(int framebuffer, int attachment, int texture, int level);
+    public abstract void namedFramebufferReadBuffer(int framebuffer, int mode);
+    public abstract void namedFramebufferDrawBuffers(int framebuffer, IntBuffer bufs);
+    public abstract void blitNamedFramebuffer(int readFramebuffer, int drawFramebuffer, int srcX0, int srcY0, int srcX1, int srcY1, int dstX0, int dstY0, int dstX1, int dstY1, int mask, int filter);
+    public abstract int createBuffers();
+    public abstract void namedBufferData(int buffer, long size, int usage);
+    public abstract void namedBufferData(int buffer, ByteBuffer data, int usage);
+    public abstract void namedBufferData(int buffer, FloatBuffer data, int usage);
+    public abstract void namedBufferSubData(int buffer, long offset, ByteBuffer data);
+    public abstract void copyTextureSubImage2D(int texture, int target, int level, int xoffset, int yoffset, int x, int y, int width, int height);
+    public abstract int getTextureParameteri(int texture, int target, int pname);
+    public abstract float getTextureParameterf(int texture, int target, int pname);
+    public abstract int getTextureLevelParameteri(int texture, int level, int pname);
+
+    public abstract int getInteger(int pname);
+    public abstract void getInteger(int pname, IntBuffer params);
+    public void getInteger(int pname, int[] params) { if (params.length > 0) params[0] = getInteger(pname); }
+    public abstract float getFloat(int pname);
+    public abstract void getFloat(int pname, FloatBuffer params);
+    public double getDouble(int pname) { return getFloat(pname); }
+    public void getDouble(int pname, DoubleBuffer params) { if (params.remaining() > 0) params.put(params.position(), getDouble(pname)); }
+    public abstract boolean getBoolean(int pname);
+    public abstract void getBoolean(int pname, ByteBuffer params);
+    public abstract String getString(int pname);
+    public abstract String getStringi(int name, int index);
+    public abstract int getError();
+
+    public abstract long fenceSync(int condition, int flags);
+    public abstract int clientWaitSync(long sync, int flags, long timeout);
+    public abstract void deleteSync(long sync);
+    public void waitSync(long sync, int flags, long timeout) { throw new UnsupportedOperationException("sync objects unsupported"); }
+    public int getSynci(long sync, int pname, IntBuffer length) { throw new UnsupportedOperationException("sync objects unsupported"); }
+
+    public void genQueries(IntBuffer ids) { throw new UnsupportedOperationException("occlusion queries unsupported"); }
+    public int genQueries() { throw new UnsupportedOperationException("occlusion queries unsupported"); }
+    public void deleteQueries(int id) { throw new UnsupportedOperationException("occlusion queries unsupported"); }
+    public void beginQuery(int target, int id) { throw new UnsupportedOperationException("occlusion queries unsupported"); }
+    public void endQuery(int target) { throw new UnsupportedOperationException("occlusion queries unsupported"); }
+    public void getQueryObjectui(int id, int pname, IntBuffer params) { throw new UnsupportedOperationException("occlusion queries unsupported"); }
+    public int getQueryObjecti(int id, int pname) { throw new UnsupportedOperationException("occlusion queries unsupported"); }
+
+    public void queryCounter(int id, int target) { throw new UnsupportedOperationException("timer queries unsupported"); }
+    public long getQueryObjectui64(int id, int pname) { throw new UnsupportedOperationException("timer queries unsupported"); }
+
+    public boolean supportsGpuProfiling() { return false; }
+    public int genQuery() { throw new UnsupportedOperationException("timer queries unsupported"); }
+    public void deleteQuery(int query) { throw new UnsupportedOperationException("timer queries unsupported"); }
+    public void queryCounter(int query) { throw new UnsupportedOperationException("timer queries unsupported"); }
+    public boolean isQueryResultAvailable(int query) { throw new UnsupportedOperationException("timer queries unsupported"); }
+    public long getQueryResult64(int query) { throw new UnsupportedOperationException("timer queries unsupported"); }
+    public long getGpuTimestamp() { throw new UnsupportedOperationException("timer queries unsupported"); }
+
+    public abstract void clearBufferSubData(int target, int internalFormat, long offset, long size, int format, int type, ByteBuffer data);
+    public abstract void clearBufferData(int target, int internalformat, int format, int type, ByteBuffer data);
+    public abstract void clearTexImage(int texture, int level, int format, int type);
+
+    public abstract void bindImageTexture(int unit, int texture, int level, boolean layered, int layer, int access, int format);
+    public abstract void memoryBarrier(int barriers);
+
+    public abstract void copyImageSubData(int srcName, int srcTarget, int srcLevel, int srcX, int srcY, int srcZ,
+                                           int dstName, int dstTarget, int dstLevel, int dstX, int dstY, int dstZ,
+                                           int srcWidth, int srcHeight, int srcDepth);
+
+    // Debug output
+    public boolean supportsDebugOutput() { return false; }
+    public int setupDebugOutput(DebugMessageHandler handler) { return 0; }
+    public int disableDebugOutput() { return 0; }
+
+    // Object labeling
+    public void objectLabel(int identifier, int name, CharSequence label) {}
+    public String getObjectLabel(int identifier, int name) { return ""; }
+
+    // Debug groups
+    public void pushDebugGroup(int source, int id, CharSequence message) {}
+    public void popDebugGroup() {}
+
+    // Debug message insertion
+    public void debugMessageInsert(int source, int type, int id, int severity, CharSequence message) {}
+
+    public void debugMessageControl(int source, int type, int severity, IntBuffer ids, boolean enabled) {}
+
+    public void debugMessageCallback(GLDebugMessageListener listener, long userParam) {}
+
+    public int getDebugMessageLog(int count, IntBuffer sources, IntBuffer types, IntBuffer ids, IntBuffer severities, IntBuffer lengths, ByteBuffer messageLog) { return 0; }
+
+}

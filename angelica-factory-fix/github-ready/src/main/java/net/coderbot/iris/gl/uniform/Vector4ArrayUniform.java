@@ -1,0 +1,43 @@
+package net.coderbot.iris.gl.uniform;
+
+import com.gtnewhorizons.angelica.glsm.RenderSystem;
+import net.coderbot.iris.gl.state.ValueUpdateNotifier;
+
+import java.util.Arrays;
+import java.util.function.Supplier;
+
+public class Vector4ArrayUniform extends Uniform {
+	private final Runnable updateListener = uploadWhileBound(this::updateValue);
+    private final Supplier<float[]> value;
+    private float[] cachedValue;
+
+    Vector4ArrayUniform(int location, Supplier<float[]> value) {
+        this(location, value, null);
+    }
+
+    Vector4ArrayUniform(int location, Supplier<float[]> value, ValueUpdateNotifier notifier) {
+        super(location, notifier);
+
+        this.cachedValue = new float[4];
+        this.value = value;
+    }
+
+    @Override
+    public void update() {
+        updateValue();
+
+        if (notifier != null) {
+            notifier.setListener(updateListener);
+        }
+    }
+
+    private void updateValue() {
+        float[] newValue = value.get();
+
+        if (dirty || !Arrays.equals(newValue, cachedValue)) {
+            dirty = false;
+            cachedValue = newValue;
+            RenderSystem.uniform4f(location, cachedValue[0], cachedValue[1], cachedValue[2], cachedValue[3]);
+        }
+    }
+}

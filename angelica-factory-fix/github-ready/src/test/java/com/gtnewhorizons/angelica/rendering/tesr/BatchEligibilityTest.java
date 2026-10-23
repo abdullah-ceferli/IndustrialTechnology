@@ -1,0 +1,246 @@
+package com.gtnewhorizons.angelica.rendering.tesr;
+
+import com.gtnewhorizons.angelica.glsm.testutil.Reflect;
+import com.gtnewhorizons.angelica.rendering.items.DroppedItemInstancer;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import java.util.function.Consumer;
+import java.util.stream.Stream;
+
+import static com.gtnewhorizons.angelica.rendering.tesr.BatchEligibility.DENIED;
+import static com.gtnewhorizons.angelica.rendering.tesr.BatchEligibility.SAFE;
+import static com.gtnewhorizons.angelica.rendering.tesr.BatchEligibility.UNKNOWN;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class BatchEligibilityTest {
+
+    @Test
+    void uncapturedStateDemotesSafeRenderersAndPreventsUnknownPromotion() {
+        for (byte state : new byte[] {BatchEligibility.SAFE, BatchEligibility.UNKNOWN}) {
+            BatchEligibility.begin(state, 0);
+            BatchEligibility.onPartQueued();
+            BatchEligibility.onUncapturedState();
+            assertFalse(BatchEligibility.batchingAllowed());
+            BatchEligibility.onBatchFlushed(4);
+            BatchEligibility.onPartFallback(4, 5);
+            assertEquals(BatchEligibility.DENIED, BatchEligibility.end(state, 5));
+        }
+        assertTrue(BatchEligibility.begin(BatchEligibility.SAFE, 5));
+        assertEquals(BatchEligibility.SAFE, BatchEligibility.end(BatchEligibility.SAFE, 5));
+    }
+
+    private long drawCalls;
+
+    @BeforeEach
+    void reset() {
+        drawCalls = 0L;
+    }
+
+    private void draw(int count) {
+        drawCalls += count;
+    }
+
+    private void unbatchedPart(int draws) {
+        final long before = drawCalls;
+        draw(draws);
+        BatchEligibility.onPartFallback(before, drawCalls);
+    }
+
+    static Stream<Arguments> demotions() {
+        return Stream.of(
+            Arguments.of("a raw draw", (Consumer<BatchEligibilityTest>) t -> t.draw(1)),
+            Arguments.of("a fallback part", (Consumer<BatchEligibilityTest>) t -> t.unbatchedPart(1)));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("demotions")
+    void aPromotedRendererIsDemotedWhenItStartsMixing(String name, Consumer<BatchEligibilityTest> mixing) {
+        assertTrue(BatchEligibility.begin(SAFE, drawCalls), "proven renderers batch");
+        BatchEligibility.onPartQueued();
+        mixing.accept(this);
+        assertEquals(DENIED, BatchEligibility.end(SAFE, drawCalls));
+    }
+
+    @Test
+    void aDeniedRendererIsNeverPromoted() {
+        assertFalse(BatchEligibility.begin(DENIED, drawCalls));
+        unbatchedPart(1);
+        assertEquals(DENIED, BatchEligibility.end(DENIED, drawCalls));
+    }
+
+    @Test
+    void aDispatchWithoutPartsProvesNothing() {
+        BatchEligibility.begin(UNKNOWN, drawCalls);
+        draw(3);
+        assertEquals(UNKNOWN, BatchEligibility.end(UNKNOWN, drawCalls));
+    }
+
+    @Test
+    void aNestedDispatchDoesNotObserveSeparately() {
+        BatchEligibility.begin(UNKNOWN, drawCalls);
+        unbatchedPart(1);
+
+        BatchEligibility.begin(UNKNOWN, drawCalls);
+        draw(1);
+        assertEquals(UNKNOWN, BatchEligibility.end(UNKNOWN, drawCalls), "the inner dispatch leaves the verdict to the outer one");
+
+        assertEquals(DENIED, BatchEligibility.end(UNKNOWN, drawCalls), "the nested draw still counts against the outer renderer");
+    }
+
+    @Test
+    void statePersistsNothingBetweenDispatches() {
+        BatchEligibility.begin(UNKNOWN, drawCalls);
+        unbatchedPart(1);
+        draw(1);
+        assertEquals(DENIED, BatchEligibility.end(UNKNOWN, drawCalls));
+
+        assertFalse(BatchEligibility.begin(UNKNOWN, drawCalls), "unproven renderers run unbatched");
+        unbatchedPart(1);
+        assertEquals(SAFE, BatchEligibility.end(UNKNOWN, drawCalls), "the previous dispatch's foreign draws must not leak");
+    }
+
+    @Test
+    void batchingIsDisallowedOutsideADispatch() {
+        BatchEligibility.begin(SAFE, drawCalls);
+        BatchEligibility.end(SAFE, drawCalls);
+        assertFalse(BatchEligibility.batchingAllowed());
+    }
+
+    @Test
+    void ordinaryPlacedItemCanBatchInsideADeniedWrapper() {
+        BatchEligibility.begin(DENIED, drawCalls);
+        BatchEligibility.beginIsolated(SAFE, drawCalls);
+        assertTrue(BatchEligibility.batchingAllowed());
+        BatchEligibility.begin(DENIED, drawCalls);
+        assertTrue(BatchEligibility.batchingAllowed(), "nested RenderItem inherits the content scope");
+        BatchEligibility.onPartQueued();
+        assertEquals(DENIED, BatchEligibility.end(DENIED, drawCalls));
+        assertEquals(SAFE, BatchEligibility.endIsolated(SAFE, drawCalls));
+        assertFalse(BatchEligibility.batchingAllowed(), "restore the wrapper's eligibility");
+        assertEquals(DENIED, BatchEligibility.end(DENIED, drawCalls));
+    }
+
+    @Test
+    void customPlacedItemStaysEntirelyLiveWithoutPoisoningOrdinaryItems() {
+        BatchEligibility.begin(SAFE, drawCalls);
+        BatchEligibility.onPartQueued();
+        BatchEligibility.beginIsolated(DENIED, drawCalls);
+        assertFalse(BatchEligibility.batchingAllowed());
+        BatchEligibility.begin(SAFE, drawCalls);
+        assertFalse(BatchEligibility.batchingAllowed(), "even a batchable nested mob must stay live");
+        unbatchedPart(2);
+        draw(3);
+        assertEquals(SAFE, BatchEligibility.end(SAFE, drawCalls));
+        assertEquals(DENIED, BatchEligibility.endIsolated(DENIED, drawCalls));
+        assertTrue(BatchEligibility.batchingAllowed());
+
+        BatchEligibility.beginIsolated(UNKNOWN, drawCalls);
+        unbatchedPart(1);
+        assertEquals(SAFE, BatchEligibility.endIsolated(UNKNOWN, drawCalls));
+        assertEquals(SAFE, BatchEligibility.end(SAFE, drawCalls));
+    }
+
+    @Test
+    void isolatedScopesRestoreEnclosingDrawBracketsWithoutDoubleCounting() {
+        BatchEligibility.begin(UNKNOWN, drawCalls);
+        BatchEligibility.beginExpectedDraws(drawCalls);
+        draw(1);
+        BatchEligibility.beginIsolated(UNKNOWN, drawCalls);
+        BatchEligibility.beginExpectedDraws(drawCalls);
+        unbatchedPart(2);
+        BatchEligibility.endExpectedDraws(drawCalls);
+        assertEquals(SAFE, BatchEligibility.endIsolated(UNKNOWN, drawCalls));
+        draw(1);
+        BatchEligibility.endExpectedDraws(drawCalls);
+        unbatchedPart(1);
+        draw(1);
+        assertEquals(DENIED, BatchEligibility.end(UNKNOWN, drawCalls));
+        assertEquals(1L, (long) Reflect.getStatic(BatchEligibility.class, "foreignDraws"));
+    }
+
+    @Test
+    void isolatedScopesCanNestAndDoNotPromoteTheirWrapper() {
+        BatchEligibility.begin(UNKNOWN, drawCalls);
+        BatchEligibility.beginIsolated(SAFE, drawCalls);
+        BatchEligibility.onPartQueued();
+        BatchEligibility.beginIsolated(DENIED, drawCalls);
+        unbatchedPart(1);
+        draw(1);
+        assertEquals(DENIED, BatchEligibility.endIsolated(DENIED, drawCalls));
+        assertTrue(BatchEligibility.batchingAllowed());
+        assertEquals(SAFE, BatchEligibility.endIsolated(SAFE, drawCalls));
+        assertEquals(UNKNOWN, BatchEligibility.end(UNKNOWN, drawCalls));
+        assertFalse(BatchEligibility.batchingAllowed());
+    }
+
+    @Test
+    void bracketedDrawsWithAQueuedPartPromoteUnknownToSafe() {
+        BatchEligibility.begin(UNKNOWN, drawCalls);
+        BatchEligibility.onPartQueued();
+        BatchEligibility.beginExpectedDraws(drawCalls);
+        draw(2);
+        BatchEligibility.endExpectedDraws(drawCalls);
+        assertEquals(SAFE, BatchEligibility.end(UNKNOWN, drawCalls));
+
+        BatchEligibility.begin(SAFE, drawCalls);
+        BatchEligibility.onPartQueued();
+        BatchEligibility.beginExpectedDraws(drawCalls);
+        draw(2);
+        BatchEligibility.endExpectedDraws(drawCalls);
+        assertEquals(SAFE, BatchEligibility.end(SAFE, drawCalls));
+    }
+
+    @Test
+    void bracketDoesNotDoubleCountAFallbackPartsOwnDraws() {
+        BatchEligibility.begin(UNKNOWN, drawCalls);
+        BatchEligibility.beginExpectedDraws(drawCalls);
+        unbatchedPart(2);
+        BatchEligibility.endExpectedDraws(drawCalls);
+        draw(1);
+        assertEquals(DENIED, BatchEligibility.end(UNKNOWN, drawCalls), "only the unbracketed draw is foreign");
+    }
+
+    @Test
+    void nestedBracketsCountOnlyTheOutermostSpan() {
+        BatchEligibility.begin(UNKNOWN, drawCalls);
+        BatchEligibility.onPartQueued();
+        BatchEligibility.beginExpectedDraws(drawCalls);
+        draw(1);
+        BatchEligibility.beginExpectedDraws(drawCalls);
+        draw(1);
+        BatchEligibility.endExpectedDraws(drawCalls);
+        draw(1);
+        BatchEligibility.endExpectedDraws(drawCalls);
+        assertEquals(SAFE, BatchEligibility.end(UNKNOWN, drawCalls), "the inner bracket must not reset the outer span");
+    }
+
+    @Test
+    void shadowPassQueuesTheGlintWithoutTouchingTheCacheOrFallingBack() {
+        try {
+            Reflect.set(ModelPartBatcher.INSTANCE, "active", true);
+            Reflect.set(ModelPartBatcher.INSTANCE, "shadow", true);
+            Reflect.setStatic(DroppedItemInstancer.class, "basePart", true);
+
+            final long glintBefore = DroppedItemInstancer.statGlintInstanced();
+            final long fallbackBefore = DroppedItemInstancer.statFallback();
+            BatchEligibility.begin(SAFE, 0L);
+            final long part = DroppedItemInstancer.glint(1f, 0f, 0f, 1f, 16, 16, 0.0625f, EntityMaterials.GLINT);
+            assertEquals(SAFE, BatchEligibility.end(SAFE, 0L));
+
+            assertEquals(DroppedItemInstancer.SKIP, part, "the shadow-pass early return must not fall back to the original draw");
+            assertEquals(glintBefore, DroppedItemInstancer.statGlintInstanced(), "no instanced draw was queued");
+            assertEquals(fallbackBefore, DroppedItemInstancer.statFallback(), "no fallback was recorded");
+        } finally {
+            Reflect.set(ModelPartBatcher.INSTANCE, "active", false);
+            Reflect.set(ModelPartBatcher.INSTANCE, "shadow", false);
+            Reflect.setStatic(DroppedItemInstancer.class, "basePart", false);
+            DroppedItemInstancer.clear();
+        }
+    }
+}

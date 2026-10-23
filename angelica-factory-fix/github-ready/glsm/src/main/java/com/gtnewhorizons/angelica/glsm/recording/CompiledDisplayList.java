@@ -1,0 +1,192 @@
+package com.gtnewhorizons.angelica.glsm.recording;
+
+import com.gtnewhorizons.angelica.glsm.DisplayListManager;
+import com.gtnewhorizons.angelica.glsm.GLContextState;
+import com.gtnewhorizons.angelica.glsm.GLStateManager;
+import com.gtnewhorizons.angelica.glsm.recording.commands.DisplayListCommand;
+import com.gtnewhorizons.angelica.glsm.recording.commands.IndexedDrawBatch;
+import it.unimi.dsi.fastutil.ints.Int2IntMap;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
+
+import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.List;
+
+import static com.gtnewhorizon.gtnhlib.bytebuf.MemoryUtilities.memAddress;
+import static com.gtnewhorizon.gtnhlib.bytebuf.MemoryUtilities.memFree;
+import static com.gtnewhorizon.gtnhlib.bytebuf.MemoryUtilities.memGetInt;
+
+/**
+ * Represents a compiled display list.
+ *
+ * <p>Contains commands serialized to a direct ByteBuffer for off-heap storage,
+ * with complex objects (TexImage2DCmd, TexSubImage2DCmd) stored separately.
+ *
+ * <p>The ownedVbos array contains VBOs that are referenced by DrawRange commands.
+ */
+public final class CompiledDisplayList {
+    /**
+     * Empty display list singleton. Per OpenGL spec, an empty list is still valid.
+     * This instance does nothing when rendered and is never deleted (shared singleton).
+     */
+    public static final CompiledDisplayList EMPTY = new CompiledDisplayList(null, null, null, Collections.emptyList(), null);
+
+    private final ByteBuffer commandBuffer;     // Off-heap command storage, must be freed
+    private final DisplayListCommand[] complexObjects;      // Complex commands (TexImage2D, etc.)
+    private final DisplayListVBO ownedVbos;     // GPU resources referenced by index
+    private final List<IndexedDrawBatch> indexedBatches; // Shared VAO/VBO/EBO triples per layout group
+    private GLContextState compileCtx;
+    private Int2IntMap replayPrograms;
+    private long programLifetimeGeneration = -1;
+
+    int resolveProgram(int program) {
+        if (program == 0) return 0;
+        final long generation = GLStateManager.getProgramLifetimeGeneration();
+        if (replayPrograms == null) replayPrograms = new Int2IntOpenHashMap();
+        if (programLifetimeGeneration != generation) {
+            replayPrograms.clear();
+            programLifetimeGeneration = generation;
+        }
+        if (replayPrograms.containsKey(program)) return replayPrograms.get(program);
+        final boolean valid = GLStateManager.glIsProgram(program);
+        if (!valid || !GLStateManager.isProgramPendingDeletion(program)) {
+            replayPrograms.put(program, valid ? program : 0);
+        }
+        return valid ? program : 0;
+    }
+
+    public CompiledDisplayList(ByteBuffer commandBuffer, DisplayListCommand[] complexObjects, DisplayListVBO ownedVbos, List<IndexedDrawBatch> indexedBatches, GLContextState compileCtx) {
+        this.commandBuffer = commandBuffer;
+        this.complexObjects = complexObjects;
+        this.ownedVbos = ownedVbos;
+        this.indexedBatches = indexedBatches;
+        this.compileCtx = compileCtx;
+    }
+
+    boolean replaysVertexArrayBind(int vao) {
+        return vao == 0 || compileCtx == GLStateManager.ctx();
+    }
+
+    /**
+     * Render this display list by executing all commands.
+     */
+    public void render() {
+        render(-1);
+    }
+
+    public void render(int list) {
+        if (commandBuffer != null && commandBuffer.limit() > 0) {
+            CommandBufferExecutor.execute(commandBuffer, complexObjects, ownedVbos, list, this);
+        }
+    }
+
+    /**
+     * Delete all resources held by this display list.
+     */
+    public void delete() {
+        if (complexObjects != null) {
+            for (DisplayListCommand cmd : complexObjects) {
+                cmd.delete();
+            }
+        }
+
+        // Close VBOs from immediate-mode DisplayListVBOBuilder.
+        if (ownedVbos != null) {
+            ownedVbos.delete();
+        }
+
+        // Release shared (VAO, VBO, EBO) triples from IndexedDrawBatchBuilder.
+        if (indexedBatches != null) {
+            for (IndexedDrawBatch batch : indexedBatches) {
+                batch.delete();
+            }
+        }
+
+        // Free the command buffer (off-heap memory)
+        if (commandBuffer != null) {
+            memFree(commandBuffer);
+        }
+        compileCtx = null;
+    }
+
+    /**
+     * Get the command buffer for debugging/inspection.
+     */
+    public ByteBuffer getCommandBuffer() {
+        return commandBuffer;
+    }
+
+    /**
+     * Get complex objects for inlining into another display list (nested lists).
+     */
+    public DisplayListCommand[] getComplexObjects() {
+        return complexObjects;
+    }
+
+    public DisplayListVBO getOwnedVbos() {
+        return ownedVbos;
+    }
+
+    public List<IndexedDrawBatch> getIndexedBatches() {
+        return indexedBatches;
+    }
+
+    // === Test inspection methods ===
+
+    /**
+     * Get counts of each command type in the buffer.
+     * Used for testing to verify optimization results.
+     */
+    public Int2IntMap getCommandCounts() {
+        final Int2IntMap counts = new Int2IntOpenHashMap();
+        if (commandBuffer == null || commandBuffer.limit() == 0) {
+            return counts;
+        }
+        long ptr = memAddress(commandBuffer);
+        final long end = ptr + commandBuffer.limit();
+        while (ptr < end) {
+            final int cmd = memGetInt(ptr);
+            counts.mergeInt(cmd, 1, Integer::sum);
+            ptr += GLCommand.getCommandSize(cmd, ptr);
+        }
+        return counts;
+    }
+
+    /**
+     * Get the sequence of command opcodes in order.
+     * Used for testing to verify command ordering.
+     */
+    public IntList getCommandOpcodes() {
+        final IntList opcodes = new IntArrayList();
+        if (commandBuffer == null || commandBuffer.limit() == 0) {
+            return opcodes;
+        }
+        long ptr = memAddress(commandBuffer);
+        final long end = ptr + commandBuffer.limit();
+        while (ptr < end) {
+            final int cmd = memGetInt(ptr);
+            opcodes.add(cmd);
+            ptr += GLCommand.getCommandSize(cmd, ptr);
+        }
+        return opcodes;
+    }
+
+    public String getCompiledDisplayListString(int listId, StackTraceElement[] stackTrace) {
+        return DisplayListManager.getCompiledDisplayListString(listId, this, stackTrace);
+    }
+
+    public String toString(int listId, StackTraceElement[] stackTrace) {
+        return getCompiledDisplayListString(listId, stackTrace);
+    }
+
+    public String toString(int listId) {
+        return toString(listId, null);
+    }
+
+    @Override
+    public String toString() {
+        return toString(0);
+    }
+}

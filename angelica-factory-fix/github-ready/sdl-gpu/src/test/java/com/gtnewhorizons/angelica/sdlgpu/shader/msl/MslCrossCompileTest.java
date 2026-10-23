@@ -1,0 +1,461 @@
+package com.gtnewhorizons.angelica.sdlgpu.shader.msl;
+
+import com.gtnewhorizons.angelica.glsm.shader.GlslVulkanPreprocess;
+import com.gtnewhorizons.angelica.glsm.shader.ShaderCacheIO;
+import com.gtnewhorizons.angelica.glsm.shader.ShaderDiskCache;
+import com.gtnewhorizons.angelica.glsm.testutil.Reflect;
+import com.gtnewhorizons.angelica.glsm.testutil.TestPaths;
+import com.gtnewhorizons.angelica.sdlgpu.shader.ShaderManager;
+import com.gtnewhorizons.angelica.sdlgpu.shader.SpirvTestShaders;
+import com.gtnewhorizons.angelica.sdlgpu.shader.cross.CrossCompileCache;
+import com.gtnewhorizons.angelica.sdlgpu.shader.cross.CrossCompileUtil;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.lwjgl.opengl.GL20;
+import org.lwjgl.opengl.GL43;
+import org.lwjgl.system.MemoryUtil;
+import org.lwjgl.util.shaderc.Shaderc;
+
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
+
+import static com.gtnewhorizons.angelica.sdlgpu.shader.SpirvTestShaders.compileOrFail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * Tests SPIR-V → MSL cross-compilation for the macOS/Metal backend.
+ */
+class MslCrossCompileTest {
+    private static CrossCompileCache cache() { return Reflect.getStatic(MslCrossCompile.class, "CACHE"); }
+
+    @AfterEach
+    void resetDiskCache() {
+        Reflect.setStatic(ShaderDiskCache.class, "root", null);
+        Reflect.<Map<?, ?>>get(cache(), "cache").clear();
+    }
+
+    @Test
+    void vertexShaderCrossCompiles() {
+        final Msl out = crossCompile(SpirvTestShaders.VERTEX_GLSL, Shaderc.shaderc_vertex_shader, GL20.GL_VERTEX_SHADER, false);
+        final String msl = out.code();
+        assertTrue(msl.length() > 0, "MSL output non-empty");
+        assertTrue(msl.contains("vertex "), "MSL should contain vertex stage qualifier:\n" + msl);
+        assertFalse(msl.contains("descriptor_set"), "MSL must not leak descriptor_set decorations:\n" + msl);
+        assertTrue(msl.contains("[[buffer(0)]]"), "UBO should land at [[buffer(0)]]:\n" + msl);
+        assertTrue(msl.contains("[[texture(0)]]"), "sampler2D should land at [[texture(0)]]:\n" + msl);
+        assertTrue(msl.contains("[[sampler(0)]]"), "sampler2D should land at [[sampler(0)]]:\n" + msl);
+        assertEquals("main0", out.entrypoint(), "Metal forbids main; expect main0");
+    }
+
+    @Test
+    void fragmentShaderCrossCompiles() {
+        final Msl out = crossCompile(SpirvTestShaders.FRAGMENT_GLSL, Shaderc.shaderc_fragment_shader, GL20.GL_FRAGMENT_SHADER, false);
+        final String msl = out.code();
+        assertTrue(msl.contains("fragment "), "MSL should contain fragment stage qualifier:\n" + msl);
+        assertTrue(msl.contains("[[buffer(0)]]"), "Fragment UBO should land at [[buffer(0)]]:\n" + msl);
+        assertTrue(msl.contains("[[texture(0)]]"), "First sampler at [[texture(0)]]:\n" + msl);
+        assertTrue(msl.contains("[[texture(1)]]"), "Second sampler at [[texture(1)]]:\n" + msl);
+        assertTrue(msl.contains("[[sampler(0)]]") && msl.contains("[[sampler(1)]]"),
+            "Samplers at slots 0 and 1:\n" + msl);
+        assertEquals("main0", out.entrypoint());
+    }
+
+    private static final String CHUNK_CULL_GLSL = """
+        #version 460 core
+        layout(local_size_x = 64) in;
+        layout(std430, binding = 0) readonly  buffer A { uint a[]; } visible;
+        layout(std430, binding = 1) readonly  buffer B { uint b[]; } meta;
+        layout(std430, binding = 2) writeonly buffer C { uint c[]; } indirect;
+        layout(binding = 3) uniform sampler2D u_Hiz;
+        layout(std140, binding = 0) uniform Frustum { vec4 control; } frustum;
+        void main() {
+            uint gid = gl_GlobalInvocationID.x;
+            if (gid >= uint(frustum.control.x)) return;
+            indirect.c[gid] = visible.a[gid] + meta.b[gid] + uint(textureLod(u_Hiz, vec2(0), 0).r);
+        }
+        """;
+
+    @Test
+    void ldsMultiMipComputeCrossCompiles() {
+        final Msl out = crossCompile(SpirvTestShaders.LDS_MULTI_MIP_GLSL, Shaderc.shaderc_compute_shader, GL43.GL_COMPUTE_SHADER, false);
+        final String msl = out.code();
+        assertTrue(msl.contains("kernel "), "Compute MSL should contain kernel stage qualifier:\n" + msl);
+        assertTrue(msl.contains("threadgroup spvUnsafeArray<float") || msl.contains("threadgroup float"), "shared float array must become threadgroup memory:\n" + msl);
+        assertTrue(msl.contains("threadgroup_barrier"), "barrier() must become threadgroup_barrier:\n" + msl);
+        assertTrue(msl.contains("[[texture(0)]]"), "u_Src RW image at [[texture(0)]]:\n" + msl);
+        assertTrue(msl.contains("[[texture(1)]]"), "u_Dst1 at [[texture(1)]]:\n" + msl);
+        assertTrue(msl.contains("[[texture(2)]]"), "u_Dst2 at [[texture(2)]]:\n" + msl);
+        assertTrue(msl.contains("[[buffer(0)]]"), "Down UBO at [[buffer(0)]]:\n" + msl);
+        assertFalse(msl.contains("descriptor_set"), "MSL must not leak descriptor_set decorations:\n" + msl);
+        assertEquals("main0", out.entrypoint());
+    }
+
+    /**
+     * The clear shader omits the image format qualifier, which GLSL allows only for writeonly images. Metal needs a
+     * concrete texture type, so verify SPIRV-Cross resolves it rather than emitting an unusable access-less image.
+     */
+    @Test
+    void clearImage3dComputeCrossCompiles() {
+        final String glsl = TestPaths.readString("src/main/resources/assets/angelica/shaders/sdlgpu/clear_image3d.csh");
+        final Msl out = crossCompile(glsl, Shaderc.shaderc_compute_shader, GL43.GL_COMPUTE_SHADER, false);
+        final String msl = out.code();
+        assertTrue(msl.contains("kernel "), "compute MSL should contain kernel stage qualifier:\n" + msl);
+        assertTrue(msl.contains("texture3d<uint"), "formatless writeonly uimage3D must resolve to a uint 3D texture:\n" + msl);
+        assertTrue(msl.contains("access::write"), "the image must carry write access:\n" + msl);
+        assertTrue(msl.contains("[[texture(0)]]"), "the target image should land at [[texture(0)]]:\n" + msl);
+        assertEquals("main0", out.entrypoint());
+    }
+
+    @Test
+    void chunkCullComputeCrossCompiles() {
+        final Msl out = crossCompile(CHUNK_CULL_GLSL, Shaderc.shaderc_compute_shader, GL43.GL_COMPUTE_SHADER, false);
+        final String msl = out.code();
+        assertTrue(msl.contains("kernel "), "Compute MSL should contain kernel stage qualifier:\n" + msl);
+        assertTrue(msl.contains("[[texture(0)]]"), "u_Hiz at [[texture(0)]]:\n" + msl);
+        assertTrue(msl.contains("[[sampler(0)]]"), "u_Hiz sampler at [[sampler(0)]]:\n" + msl);
+        assertTrue(msl.contains("[[buffer(0)]]"), "Frustum UBO at [[buffer(0)]]:\n" + msl);
+        assertTrue(msl.contains("[[buffer(1)]]"), "visible RO SSBO at [[buffer(1)]]:\n" + msl);
+        assertTrue(msl.contains("[[buffer(2)]]"), "meta RO SSBO at [[buffer(2)]]:\n" + msl);
+        assertTrue(msl.contains("[[buffer(3)]]"), "indirect RW SSBO at [[buffer(3)]] (numUBOs+numROBuf=3):\n" + msl);
+        assertEquals("main0", out.entrypoint());
+    }
+
+    private static final String VERTEX_WRITES_IMAGE_GLSL = """
+        #version 460 core
+        layout(set = 0, binding = 0) uniform UBO { mat4 u_Mvp; } ubo;
+        layout(set = 0, binding = 1, r32ui) writeonly uniform uimage3D voxel_img;
+        layout(location = 0) in vec3 a_Position;
+        void main() {
+            gl_Position = ubo.u_Mvp * vec4(a_Position, 1.0);
+            imageStore(voxel_img, ivec3(a_Position), uvec4(1u, 0u, 0u, 0u));
+        }
+        """;
+
+    @Test
+    void vertexShaderWritingStorageImageStillReturnsPosition() {
+        final Msl out = crossCompile(VERTEX_WRITES_IMAGE_GLSL, Shaderc.shaderc_vertex_shader, GL20.GL_VERTEX_SHADER, false);
+        final String msl = out.code();
+        assertFalse(msl.contains("vertex void main0"),
+            "vertex stage must not be emitted with void return when gl_Position is written:\n" + msl);
+        assertTrue(msl.contains("[[position]]"),
+            "vertex output struct should include [[position]] decoration:\n" + msl);
+    }
+
+    private static final String CPP_KEYWORD_LOCAL_GLSL = """
+        #version 460 core
+        layout(location = 0) in vec4 v_Color;
+        layout(location = 0) out vec4 fragColor;
+        vec4 trace(vec4 c) {
+            vec4 try = c * 0.5;
+            if (try.a > -0.5) return try;
+            return c;
+        }
+        void main() { fragColor = trace(v_Color); }
+        """;
+
+    @Test
+    void cppKeywordLocalIsRenamedBeforeMsl() {
+        final GlslVulkanPreprocess.Result pre = GlslVulkanPreprocess.run(CPP_KEYWORD_LOCAL_GLSL, GL20.GL_FRAGMENT_SHADER, "test", true);
+        assertNotNull(pre);
+        final Msl out = crossCompile(pre.rewrittenSource(), Shaderc.shaderc_fragment_shader, GL20.GL_FRAGMENT_SHADER, false);
+        final String msl = out.code();
+        assertTrue(msl.contains("angelica_renamed_try"), "the local must keep a renamed identifier:\n" + msl);
+        assertFalse(Pattern.compile("\\btry\\b").matcher(msl).find(), "try is reserved in MSL:\n" + msl);
+    }
+
+    // Mimics the shape of RwImageStoreExtractor's chunk-vertex compute output:
+    //   - loose uniforms (consolidated by shaderc into a default UBO)
+    //   - readonly SSBO at binding 9 (_VgVbuf)
+    //   - one iimage2D used by imageAtomicAdd (read+write)
+    //   - one writeonly uimage3D used by imageStore only
+    private static final String CHUNK_COMPUTE_WITH_ATOMIC_IMAGE_GLSL = """
+        #version 460 core
+        layout(local_size_x = 64) in;
+        layout(binding = 0, r32i) uniform iimage2D endcrystal_img;
+        layout(binding = 1, r16ui) writeonly uniform uimage3D voxel_img;
+        uniform int _vg_rangeBase;
+        uniform int _vg_rangeCount;
+        uniform int _vg_vertexTotal;
+        uniform int _vg_invocationBase;
+        layout(std430, binding = 9) readonly buffer _VgVbuf { uint data[]; } _vg_vbuf;
+        layout(std430, binding = 10) readonly buffer _VgRanges { uvec2 r[]; } _vg_ranges;
+        void main() {
+            uint _vg_g = uint(_vg_invocationBase) + gl_GlobalInvocationID.x;
+            if (_vg_g >= uint(_vg_vertexTotal)) return;
+            int _vg_lo = _vg_rangeBase;
+            int _vg_hi = _vg_rangeBase + _vg_rangeCount - 1;
+            while (_vg_lo < _vg_hi) {
+                int _vg_mid = (_vg_lo + _vg_hi + 1) >> 1;
+                if (_vg_ranges.r[_vg_mid].y <= _vg_g) _vg_lo = _vg_mid; else _vg_hi = _vg_mid - 1;
+            }
+            int id = int(_vg_ranges.r[_vg_lo].x + (_vg_g - _vg_ranges.r[_vg_lo].y));
+            imageAtomicAdd(endcrystal_img, ivec2(id, 0), 1);
+            imageStore(voxel_img, ivec3(0), uvec4(uint(id), 0u, 0u, 0u));
+        }
+        """;
+
+    private static final String COMPOSITE_VSH_COMPUTE_WITH_ATOMIC_IMAGE_GLSL = """
+        #version 460 core
+        layout(local_size_x = 64) in;
+        layout(binding = 0, r32i) uniform iimage2D endcrystal_img;
+        uniform mat4 iris_ModelViewProjectionMatrix;
+        const vec4 _vg_quad[4] = vec4[4](
+            vec4(1.0, 1.0, 0.0, 1.0),
+            vec4(0.0, 1.0, 0.0, 1.0),
+            vec4(1.0, 0.0, 0.0, 1.0),
+            vec4(0.0, 0.0, 0.0, 1.0));
+        vec4 _vg_gl_vertex;
+        int _vg_gl_vertex_id;
+        #define iris_GlVertex _vg_gl_vertex
+        #define iris_GlVertexID _vg_gl_vertex_id
+        vec4 iris_ftransform() { return iris_ModelViewProjectionMatrix * iris_GlVertex; }
+        void _vg_body() {
+            imageAtomicAdd(endcrystal_img, ivec2(iris_GlVertexID, 0), 1);
+        }
+        void main() {
+            uint vid = gl_GlobalInvocationID.x;
+            if (vid >= 4u) return;
+            _vg_gl_vertex = _vg_quad[vid];
+            _vg_gl_vertex_id = int(vid);
+            _vg_body();
+        }
+        """;
+
+    // Mirrors composite-fsh: 2D dispatch + _vg_target_size uniform + gl_FragCoord shim.
+    private static final String COMPOSITE_FSH_COMPUTE_WITH_ATOMIC_IMAGE_GLSL = """
+        #version 460 core
+        layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+        layout(binding = 0, r32i) uniform iimage2D endcrystal_img;
+        uniform ivec2 _vg_target_size;
+        vec4 _vg_gl_fragcoord_raw;
+        #define gl_FragCoord _vg_gl_fragcoord_raw
+        void _vg_body() {
+            imageAtomicAdd(endcrystal_img, ivec2(gl_FragCoord.xy), 1);
+        }
+        void main() {
+            ivec2 px = ivec2(gl_GlobalInvocationID.xy);
+            if (px.x >= _vg_target_size.x || px.y >= _vg_target_size.y) return;
+            _vg_gl_fragcoord_raw = vec4(vec2(px) + 0.5, 0.0, 1.0);
+            _vg_body();
+        }
+        """;
+
+    private static final String CHUNK_COMPUTE_WITH_INLINE_ATOMIC_GLSL = """
+        #version 460 core
+        layout(local_size_x = 64) in;
+        layout(binding = 0, r32i) uniform iimage2D endcrystal_img;
+        uniform int _vg_rangeBase;
+        uniform int _vg_rangeCount;
+        uniform int _vg_vertexTotal;
+        uniform int _vg_invocationBase;
+        layout(std430, binding = 9) readonly buffer _VgVbuf { uint data[]; } _vg_vbuf;
+        layout(std430, binding = 10) readonly buffer _VgRanges { uvec2 r[]; } _vg_ranges;
+        void main() {
+            { int _vg_prev = imageLoad(endcrystal_img, ivec2(0, 0)).x;
+              imageStore(endcrystal_img, ivec2(0, 0), ivec4(_vg_prev + 1, 0, 0, 0)); }
+        }
+        """;
+
+    @Test
+    void chunkComputeWithInlineAtomic_shadercAccepts() {
+        final ByteBuffer spirv = compileOrFail(CHUNK_COMPUTE_WITH_INLINE_ATOMIC_GLSL, Shaderc.shaderc_compute_shader);
+        MemoryUtil.memFree(spirv);
+    }
+
+    static Stream<Arguments> computeShadersWithImageAtomics() {
+        return Stream.of(
+            Arguments.of("chunk compute", CHUNK_COMPUTE_WITH_ATOMIC_IMAGE_GLSL),
+            Arguments.of("composite vsh compute", COMPOSITE_VSH_COMPUTE_WITH_ATOMIC_IMAGE_GLSL),
+            Arguments.of("composite fsh compute", COMPOSITE_FSH_COMPUTE_WITH_ATOMIC_IMAGE_GLSL));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("computeShadersWithImageAtomics")
+    void computeWithImageAtomic_mslBufferSlotsAreUnique(String name, String glsl) {
+        final Msl out = crossCompile(glsl, Shaderc.shaderc_compute_shader, GL43.GL_COMPUTE_SHADER, false);
+        final String msl = out.code();
+        assertUniqueBufferSlots(msl);
+    }
+
+    private static void assertUniqueBufferSlots(String msl) {
+        final Set<Integer> seen = new HashSet<>();
+        int from = 0;
+        final String marker = "[[buffer(";
+        while (true) {
+            final int open = msl.indexOf(marker, from);
+            if (open < 0) break;
+            final int numStart = open + marker.length();
+            final int close = msl.indexOf(')', numStart);
+            if (close < 0) break;
+            final String numText = msl.substring(numStart, close).trim();
+            final int slot;
+            try {
+                slot = Integer.parseInt(numText);
+            } catch (NumberFormatException nfe) {
+                from = close + 1;
+                continue;
+            }
+            assertTrue(seen.add(slot),
+                "duplicate [[buffer(" + slot + ")]] annotation in MSL output (SDL_GPU MSL atomic emulation collision?):\n" + msl);
+            from = close + 1;
+        }
+        assertFalse(seen.isEmpty(), "expected at least one [[buffer(N)]] in MSL output:\n" + msl);
+    }
+
+    private static void assertSlot(String msl, String imageName, int slot, String shader) {
+        final Matcher m = Pattern .compile(imageName + "\\s*\\[\\[texture\\((\\d+)\\)\\]\\]").matcher(msl);
+        assertTrue(m.find(), shader + ": " + imageName + " missing [[texture(N)]]:\n" + msl);
+        assertEquals(slot, Integer.parseInt(m.group(1)), shader + ": " + imageName + " at wrong Metal texture slot:\n" + msl);
+    }
+
+    @Test
+    void realCullingShadersCrossCompile() {
+        final String[] names = { "chunk_cull.csh" };
+        for (String name : names) {
+            final String glsl = TestPaths.readString("src/main/resources/assets/angelica/shaders/culling/" + name);
+            assertTrue(crossCompile(glsl, Shaderc.shaderc_compute_shader, GL43.GL_COMPUTE_SHADER, false).code().contains("kernel "), name + " should produce compute MSL");
+        }
+    }
+
+    @Test
+    void diskCacheHitReturnsStoredBlob(@TempDir Path dir) {
+        ShaderDiskCache.configure(dir, "t");
+        Reflect.<Map<?, ?>>get(cache(), "cache").clear();
+        final ByteBuffer spirv = compileOrFail(SpirvTestShaders.VERTEX_GLSL, Shaderc.shaderc_vertex_shader);
+        try {
+            ShaderManager.remapSpirvForSDLGPU(spirv, GL20.GL_VERTEX_SHADER);
+            final byte[] heap = ShaderCacheIO.toHeap(spirv);
+            MemoryUtil.memFree(MslCrossCompile.compile(spirv, GL20.GL_VERTEX_SHADER, false).code());
+            Reflect.<Map<?, ?>>get(cache(), "cache").clear();
+            ShaderDiskCache.putBlob(cache().diskKey(heap, GL20.GL_VERTEX_SHADER), "poison_entry", "poison".getBytes(StandardCharsets.UTF_8));
+            final CrossCompileCache.Output out = MslCrossCompile.compile(spirv, GL20.GL_VERTEX_SHADER, false);
+            try {
+                assertEquals("poison_entry", out.entrypoint());
+                assertEquals("poison", new String(ShaderCacheIO.toHeap(out.code()), StandardCharsets.UTF_8));
+            } finally {
+                MemoryUtil.memFree(out.code());
+            }
+        } finally {
+            MemoryUtil.memFree(spirv);
+        }
+    }
+
+    private static final String IMAGE_ATOMIC_GLSL = """
+        #version 460 core
+        layout(local_size_x = 64) in;
+        layout(binding = 0, r32i) uniform iimage2D counter;
+        void main() {
+            imageAtomicAdd(counter, ivec2(0, 0), 1);
+        }
+        """;
+
+    @Test
+    void imageAtomicsUseTheAuxBufferWithoutTextureAtomics() {
+        assertTrue(computeMsl(IMAGE_ATOMIC_GLSL, false).contains("counter_atomic"));
+    }
+
+    @Test
+    void imageAtomicsCompileToTextureAtomicsWhenAvailable() {
+        final String msl = computeMsl(IMAGE_ATOMIC_GLSL, true);
+        assertFalse(msl.contains("counter_atomic"), msl);
+        assertTrue(msl.contains("counter.atomic_fetch_add("), msl);
+    }
+
+    @Test
+    void textureAtomicsDoNotChangeShadersWithoutImageAtomics() {
+        final String base = computeMsl(CHUNK_CULL_GLSL, false);
+        Reflect.<Map<?, ?>>get(cache(), "cache").clear();
+        assertEquals(base, computeMsl(CHUNK_CULL_GLSL, true));
+    }
+
+    private static final String FRAGMENT_IMAGE_ATOMIC_GLSL = """
+        #version 460 core
+        layout(binding = 0, r32i) uniform iimage2D counter;
+        layout(location = 0) out vec4 fragColor;
+        void main() {
+            fragColor = vec4(imageAtomicAdd(counter, ivec2(0, 0), 1));
+        }
+        """;
+
+    @Test
+    void textureAtomicsLeaveRasterStagesAtMsl22() {
+        final ByteBuffer spirv = compileOrFail(FRAGMENT_IMAGE_ATOMIC_GLSL, Shaderc.shaderc_fragment_shader);
+        try {
+            assertTrue(CrossCompileUtil.usesImageAtomics(spirv));
+            final String base = fragmentMsl(spirv, false);
+            Reflect.<Map<?, ?>>get(cache(), "cache").clear();
+            final String atomics = fragmentMsl(spirv, true);
+            assertEquals(base, atomics);
+            assertFalse(atomics.contains("counter.atomic_fetch_add("), atomics);
+        } finally {
+            MemoryUtil.memFree(spirv);
+        }
+    }
+
+    private static String fragmentMsl(ByteBuffer spirv, boolean textureAtomics) {
+        final CrossCompileCache.Output out = MslCrossCompile.compile(spirv, GL20.GL_FRAGMENT_SHADER, textureAtomics);
+        try {
+            return decode(out.code());
+        } finally {
+            MemoryUtil.memFree(out.code());
+        }
+    }
+
+    private static String computeMsl(String glsl, boolean textureAtomics) {
+        return crossCompile(glsl, Shaderc.shaderc_compute_shader, GL43.GL_COMPUTE_SHADER, textureAtomics).code();
+    }
+
+    private record Msl(String code, String entrypoint) {}
+
+    private static Msl crossCompile(String glsl, int shaderKind, int glType, boolean textureAtomics) {
+        final ByteBuffer spirv = compileOrFail(glsl, shaderKind);
+        try {
+            if (glType == GL43.GL_COMPUTE_SHADER) ShaderManager.remapSpirvForComputeSDLGPU(spirv);
+            else ShaderManager.remapSpirvForSDLGPU(spirv, glType);
+            final CrossCompileCache.Output out = MslCrossCompile.compile(spirv, glType, textureAtomics);
+            try {
+                return new Msl(decode(out.code()), out.entrypoint());
+            } finally {
+                MemoryUtil.memFree(out.code());
+            }
+        } finally {
+            MemoryUtil.memFree(spirv);
+        }
+    }
+
+    @Test
+    void onlyShadersWithImageAtomicsAreDetected() {
+        final ByteBuffer atomic = compileOrFail(IMAGE_ATOMIC_GLSL, Shaderc.shaderc_compute_shader);
+        final ByteBuffer plain = compileOrFail(CHUNK_CULL_GLSL, Shaderc.shaderc_compute_shader);
+        try {
+            assertTrue(CrossCompileUtil.usesImageAtomics(atomic));
+            assertFalse(CrossCompileUtil.usesImageAtomics(plain));
+        } finally {
+            MemoryUtil.memFree(atomic);
+            MemoryUtil.memFree(plain);
+        }
+    }
+
+    private static String decode(ByteBuffer buf) {
+        final ByteBuffer slice = buf.duplicate();
+        int len = slice.remaining();
+        if (len > 0 && slice.get(slice.limit() - 1) == 0) len--;
+        final byte[] bytes = new byte[len];
+        slice.get(bytes, 0, len);
+        return new String(bytes, StandardCharsets.UTF_8);
+    }
+}

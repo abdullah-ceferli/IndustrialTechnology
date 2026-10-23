@@ -1,0 +1,30 @@
+# This is the universal Text Editor Configuration
+# for all GTNewHorizons projects
+# See: https://editorconfig.org/
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_size = 4
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{bat,ini}]
+end_of_line = crlf
+
+[*.{dtd,json,info,mcmeta,md,sh,svg,xml,xsd,xsl,yaml,yml}]
+indent_size = 2
+
+[*.lang]
+trim_trailing_whitespace = false
+
+[*.java]
+max_line_length = 240
+ij_java_wrap_long_lines = false
+ij_java_use_single_class_imports = true
+ij_java_class_count_to_use_import_on_demand = 999
+ij_java_names_count_to_use_import_on_demand = 999
+ij_java_packages_to_use_import_on_demand = empty

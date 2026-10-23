@@ -1,0 +1,313 @@
+package net.coderbot.iris.layer;
+
+import lombok.Getter;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import net.coderbot.iris.Iris;
+import net.coderbot.iris.gbuffer_overrides.matching.SpecialCondition;
+import com.gtnewhorizons.angelica.glsm.DisplayListManager;
+import com.gtnewhorizons.angelica.glsm.GLStateManager;
+import com.gtnewhorizons.angelica.glsm.ffp.FfpExtendedAttribs;
+import com.gtnewhorizons.angelica.iris.IrisDisplayListState;
+import net.coderbot.iris.gl.shader.ProgramCreator;
+import net.coderbot.iris.gl.state.StateUpdateNotifiers;
+import net.coderbot.iris.pipeline.WorldRenderingPhase;
+import net.coderbot.iris.pipeline.WorldRenderingPipeline;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL13;
+
+import java.util.Arrays;
+
+public class GbufferPrograms {
+	private static boolean entities;
+	private static boolean blockEntities;
+	private static boolean particles;
+	private static boolean outline;
+	private static boolean entityLoop;
+	private static Runnable phaseChangeListener;
+
+	static {
+		StateUpdateNotifiers.phaseChangeNotifier = listener -> phaseChangeListener = listener;
+	}
+
+	private static void checkReentrancy() {
+		if (entities || blockEntities || outline) {
+			throw new IllegalStateException("GbufferPrograms in weird state, tried to call begin function when entities = "
+				+ entities + ", blockEntities = " + blockEntities + ", outline = " + outline);
+		}
+	}
+
+	public static void beginEntities() {
+		checkReentrancy();
+		setPhase(WorldRenderingPhase.ENTITIES);
+		setBlockEntityDefaults();
+		entities = true;
+	}
+
+	public static void beginEntityLoop() {
+		entityLoop = true;
+		setPhase(WorldRenderingPhase.ENTITIES);
+		setBlockEntityDefaults();
+	}
+
+	public static void endEntityLoop() {
+		entityLoop = false;
+		setPhase(WorldRenderingPhase.NONE);
+	}
+
+	public static boolean isEntityLoopActive() {
+		return entityLoop;
+	}
+
+	public static void onEntityRenderBoundary() {
+		final WorldRenderingPipeline pipeline = Iris.getPipelineManager().getPipelineNullable();
+
+		if (pipeline != null) {
+			pipeline.onEntityRenderBoundary();
+		}
+	}
+
+	public static void endEntities() {
+		if (!entities) {
+			throw new IllegalStateException("GbufferPrograms in weird state, tried to call endEntities when entities = false");
+		}
+
+		entities = false;
+		endPhase();
+	}
+
+	private static void endPhase() {
+		if (particles) {
+			setPhase(WorldRenderingPhase.PARTICLES);
+		} else if (entityLoop) {
+			setPhase(WorldRenderingPhase.ENTITIES);
+		} else {
+			setPhase(WorldRenderingPhase.NONE);
+		}
+	}
+
+	public static void beginOutline() {
+		checkReentrancy();
+		setPhase(WorldRenderingPhase.OUTLINE);
+		outline = true;
+	}
+
+	public static void endOutline() {
+		if (!outline) {
+			throw new IllegalStateException("GbufferPrograms in weird state, tried to call endOutline when outline = false");
+		}
+
+		outline = false;
+		endPhase();
+	}
+
+	public static int beginParticles() {
+		if (particleDepth == particlePhaseSaves.length) {
+			particlePhaseSaves = Arrays.copyOf(particlePhaseSaves, particleDepth * 2);
+			particleTranslucencySaves = Arrays.copyOf(particleTranslucencySaves, particleDepth * 2);
+		}
+
+		particlePhaseSaves[particleDepth] = getCurrentPhase();
+		particleTranslucencySaves[particleDepth] = beginTranslucencyDeclaration(Boolean.FALSE);
+
+		setPhase(WorldRenderingPhase.PARTICLES);
+		particles = true;
+
+		return particleDepth++;
+	}
+
+	public static void endParticles(int depth) {
+		particleDepth = depth;
+
+		endTranslucencyDeclaration(particleTranslucencySaves[depth]);
+		particleTranslucencySaves[depth] = null;
+
+		setPhase(particlePhaseSaves[depth]);
+		particlePhaseSaves[depth] = null;
+
+		particles = particleDepth > 0;
+	}
+
+	private static WorldRenderingPhase[] particlePhaseSaves = new WorldRenderingPhase[4];
+	private static Boolean[] particleTranslucencySaves = new Boolean[4];
+	private static int particleDepth;
+
+	public static void beginBlockEntities() {
+		checkReentrancy();
+		setPhase(WorldRenderingPhase.BLOCK_ENTITIES);
+		setBlockEntityDefaults();
+		blockEntities = true;
+	}
+
+	public static void endBlockEntities() {
+		if (!blockEntities) {
+			throw new IllegalStateException("GbufferPrograms in weird state, tried to call endBlockEntities when blockEntities = false");
+		}
+
+		blockEntities = false;
+		endPhase();
+	}
+
+	public static void setCutoutDefaults() {
+		GLStateManager.enableAlphaTest();
+		GLStateManager.glAlphaFunc(GL11.GL_GREATER, 0.1F);
+
+		if (DisplayListManager.getRecordMode() == DisplayListManager.RecordMode.NONE) {
+			GLStateManager.getTextures().getTextureUnitStates(1).enable();
+			return;
+		}
+		final int previousUnit = GLStateManager.getActiveTextureUnitForServerState();
+		GLStateManager.glActiveTexture(GL13.GL_TEXTURE1);
+		GLStateManager.enableTexture();
+		GLStateManager.glActiveTexture(GL13.GL_TEXTURE0 + previousUnit);
+	}
+
+	public static void setBlockEntityDefaults() {
+		GLStateManager.glVertexAttrib2s(ProgramCreator.MC_ENTITY, (short)-1, (short)-1);
+		FfpExtendedAttribs.setNeutralCurrentValues();
+		GLStateManager.glVertexAttrib4f(ProgramCreator.AT_MIDBLOCK, 0.0f, 0.0f, 0.0f, 0.0f);
+	}
+
+	public static WorldRenderingPhase getCurrentPhase() {
+		final WorldRenderingPipeline pipeline = Iris.getPipelineManager().getPipelineNullable();
+
+		if (pipeline != null) {
+			return pipeline.getPhase();
+		} else {
+			return WorldRenderingPhase.NONE;
+		}
+	}
+
+	private static void setPhase(WorldRenderingPhase phase) {
+		final WorldRenderingPipeline pipeline = Iris.getPipelineManager().getPipelineNullable();
+
+		if (pipeline != null) {
+			pipeline.setPhase(phase);
+		}
+	}
+
+	public static boolean beginNestedEntityPhase() {
+		IrisDisplayListState.recordNestedEntityScope(true);
+		if (getCurrentPhase() != WorldRenderingPhase.BLOCK_ENTITIES) {
+			return false;
+		}
+		applyPushOverridePhase(WorldRenderingPhase.ENTITIES);
+		return true;
+	}
+
+	public static void endNestedEntityPhase(boolean pushed) {
+		IrisDisplayListState.recordNestedEntityScope(false);
+		if (pushed) {
+			applyPopOverridePhase();
+		}
+	}
+
+	public static void setOverridePhase(WorldRenderingPhase phase) {
+		IrisDisplayListState.recordOverridePhase(phase);
+		applyOverridePhase(phase);
+	}
+
+	private static final ObjectArrayList<WorldRenderingPhase> phaseStack = new ObjectArrayList<>();
+
+	public static void pushOverridePhase(WorldRenderingPhase phase) {
+		IrisDisplayListState.recordPhaseScope(phase, true);
+		applyPushOverridePhase(phase);
+	}
+
+	private static void applyPushOverridePhase(WorldRenderingPhase phase) {
+		phaseStack.add(overridePhase);
+		applyOverridePhase(phase);
+	}
+
+	public static void popOverridePhase() {
+		IrisDisplayListState.recordPhaseScope(null, false);
+		applyPopOverridePhase();
+	}
+
+	private static void applyPopOverridePhase() {
+		applyOverridePhase(phaseStack.pop());
+	}
+
+	private static void applyOverridePhase(WorldRenderingPhase phase) {
+		overridePhase = phase;
+
+		final WorldRenderingPipeline pipeline = Iris.getPipelineManager().getPipelineNullable();
+
+		if (pipeline != null) {
+			pipeline.setOverridePhase(phase);
+		}
+	}
+
+    @Getter
+    private static WorldRenderingPhase overridePhase;
+
+    public static Boolean beginTranslucencyDeclaration(Boolean translucent) {
+		IrisDisplayListState.recordTranslucencyScope(translucent, true);
+		final Boolean previous = declaredTranslucent;
+		declaredTranslucent = translucent;
+		applyTranslucencyDeclaration();
+		return previous;
+	}
+
+	public static void endTranslucencyDeclaration(Boolean previous) {
+		IrisDisplayListState.recordTranslucencyScope(null, false);
+		declaredTranslucent = previous;
+		applyTranslucencyDeclaration();
+	}
+
+	public static void setTranslucencyDeclaration(Boolean translucent) {
+		IrisDisplayListState.recordTranslucency(translucent);
+		declaredTranslucent = translucent;
+		applyTranslucencyDeclaration();
+	}
+
+	private static Boolean declaredTranslucent;
+
+	private static void applyTranslucencyDeclaration() {
+		final WorldRenderingPipeline pipeline = Iris.getPipelineManager().getPipelineNullable();
+
+		if (pipeline != null) {
+			pipeline.setDeclaredTranslucency(declaredTranslucent);
+		}
+	}
+
+	private static SpecialCondition currentSpecial;
+	private static final ObjectArrayList<SpecialCondition> specialStack = new ObjectArrayList<>();
+
+	public static SpecialCondition getSpecialCondition() {
+		return currentSpecial;
+	}
+
+	public static Boolean getDeclaredTranslucency() {
+		return declaredTranslucent;
+	}
+
+	public static void setupSpecialRenderCondition(SpecialCondition override) {
+		IrisDisplayListState.recordSpecialCondition(override, true);
+		specialStack.add(currentSpecial);
+		applySpecialCondition(override);
+	}
+
+	private static void applySpecialCondition(SpecialCondition override) {
+		currentSpecial = override;
+		final WorldRenderingPipeline pipeline = Iris.getPipelineManager().getPipelineNullable();
+
+		if (pipeline != null) {
+			pipeline.setSpecialCondition(override);
+		}
+	}
+
+	public static void teardownSpecialRenderCondition() {
+		IrisDisplayListState.recordSpecialCondition(null, false);
+		applySpecialCondition(specialStack.pop());
+	}
+
+	public static void runPhaseChangeNotifier() {
+		if (phaseChangeListener != null) {
+			phaseChangeListener.run();
+		}
+	}
+
+	public static void init() {
+		// Empty initializer to run static
+	}
+}

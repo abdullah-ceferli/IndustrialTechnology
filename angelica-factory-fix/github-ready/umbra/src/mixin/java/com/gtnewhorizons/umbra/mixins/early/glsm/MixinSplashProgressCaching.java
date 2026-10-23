@@ -1,0 +1,17 @@
+package com.gtnewhorizons.umbra.mixins.early.glsm;
+
+import com.gtnewhorizons.angelica.glsm.hooks.FrameHooks;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+@SuppressWarnings("deprecation")
+@Mixin(value = cpw.mods.fml.client.SplashProgress.class, remap = false)
+public class MixinSplashProgressCaching {
+
+    @Inject(method = "finish", at = @At("RETURN"))
+    private static void umbra$enableCachingOnFinish(CallbackInfo ci) {
+        FrameHooks.splashFinished();
+    }
+}
