@@ -17,7 +17,7 @@ import net.minecraftforge.common.MinecraftForge;
 
 public final class ModRegistry {
     public static final Block[] quarries = new Block[3];
-    public static Block loader, redstoneRelay, monitoringStick, automationStick, greenLamp;
+    public static Block loader, redstoneRelay, monitoringStick, automationStick, greenLamp, capacitorBank;
     public static Item drill, circuit, gear, terminal, greenStick, yellowStick, blueStick, automationGuide;
     public static final CreativeTabs TAB = new CreativeTabs(IndustrialTechnology.MODID) {
         @Override public Item getTabIconItem() { return Item.getItemFromBlock(quarries[0]); }
@@ -42,6 +42,13 @@ public final class ModRegistry {
         drill = new ItemDrill(); GameRegistry.registerItem(drill, "drill");
         circuit = component("circuit"); gear = component("steel_gear");
         greenLamp=new dev.industrialtechnology.lighting.BlockGreenLamp();GameRegistry.registerBlock(greenLamp,"green_redstone_lamp");
+        capacitorBank=new dev.industrialtechnology.capacitor.BlockCapacitorBank();
+        GameRegistry.registerBlock(capacitorBank,dev.industrialtechnology.capacitor.ItemBlockCapacitorBank.class,"advanced_capacitor_bank");
+        GameRegistry.registerTileEntity(dev.industrialtechnology.capacitor.TileCapacitorBank.class,"industrialtech:advanced_capacitor_bank");
+        dev.industrialtechnology.railway.RailwayRegistry.register();
+        dev.industrialtechnology.steel.SteelRegistry.register();
+        dev.industrialtechnology.console.ConsoleRegistry.register();
+        dev.industrialtechnology.bag.BagRegistry.register();
         MinecraftForge.EVENT_BUS.register(new DropCapture());
     }
     private static Item component(String name) {
@@ -50,6 +57,11 @@ public final class ModRegistry {
         GameRegistry.registerItem(item, name); return item;
     }
     public static void recipes() {
+        dev.industrialtechnology.railway.RailwayRegistry.recipes();
+        dev.industrialtechnology.steel.SteelRegistry.recipes();
+        dev.industrialtechnology.console.ConsoleRegistry.recipes();
+        dev.industrialtechnology.bag.BagRegistry.recipes();
+        GameRegistry.addRecipe(new ItemStack(capacitorBank),"DGD","CRC","DGD",'D',Items.diamond,'G',Blocks.gold_block,'C',circuit,'R',Blocks.redstone_block);
         GameRegistry.addRecipe(new net.minecraftforge.oredict.ShapedOreRecipe(new ItemStack(greenLamp,4),"GGG","DLD","GRG",'G',Blocks.glass,'D',new ItemStack(Items.dye,1,2),'L',Blocks.glowstone,'R',Items.redstone));
         GameRegistry.addShapelessRecipe(new ItemStack(automationGuide),Items.book,Items.redstone,Items.paper);
         GameRegistry.addRecipe(new ItemStack(terminal),"IGI","RDR","IEI",'I',Items.iron_ingot,'G',Items.gold_ingot,'R',Items.redstone,'D',Items.diamond,'E',Items.ender_pearl);

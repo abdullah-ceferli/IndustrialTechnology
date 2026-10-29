@@ -17,8 +17,8 @@ import net.minecraftforge.common.MinecraftForge;
 import cpw.mods.fml.common.FMLCommonHandler;
 import org.apache.logging.log4j.Logger;
 
-@Mod(modid = IndustrialTechnology.MODID, name = "Industrial Technology", version = "2.2.1",
-     acceptedMinecraftVersions = "[1.7.10]", dependencies = "required-after:Forge@[10.13.4.1614,)")
+@Mod(modid = IndustrialTechnology.MODID, name = "Industrial Technology", version = "2.7.0",
+     acceptedMinecraftVersions = "[1.7.10]", dependencies = "required-after:Forge@[10.13.4.1614,);after:hbm")
 public final class IndustrialTechnology {
     public static final String MODID = "industrialtech";
     @Mod.Instance(MODID) public static IndustrialTechnology instance;
@@ -44,6 +44,12 @@ public final class IndustrialTechnology {
         network.registerMessage(dev.industrialtechnology.wireless.WirelessCommand.Handler.class,dev.industrialtechnology.wireless.WirelessCommand.class,2,Side.SERVER);
         network.registerMessage(dev.industrialtechnology.wireless.WirelessSnapshot.Handler.class,dev.industrialtechnology.wireless.WirelessSnapshot.class,3,Side.CLIENT);
         network.registerMessage(dev.industrialtechnology.wireless.WirelessCatalog.Handler.class,dev.industrialtechnology.wireless.WirelessCatalog.class,6,Side.CLIENT);
+        network.registerMessage(dev.industrialtechnology.capacitor.BankCommand.Handler.class,dev.industrialtechnology.capacitor.BankCommand.class,7,Side.SERVER);
+        network.registerMessage(dev.industrialtechnology.capacitor.BankSnapshot.Handler.class,dev.industrialtechnology.capacitor.BankSnapshot.class,8,Side.CLIENT);
+        network.registerMessage(dev.industrialtechnology.expansion.ExpansionCommand.Handler.class,dev.industrialtechnology.expansion.ExpansionCommand.class,9,Side.SERVER);
+        network.registerMessage(dev.industrialtechnology.expansion.ExpansionSnapshot.Handler.class,dev.industrialtechnology.expansion.ExpansionSnapshot.class,10,Side.CLIENT);
+        network.registerMessage(dev.industrialtechnology.console.ConsoleCommand.Handler.class,dev.industrialtechnology.console.ConsoleCommand.class,11,Side.SERVER);
+        network.registerMessage(dev.industrialtechnology.console.ConsoleSnapshot.Handler.class,dev.industrialtechnology.console.ConsoleSnapshot.class,12,Side.CLIENT);
         ForgeChunkManager.setForcedChunkLoadingCallback(instance, new ChunkTickets.Callback());
     }
     @Mod.EventHandler public void init(FMLInitializationEvent event) {
@@ -56,8 +62,16 @@ public final class IndustrialTechnology {
         MinecraftForge.EVENT_BUS.register(new dev.industrialtechnology.wireless.TerminalSafety());
         MinecraftForge.EVENT_BUS.register(new dev.industrialtechnology.wireless.TargetAnchors());
         FMLCommonHandler.instance().bus().register(new dev.industrialtechnology.wireless.WirelessScheduler());
+        dev.industrialtechnology.capacitor.BankManager banks=dev.industrialtechnology.capacitor.BankManager.events();
+        MinecraftForge.EVENT_BUS.register(banks);FMLCommonHandler.instance().bus().register(banks);
+        dev.industrialtechnology.solar.SolarArrays sun=new dev.industrialtechnology.solar.SolarArrays();
+        MinecraftForge.EVENT_BUS.register(sun);FMLCommonHandler.instance().bus().register(sun);
+        MinecraftForge.EVENT_BUS.register(new dev.industrialtechnology.railway.TrackWorld());
+        MinecraftForge.EVENT_BUS.register(new dev.industrialtechnology.railway.RailwayWorld());
+        FMLCommonHandler.instance().bus().register(new dev.industrialtechnology.console.ConsoleService());
         proxy.init();
     }
+    @Mod.EventHandler public void serverStopped(cpw.mods.fml.common.event.FMLServerStoppedEvent event){dev.industrialtechnology.console.ConsoleService.clear();dev.industrialtechnology.capacitor.BankManager.clear();dev.industrialtechnology.solar.SolarArrays.clear();dev.industrialtechnology.railway.TrackWorld.clear();dev.industrialtechnology.railway.RailwayWorld.clear();}
     @Mod.EventHandler public void missingMappings(cpw.mods.fml.common.event.FMLMissingMappingsEvent event) {
         ContentMigration.ignoreRetired(event);
     }

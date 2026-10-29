@@ -1,0 +1,13 @@
+PASS: Saved green lamp and directly attached powered lever survive a real JVM restart
+PASS: Actual restart preserves EVERY interval and future deadline without an early repeat
+PASS: Actual restart restores enabled code programs compiled bindings and latched truth without duplicate pulses
+PASS: Actual restart preserves all three physical torch colors orientations owners and an unlinked torch
+PASS: Actual restart restores terminal networks, endpoint identities and renamed devices
+PASS: Actual restart restores target anchor identities without changing foreign machine NBT
+PASS: Actual restart preserves eight automation rules, edge latch and seven-second pulse configuration
+PASS: Actual restart preserves the stored quarry item and all 50 large NBT filter selections on replacement
+PASS: Actual restart callback restores enabled Quarry and its exact 15 forced chunks
+PASS: Actual restart restores standalone loader without online players
+PASS: Disabled loader and stopped quarry remain disabled after server restart
+PASS: Breaking restored machines releases every owned ticket
+Failed: 0

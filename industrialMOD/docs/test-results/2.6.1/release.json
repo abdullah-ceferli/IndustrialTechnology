@@ -1,0 +1,14 @@
+{
+  "version": "2.6.1",
+  "sha256": "59df86fe11a31e1ee71eee48a8d63118a6543fb9605663e3b9a40ae034bde061",
+  "bytes": 752187,
+  "nativeDirectory": "run-test-console-screen-production-2.6.1",
+  "clientDirectory": "run-test-console-facing-2.6.1-b",
+  "checks": {
+    "console-initial.txt": 15,
+    "console-restart.txt": 1,
+    "console-facing-client.txt": 8,
+    "JUnit": 125
+  },
+  "totalChecks": 149
+}

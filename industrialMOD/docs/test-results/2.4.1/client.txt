@@ -1,0 +1,33 @@
+VIEW: rail-model-0.png pos=96.5,84.125,24.5 yaw=135.0 pitch=18.0 time=6000
+PASS: Native model, wheels and track render: Coal Steam Locomotive
+VIEW: rail-model-1.png pos=96.5,84.125,56.5 yaw=135.0 pitch=18.0 time=6000
+PASS: Native model, wheels and track render: Industrial RF Electric
+VIEW: rail-model-2.png pos=96.5,84.125,88.5 yaw=135.0 pitch=18.0 time=6000
+PASS: Native model, wheels and track render: ACS-64 Passenger Electric
+VIEW: rail-model-3.png pos=96.5,84.125,120.5 yaw=135.0 pitch=18.0 time=6000
+PASS: Native model, wheels and track render: AZ8A Two-section Freight Electric
+VIEW: rail-model-4.png pos=96.5,84.125,152.5 yaw=135.0 pitch=18.0 time=6000
+PASS: Native model, wheels and track render: Freight Container Wagon
+VIEW: rail-model-5.png pos=96.5,84.125,184.5 yaw=135.0 pitch=18.0 time=6000
+PASS: Native model, wheels and track render: Passenger Coach
+VIEW: solar-five-tiers.png pos=66.0,79.62000000476837,28.0 yaw=180.0 pitch=20.0 time=6000
+PASS: All five photovoltaic tiers render with registered official cell textures
+VIEW: solar-no-gui.png pos=56.0,74.62000000476837,19.0 yaw=180.0 pitch=15.0 time=6000
+PASS: Real solar-panel right-click leaves the screen closed; retired client GUI ID is unavailable
+VIEW: freight-three-slots.png pos=72.0,74.62000000476837,133.0 yaw=180.0 pitch=0.0 time=6000
+PASS: Freight GUI displays exactly three custom logical bins plus 36 normal player slots
+PASS: Actual client request extracts a valid 64-item coal stack from 300 logical coal
+VIEW: acs64-cab.png pos=79.4088,74.89500000476838,64.5 yaw=-90.0 pitch=8.0 time=6000
+PASS: Driver mount and first-person cab synchronize to the client
+VIEW: acs64-third-person.png pos=79.4088,74.89500000476838,64.5 yaw=-90.0 pitch=8.0 time=6000
+PASS: Third-person camera extends outside the long locomotive and keeps vanilla wall clipping
+VIEW: acs64-moving-cab.png pos=80.16921666666667,74.89500000476838,64.5 yaw=-90.0 pitch=8.0 time=6000
+PASS: Server-authoritative throttle updates client speed and animated wheel travel
+VIEW: train-controls.png pos=80.50255,74.89500000476838,64.5 yaw=-90.0 pitch=8.0 time=6000
+PASS: Actual NEI icon colors remain identical while hovering train controls; GUI lighting is preserved
+PASS: Mounted controls GUI opens through validated server packet; emergency brake is active
+VIEW: charging-progress.png pos=80.56505,74.89500000476838,64.5 yaw=-90.0 pitch=8.0 time=6000
+PASS: Charging station displays the actual locomotive RF, capacity and percentage
+VIEW: passenger-interior.png pos=72.5,74.89500000476838,160.5 yaw=143.0 pitch=17.0 time=6000
+PASS: Passenger coach has a separate seated interior and synchronized passenger mount
+Failed: 0

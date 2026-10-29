@@ -1,0 +1,3 @@
+package dev.industrialtechnology.railway;
+import java.util.*;import net.minecraft.item.ItemStack;import net.minecraft.item.Item;import dev.industrialtechnology.expansion.ExpansionConfig;
+public final class CargoMass {private static final Map<String,Double> overrides=new HashMap<>();public static void configure(String[] entries){overrides.clear();for(String s:entries)try{int i=s.lastIndexOf('=');double v=Double.parseDouble(s.substring(i+1));if(Double.isFinite(v)&&v>0&&v<=100000)overrides.put(s.substring(0,i),v);}catch(Exception ignored){}}public static double of(ItemStack s){if(s==null)return 0;Double n=overrides.get(Item.itemRegistry.getNameForObject(s.getItem()));return n==null?ExpansionConfig.itemMass:n;}}

@@ -1,0 +1,14 @@
+package dev.industrialtechnology.railway;
+import net.minecraft.item.*;import net.minecraft.init.Items;import net.minecraft.nbt.*;import dev.industrialtechnology.expansion.ExpansionConfig;
+/** Templates always have count one. Only bounded ordinary stacks leave this storage. */
+public final class LogicalCargo {
+ private final ItemStack[] type;private final int[] count;private final boolean fuel;public LogicalCargo(int slots,boolean fuel){type=new ItemStack[slots];count=new int[slots];this.fuel=fuel;}public int slots(){return count.length;}public int count(int s){return s>=0&&s<count.length?count[s]:0;}public ItemStack type(int s){return s<0||s>=type.length||type[s]==null?null:type[s].copy();}
+ public static boolean coal(ItemStack s){return s!=null&&s.getItem()==Items.coal&&(s.getItemDamage()==0||s.getItemDamage()==1&&ExpansionConfig.charcoal);}
+ public int capacity(ItemStack s){return coal(s)?300:fuel?0:100;}public int capacity(int slot){return type[slot]==null?(fuel?300:100):capacity(type[slot]);}
+ public boolean same(int s,ItemStack item){return type[s]==null||type[s].isItemEqual(item)&&ItemStack.areItemStackTagsEqual(type[s],item);}
+ public int insert(int slot,ItemStack item,int amount,boolean simulate){if(slot<0||slot>=count.length||item==null||amount<=0||item.stackSize<=0||!CargoTagLimits.valid(item.getTagCompound())||!same(slot,item))return 0;int n=Math.min(Math.min(amount,item.stackSize),Math.max(0,capacity(item)-count[slot]));if(n>0&&!simulate){if(type[slot]==null){type[slot]=item.copy();type[slot].stackSize=1;}count[slot]+=n;}return n;}
+ public ItemStack extract(int s,int requested,boolean simulate){if(s<0||s>=count.length||type[s]==null||requested<=0)return null;int n=Math.min(Math.min(count[s],requested),type[s].getMaxStackSize());if(n<=0)return null;ItemStack out=type[s].copy();out.stackSize=n;if(!simulate){count[s]-=n;if(count[s]==0)type[s]=null;}return out;}
+ public int total(){int n=0;for(int c:count)n+=c;return n;}public double mass(){double n=0;for(int i=0;i<count.length;i++)n+=count[i]*CargoMass.of(type[i]);return n;}
+ public NBTTagList save(){NBTTagList l=new NBTTagList();for(int i=0;i<count.length;i++)if(type[i]!=null&&count[i]>0){NBTTagCompound n=new NBTTagCompound();n.setByte("Slot",(byte)i);NBTTagCompound t=new NBTTagCompound();type[i].writeToNBT(t);n.setTag("Type",t);n.setInteger("Quantity",count[i]);l.appendTag(n);}return l;}
+ public void load(NBTTagList l){java.util.Arrays.fill(type,null);java.util.Arrays.fill(count,0);for(int i=0;i<Math.min(l.tagCount(),count.length);i++){NBTTagCompound n=l.getCompoundTagAt(i);int slot=n.getByte("Slot")&255;if(slot>=count.length||type[slot]!=null)continue;ItemStack item=ItemStack.loadItemStackFromNBT(n.getCompoundTag("Type"));if(item==null||!CargoTagLimits.valid(item.getTagCompound()))continue;int value=Math.max(0,Math.min(capacity(item),n.getInteger("Quantity")));if(value>0){item.stackSize=1;type[slot]=item;count[slot]=value;}}}
+}

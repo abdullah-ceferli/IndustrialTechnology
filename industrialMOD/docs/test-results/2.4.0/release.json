@@ -1,0 +1,57 @@
+{
+  "version": "2.4.0",
+  "sha256": "8b50576a3f61e0e34e3e0d8e36a71a4b6e5f26ff84df5cc8472bca8b5b86d650",
+  "bytes": 673388,
+  "runs": [
+    {
+      "label": "solar-standalone",
+      "directory": "run-test-rail-signoff-2.4.0-standalone",
+      "prefix": "rail",
+      "passes": [
+        24,
+        1
+      ]
+    },
+    {
+      "label": "hbm-regression",
+      "directory": "run-test-rail-signoff-2.4.0-hbm-regression",
+      "prefix": "integration",
+      "passes": [
+        176,
+        13
+      ]
+    },
+    {
+      "label": "solar-pack",
+      "directory": "run-test-rail-signoff-2.4.0-pack",
+      "prefix": "rail",
+      "passes": [
+        26,
+        1
+      ]
+    },
+    {
+      "label": "base-regression",
+      "directory": "run-test-rail-signoff-2.4.0-base-regression",
+      "prefix": "integration",
+      "passes": [
+        139,
+        12
+      ]
+    },
+    {
+      "label": "bank-pack",
+      "directory": "run-test-rail-signoff-2.4.0-banks",
+      "prefix": "bank",
+      "passes": [
+        22,
+        1
+      ]
+    }
+  ],
+  "upstreamSolar": "9ec8183274d61b57ae0562c5d9b4bd486fef8f0c",
+  "unitChecks": 101,
+  "clientChecks": 17,
+  "nativeChecks": 415,
+  "totalChecks": 533
+}

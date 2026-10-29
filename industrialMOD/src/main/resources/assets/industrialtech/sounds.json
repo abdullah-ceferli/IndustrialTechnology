@@ -1,0 +1,65 @@
+{
+  "brake_air": {
+    "category": "neutral",
+    "sounds": [
+      {
+        "name": "industrialtech:brake_air",
+        "stream": false
+      }
+    ]
+  },
+  "coupler": {
+    "category": "neutral",
+    "sounds": [
+      {
+        "name": "industrialtech:coupler",
+        "stream": false
+      }
+    ]
+  },
+  "electric_motor": {
+    "category": "neutral",
+    "sounds": [
+      {
+        "name": "industrialtech:electric_motor",
+        "stream": false
+      }
+    ]
+  },
+  "rail_roll": {
+    "category": "neutral",
+    "sounds": [
+      {
+        "name": "industrialtech:rail_roll",
+        "stream": false
+      }
+    ]
+  },
+  "steam_exhaust": {
+    "category": "neutral",
+    "sounds": [
+      {
+        "name": "industrialtech:steam_exhaust",
+        "stream": false
+      }
+    ]
+  },
+  "steam_whistle": {
+    "category": "neutral",
+    "sounds": [
+      {
+        "name": "industrialtech:steam_whistle",
+        "stream": false
+      }
+    ]
+  },
+  "train_horn": {
+    "category": "neutral",
+    "sounds": [
+      {
+        "name": "industrialtech:train_horn",
+        "stream": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+PASS: Real Green/Blue/Yellow torches link through the existing terminal and history selects linked Greens
+PASS: Release rule switches actual Yellow redstone ON at High and OFF at Low without chatter
+PASS: Refill mode reverses the two limits and manual override still fails closed on bad data
+PASS: Changing the fluid type fails closed instead of applying a naphtha rule to another fluid
+PASS: Pausing and breaking a controller turn off only that controller's owned output
+PASS: A running Blue program and two console rules cannot fight over the same Yellow
+PASS: Unavailable history samples are gaps and history survives ordinary NBT round-trip
+PASS: Switching fluids starts a new history series while real empty samples remain zero
+PASS: Console owner, distance and stale-window checks reject forged commands
+PASS: Source picker cannot select another owner's sensor
+PASS: Large RF capacitor networks are read as long values without consuming or converting RF
+PASS: Retired solar GUI remains absent and old empty capacitor items still stack
+PASS: Actual HBM Big-Ass Tank and Yellow-on-battery telemetry use real mB and HE
+PASS: Pickup settings retain links and thresholds, omit large history arrays, and start paused
+PASS: Selected graph snapshot stays bounded to 720 samples
+PASS: Real world save writes controller band state and history for a genuine JVM restart
+Failed: 0

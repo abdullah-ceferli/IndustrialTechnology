@@ -1,0 +1,8 @@
+[FactoryFix] Clear-space gas redraw filter OFF
+[FactoryFix] Clear-space gas redraw filter ON
+[FactoryFix] Added guarded gas render flags to WorldClient
+[FactoryFix] Added guarded gas render flags to WorldClient
+PASS real WorldClient MCP stack and original call preserved
+[FactoryFix] Added guarded gas render flags to WorldClient
+PASS real WorldClient SRG stack and original call preserved
+PASS gas guards, disabled/server/boundaries/lighting/tile/unknown behavior and actual transformed packet execution

@@ -1,0 +1,74 @@
+{
+  "source": "ProjectE-1.7.10-PE1.10.1.jar",
+  "jarSha256": "a9000e69ca7756cfc5b32cfb95040fffd5a146037b4269569837db84a021d5f9",
+  "assets": {
+    "assets/industrialtech/textures/items/bags/white.png": {
+      "source": "assets/projecte/textures/items/alchemy_bags/white.png",
+      "sha256": "03430e96c6bf4e18c7aed7b01754a3266634cabf4834d7420f88fbe12b9370ab"
+    },
+    "assets/industrialtech/textures/items/bags/orange.png": {
+      "source": "assets/projecte/textures/items/alchemy_bags/orange.png",
+      "sha256": "82b1df8cbd23030a9f1e9475ea0c34bed86c40d0592c94273cec61dc0e0bea29"
+    },
+    "assets/industrialtech/textures/items/bags/magenta.png": {
+      "source": "assets/projecte/textures/items/alchemy_bags/magenta.png",
+      "sha256": "bbab0e9c716d61498789eb009ca5460d11bf516929359bd259c2c18442c68508"
+    },
+    "assets/industrialtech/textures/items/bags/light_blue.png": {
+      "source": "assets/projecte/textures/items/alchemy_bags/lightBlue.png",
+      "sha256": "c2513c1c13e6ac07492c419aabffa09622e7ab02b3c354edd5b031bad5c95b10"
+    },
+    "assets/industrialtech/textures/items/bags/yellow.png": {
+      "source": "assets/projecte/textures/items/alchemy_bags/yellow.png",
+      "sha256": "04b07d1bb4d3fef737aa92efacb52c39acfdff1ad5d358eb9cecc7318b2d5f78"
+    },
+    "assets/industrialtech/textures/items/bags/lime.png": {
+      "source": "assets/projecte/textures/items/alchemy_bags/lime.png",
+      "sha256": "8873cb49a8659e6b6884f7fec84929c5ffaffeee4cf652668f8df16c86c4a38a"
+    },
+    "assets/industrialtech/textures/items/bags/pink.png": {
+      "source": "assets/projecte/textures/items/alchemy_bags/pink.png",
+      "sha256": "9932554fbce57bfdde3e69275c3a63365a21d6bc57bbc09d0c0db9cb80aa8d57"
+    },
+    "assets/industrialtech/textures/items/bags/gray.png": {
+      "source": "assets/projecte/textures/items/alchemy_bags/gray.png",
+      "sha256": "c78aad2ed2efa7364c6cbb55620bfc107b8739afd991c237612172c340fba493"
+    },
+    "assets/industrialtech/textures/items/bags/light_gray.png": {
+      "source": "assets/projecte/textures/items/alchemy_bags/silver.png",
+      "sha256": "156fd8a00d9ff7b4f5cb4924d320fb03d6668b10aa78e46cbeaa74cb8da15412"
+    },
+    "assets/industrialtech/textures/items/bags/cyan.png": {
+      "source": "assets/projecte/textures/items/alchemy_bags/cyan.png",
+      "sha256": "5f01add7749ade5e8712502d3102de3853d1fe35cc7ee93a4488edb8f4028b0d"
+    },
+    "assets/industrialtech/textures/items/bags/purple.png": {
+      "source": "assets/projecte/textures/items/alchemy_bags/purple.png",
+      "sha256": "8fe0301e8d3a8c952e45856b2fa352ebaf79d97e7951c874842ea5b9893aee6c"
+    },
+    "assets/industrialtech/textures/items/bags/blue.png": {
+      "source": "assets/projecte/textures/items/alchemy_bags/blue.png",
+      "sha256": "ab45ee8c13b101fa9d37ee75f50727deb34e3faa3ce0af3f3a8ef3a318e8a731"
+    },
+    "assets/industrialtech/textures/items/bags/brown.png": {
+      "source": "assets/projecte/textures/items/alchemy_bags/brown.png",
+      "sha256": "cd35426412f4cb462149533fc39038564f393184540084dac4a954b39663bbeb"
+    },
+    "assets/industrialtech/textures/items/bags/green.png": {
+      "source": "assets/projecte/textures/items/alchemy_bags/green.png",
+      "sha256": "ae6c07a3ba1c56a12a1f1278c6c0298bf0d6df331e005f266f4071bceca08ca5"
+    },
+    "assets/industrialtech/textures/items/bags/red.png": {
+      "source": "assets/projecte/textures/items/alchemy_bags/red.png",
+      "sha256": "da62c5c6f5353f34f550fea9914a26733062d6b8d7339b7b98220a63a1c8b737"
+    },
+    "assets/industrialtech/textures/items/bags/black.png": {
+      "source": "assets/projecte/textures/items/alchemy_bags/black.png",
+      "sha256": "1a97a872a03191599ec431072ea15990001b1b4460cd439fdccda41bbd53f3d4"
+    },
+    "assets/industrialtech/textures/gui/storage_bag.png": {
+      "source": "assets/projecte/textures/gui/alchchest.png",
+      "sha256": "79af081c7719461105c1119609ab41f2cc1b553637d8b462c26e2222e891e57e"
+    }
+  }
+}

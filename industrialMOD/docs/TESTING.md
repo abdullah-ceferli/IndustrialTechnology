@@ -1,30 +1,14 @@
-# Verification — Industrial Technology 2.2.1
+# 2.7.0 verification — colored storage bags
 
-The plain green lamp patch is checked with Java 8 / Minecraft 1.7.10 / Forge 10.13.4.1614. Repeated assertions count as separate executions.
+Production JAR: `IndustrialTechnology-1.7.10-2.7.0.jar` (778,744 bytes).
+SHA256: `0af5bad1b21ede37837db37a82eaa3d23782f1876505f8eed319938228781b34`.
 
-| Archived report | Passed checks |
-|---|---:|
-| TEST-dev.industrialtechnology.automation.AutomationReferenceTest.xml | 2 |
-| TEST-dev.industrialtechnology.automation.RepeatTimingTest.xml | 7 |
-| TEST-dev.industrialtechnology.automation.ScriptCompilerTest.xml | 12 |
-| TEST-dev.industrialtechnology.automation.ScriptPacketTest.xml | 5 |
-| TEST-dev.industrialtechnology.client.CodeEditorModelTest.xml | 6 |
-| TEST-dev.industrialtechnology.quarry.AreaCursorTest.xml | 5 |
-| TEST-dev.industrialtechnology.quarry.BoundaryGeometryTest.xml | 5 |
-| TEST-dev.industrialtechnology.quarry.MiningRateTest.xml | 3 |
-| TEST-dev.industrialtechnology.wireless.DeviceSearchTest.xml | 4 |
-| TEST-dev.industrialtechnology.wireless.ReactorSettingsTest.xml | 4 |
-| TEST-dev.industrialtechnology.wireless.WirelessCatalogTest.xml | 5 |
-| TEST-dev.industrialtechnology.wireless.WirelessCommandTest.xml | 4 |
-| production-initial.txt | 139 |
-| production-restart.txt | 12 |
-| lamp-client.txt | 3 |
-| Total recorded successful executions | 216 |
+**167 passing recorded checks**: 125 existing JUnit tests, 17 native bag checks plus a genuine JVM restart both without and with actual ProjectE 1.7.10-PE1.10.1, and 6 graphical client checks. Exact identities/reports/screenshots are archived in docs/test-results/2.7.0.
 
-- A real development client with HBM X5771 + NEI places and toggles levers on all six lamp faces. The nighttime screenshot was inspected: uniformly green faces with no old casing, darker green when off, bright green when on. No OpenGL error was reported.
-- The exact reobfuscated distribution JAR passes the existing native standalone integration suite, including all six survival lever placements and real emitted/cached light values, followed by a genuine JVM restart confirming lamp/lever persistence.
-- The release audit requires the distribution to differ from the validated 2.2.0 baseline in exactly the two lamp textures and three version metadata entries. Lamp gameplay, attachments, all other machine behavior, registry identities, migration, artwork and recipes remain byte-for-byte unchanged.
-- All 62 existing unit checks pass. The HBM/native old-world upgrade compatibility evidence remains in [the 2.2.0 verification](TESTING-2.2.0.md); those suites were not repeated for this visual-only patch. The copied client save also exercises player recovery again and leaves its original source fixture hashes unchanged.
-- No installed Minecraft world or installed mod was edited. All test worlds are disposable project fixtures or copies. Client rendering uses a development build; exact packaged bytes are validated on the native server.
+Both native runs use the exact final production bytes. Real Minecraft crafting verifies all 16 colors and 16 dye recipes. Server tests cover the exact 104+36-slot layout, canonical shared-color inventory, separation by color/player, named item NBT, real vanilla click/right-click/drag/shift/number-key/throw transaction paths, nested-bag rejection, full and partial transfers, unstackable items, held-bag validation, replacement players after death, another real loaded dimension, recoloring without loss, slot 103 serialization, nonbag/invalid-color GUI guards, world data saving and genuine restart recovery. ProjectE coexistence is checked by loading the user's actual ProjectE JAR alongside the final release in a separate disposable world; no original ProjectE storage files are read or imported.
 
-See [the lamp patch notes](CHANGES-2.2.1.md). Normal Minecraft lighting remains unchanged: the lamp face glows green and its light level is 15 when powered.
+The NEI graphical client runs without ProjectE to establish independent operation and copied asset loading. Actual right-click item opening and vanilla window-click packets transfer a named stack, reject moving the active bag, open the same storage with a second Blue bag, and keep Red storage separate. All 104 storage slots synchronize and render on one screen alongside all 16 color icons and the ordinary player inventory. Screenshots were visually inspected; no OpenGL errors. Development client mapping is separate from native production loading tests.
+
+tools/audit_bag_release.py verifies the production/tested/sealed JAR identity, matching sources/guides, byte-identical existing machine/wireless/renderer classes except required registry/GUI/version routes, unchanged old assets, and exact original hashes for all 16 ProjectE bag icons plus its GUI atlas. New runtime code is the bag package and client screen, with no bundled ProjectE classes or mandatory dependency. Asset credits and the unchanged upstream legacy README are packaged. Existing 2.6.1 screen fixes remain byte-identical.
+
+Only fresh project run-test-* worlds were created. Installed mods, ProjectE inventories and all user worlds were not edited. Earlier machine/HBM/rail/console evidence remains archived in prior release folders.

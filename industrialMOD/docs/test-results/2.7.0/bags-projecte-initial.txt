@@ -1,0 +1,18 @@
+PASS: All sixteen color recipes craft nonstacking bags and dye recipes select the exact matching color
+PASS: Each color offers exactly 104 storage slots in the original 13 by 8 screen layout
+PASS: Two same-color bags share one canonical inventory while different colors remain separate
+PASS: Different players never share a color inventory
+PASS: Shift-click inserts and extracts actual stacks with custom item NBT intact
+PASS: Open bag rejects click, shift-click, throw and number-key movement of its protected hotbar slot
+PASS: Nested bags are rejected through cursor, shift-click and drag paths without deleting them
+PASS: Ordinary left/right clicks and drag distribution preserve exact item counts
+PASS: Full storage leaves inputs untouched and partially full stacks merge without loss
+PASS: Unstackable items and item metadata keep their ordinary stack limits
+PASS: Changing the held bag or hotbar selection invalidates the open container
+PASS: Death and a replacement player retain their personal bag storage
+PASS: Other dimensions resolve to the same overworld-owned bag data
+PASS: Recoloring selects another storage channel without erasing either color's contents
+PASS: NBT preserves slot 103, owner, color and exact custom item tags
+PASS: GUI routing refuses nonbags and invalid color metadata without opening remote tiles
+PASS: Save writes independent personal/color data for genuine JVM restart
+Failed: 0

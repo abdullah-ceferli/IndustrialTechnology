@@ -23,6 +23,7 @@ public final class ItemWirelessTerminal extends Item {
     @Override public boolean onItemUseFirst(ItemStack stack,EntityPlayer p,World w,int x,int y,int z,int side,float a,float b,float c){
         if(w.isRemote)return false; // Allow the normal client block-use packet to reach the server.
         net.minecraft.tileentity.TileEntity tile=w.getTileEntity(x,y,z);
+        if(tile instanceof dev.industrialtechnology.console.TileConsole){((dev.industrialtechnology.console.TileConsole)tile).link(p);return true;}
         if(tile instanceof TileRedstoneRelay)ItemWirelessStick.linkPlaced(p,(TileRedstoneRelay)tile);else open(p);return true;
     }
     @Override public boolean onItemUse(ItemStack stack,EntityPlayer p,World w,int x,int y,int z,int side,float a,float b,float c){return true;}

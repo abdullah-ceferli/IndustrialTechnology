@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.industrialtechnology.automation.RepeatTimingTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-25T14:10:15" hostname="DESKTOP-K160Q2I" time="0.0">
+  <properties/>
+  <testcase name="falseStopsRepeatsAndNextTrueStartsFresh" classname="dev.industrialtechnology.automation.RepeatTimingTest" time="0.0"/>
+  <testcase name="legacyWithoutEveryStillUsesOneRisingEdge" classname="dev.industrialtechnology.automation.RepeatTimingTest" time="0.0"/>
+  <testcase name="runsImmediatelyThenExactlyAtTheInterval" classname="dev.industrialtechnology.automation.RepeatTimingTest" time="0.0"/>
+  <testcase name="extremeWorldTimeDoesNotOverflowDeadline" classname="dev.industrialtechnology.automation.RepeatTimingTest" time="0.0"/>
+  <testcase name="unchangedRulesMatchDespiteTriggerMemoryButIntervalChangesReset" classname="dev.industrialtechnology.automation.RepeatTimingTest" time="0.0"/>
+  <testcase name="minutesAndTwentyHoursKeepTheirFullDelay" classname="dev.industrialtechnology.automation.RepeatTimingTest" time="0.0"/>
+  <testcase name="missedIntervalsProduceOneActionAndNoCatchUpBurst" classname="dev.industrialtechnology.automation.RepeatTimingTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

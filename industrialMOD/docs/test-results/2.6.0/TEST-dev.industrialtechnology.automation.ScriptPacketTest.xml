@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.industrialtechnology.automation.ScriptPacketTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-28T09:40:43" hostname="DESKTOP-K160Q2I" time="0.016">
+  <properties/>
+  <testcase name="oversizedUploadIsRejected" classname="dev.industrialtechnology.automation.ScriptPacketTest" time="0.015"/>
+  <testcase name="wrongLengthIsRejected" classname="dev.industrialtechnology.automation.ScriptPacketTest" time="0.0"/>
+  <testcase name="truncatedUploadIsRejected" classname="dev.industrialtechnology.automation.ScriptPacketTest" time="0.0"/>
+  <testcase name="multilineUploadAndDocumentRoundTrip" classname="dev.industrialtechnology.automation.ScriptPacketTest" time="0.001"/>
+  <testcase name="malformedUtf8IsRejected" classname="dev.industrialtechnology.automation.ScriptPacketTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

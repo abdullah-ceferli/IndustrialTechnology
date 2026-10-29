@@ -21,8 +21,9 @@ public final class VerifyHooks {
                 ClassNode node=new ClassNode();new ClassReader(result).accept(node,0);
                 int hooks=0;
                 for(MethodNode method:node.methods)for(AbstractInsnNode instruction:method.instructions.toArray())
-                    if(instruction instanceof MethodInsnNode && ((MethodInsnNode)instruction).owner.startsWith("personal/factory/"))hooks++;
-                int expected=type.endsWith("RenderGlobal")||type.endsWith("TileTDBase")?1:type.endsWith("PacketTile")?3:2;
+                    if(instruction instanceof MethodInsnNode && ((MethodInsnNode)instruction).owner.startsWith("personal/factory/")
+                        && !((MethodInsnNode)instruction).owner.equals("personal/factory/PhaseCapture"))hooks++;
+                int expected=type.endsWith("RenderGlobal")?1:type.endsWith("PacketTile")?3:2;
                 if(hooks!=expected)throw new AssertionError("Unexpected hook count: "+type+" = "+hooks);
                 StringWriter errors=new StringWriter();
                 org.objectweb.asm.util.CheckClassAdapter.verify(new ClassReader(result),false,new PrintWriter(errors));

@@ -96,6 +96,7 @@ public final class ChunkTickets {
         @Override public void ticketsLoaded(List<Ticket> tickets, World world) {
             for (Ticket ticket : tickets) {
                 NBTTagCompound n = ticket.getModData();
+                if(n.getBoolean("Railway")){if(ticket.getEntity() instanceof dev.industrialtechnology.railway.EntityRollingStock)((dev.industrialtechnology.railway.EntityRollingStock)ticket.getEntity()).tickets.adopt(ticket);else ForgeChunkManager.releaseTicket(ticket);continue;}
                 // Loading the owner chunk is necessary to validate a persisted ticket, once per restored ticket.
                 world.getChunkFromChunkCoords(n.getInteger("x") >> 4, n.getInteger("z") >> 4);
                 TileEntity te = world.getTileEntity(n.getInteger("x"), n.getInteger("y"), n.getInteger("z"));

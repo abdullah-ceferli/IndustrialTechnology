@@ -1,0 +1,17 @@
+PASS: All six active and inactive factory faces use exactly the installed HBM Nuclear Blast Furnace LEGACY texture atlas
+PASS: Server processing synchronizes the working furnace appearance; idle factory retains inactive artwork
+PASS: Cached world mesh renders green input plus, red output minus, gold full gauge and partial gauge
+PASS: Two actual HBM upgrades and their combined time and HE/t synchronize through ordinary GUI packets
+PASS: Factory tooltips restore GUI light positions, lighting state and caller color
+PASS: Arrow starts empty, fills left to right inside its own shape and never draws outside its base
+PASS: Compact screen has 3 material slots, 2 right-hand upgrades and no buffer section
+PASS: HBM energy and real upgrade-item tooltips render with no OpenGL errors
+PASS: Real container packets display HE above 65535 and synchronize iron, coal and HBM steel slots
+PASS: Factory and actual NEI item panel render with no OpenGL errors
+PASS: Bank GUI retains exact RF statistics and displays gold at full capacity
+PASS: Capacitor tooltips restore GUI light positions, lighting enable state and caller color
+PASS: Actual NEI item colors stay identical while hovering capacitor rate controls
+PASS: Bank colored controls preserve tooltip lighting and NEI rendering
+PASS: Looking up genuine HBM steel in real NEI includes the factory recipe, counted inputs/output and HE/time details
+PASS: NEI iron usage lookup also includes the steel factory; original HBM recipes remain alongside it
+Failed: 0

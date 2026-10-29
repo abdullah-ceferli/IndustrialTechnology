@@ -1,0 +1,2 @@
+PASS: Real JVM restart restores all shared-color storage including last-slot NBT
+Failed: 0

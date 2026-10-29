@@ -1,0 +1,9 @@
+PASS: Actual monitor/controller screen details render north-near (teal=623, amber=414) without GL errors
+PASS: Actual monitor/controller screen details render north-oblique (teal=54, amber=39) without GL errors
+PASS: Actual monitor/controller screen details render south-near (teal=622, amber=420) without GL errors
+PASS: Actual monitor/controller screen details render south-oblique (teal=49, amber=42) without GL errors
+PASS: Actual monitor/controller screen details render west-near (teal=621, amber=420) without GL errors
+PASS: Actual monitor/controller screen details render west-oblique (teal=49, amber=42) without GL errors
+PASS: Actual monitor/controller screen details render east-near (teal=623, amber=413) without GL errors
+PASS: Actual monitor/controller screen details render east-oblique (teal=54, amber=39) without GL errors
+Failed: 0

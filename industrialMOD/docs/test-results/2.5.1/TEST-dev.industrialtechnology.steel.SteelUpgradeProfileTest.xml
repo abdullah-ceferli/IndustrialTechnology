@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.industrialtechnology.steel.SteelUpgradeProfileTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-25T14:10:15" hostname="DESKTOP-K160Q2I" time="0.001">
+  <properties/>
+  <testcase name="slotOrderDoesNotChangeAnyCombination" classname="dev.industrialtechnology.steel.SteelUpgradeProfileTest" time="0.001"/>
+  <testcase name="malformedUpgradeCodesLeaveBaseParameters" classname="dev.industrialtechnology.steel.SteelUpgradeProfileTest" time="0.0"/>
+  <testcase name="effectivenessSavesCoalWithoutFreeSteel" classname="dev.industrialtechnology.steel.SteelUpgradeProfileTest" time="0.0"/>
+  <testcase name="overdriveCostsMoreEnergyForThroughput" classname="dev.industrialtechnology.steel.SteelUpgradeProfileTest" time="0.0"/>
+  <testcase name="unmodifiedRecipe" classname="dev.industrialtechnology.steel.SteelUpgradeProfileTest" time="0.0"/>
+  <testcase name="powerSavingTradeoff" classname="dev.industrialtechnology.steel.SteelUpgradeProfileTest" time="0.0"/>
+  <testcase name="mixedUpgradeCombinations" classname="dev.industrialtechnology.steel.SteelUpgradeProfileTest" time="0.0"/>
+  <testcase name="speedTiersAndDuplicateCap" classname="dev.industrialtechnology.steel.SteelUpgradeProfileTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

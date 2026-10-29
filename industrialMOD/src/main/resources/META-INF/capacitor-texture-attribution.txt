@@ -1,0 +1,6 @@
+Capacitor block artwork: Ender IO contributors / CrazyPants.
+Copied byte-for-byte from EnderIO-1.7.10-2.3.0.430_beta.jar at the user's request.
+Source project: https://github.com/EnderIO/EnderIO/tree/1.7.10
+The original JAR includes LICENSE (Apache License 2.0), retained under META-INF/licenses/EnderIO-Apache-2.0.txt.
+Original PNG content is unchanged; files are renamed to the Industrial Technology namespace.
+The independent RF storage, topology, GUI and block-mesh renderer are Industrial Technology implementations.

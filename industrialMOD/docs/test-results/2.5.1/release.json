@@ -1,0 +1,16 @@
+{
+  "version": "2.5.1",
+  "sha256": "60cc4bf2092e062fdf1210bf5ddf1cd50ba36463e9df723c5f355c07d13d704b",
+  "bytes": 703531,
+  "checks": {
+    "steel-initial.txt": 30,
+    "steel-restart.txt": 1,
+    "steel-standalone.txt": 4,
+    "steel-client.txt": 16,
+    "JUnit": 109
+  },
+  "totalChecks": 160,
+  "nativeDirectory": "run-test-steel-2.5.1-release",
+  "standaloneDirectory": "run-test-steel-2.5.1-standalone",
+  "clientDirectory": "run-test-steel-client-2.5.1-final-layout"
+}

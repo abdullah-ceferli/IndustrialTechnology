@@ -1,0 +1,35 @@
+[FactoryProbe] Added F9 timing scopes to net.minecraft.client.renderer.RenderGlobal
+[FactoryProbe] Instrumented net.minecraft.client.renderer.RenderGlobal
+PASS D:\IndustrialTechnology\industrialMOD\.gradle-user\caches\minecraft\net\minecraftforge\forge\1.7.10-10.13.4.1614-1.7.10\forgeSrc-1.7.10-10.13.4.1614-1.7.10.jar | net.minecraft.client.renderer.RenderGlobal | hooks=1
+[FactoryProbe] Instrumented net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher
+PASS D:\IndustrialTechnology\industrialMOD\.gradle-user\caches\minecraft\net\minecraftforge\forge\1.7.10-10.13.4.1614-1.7.10\forgeSrc-1.7.10-10.13.4.1614-1.7.10.jar | net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher | hooks=2
+[FactoryFix] Patched redundant redraw handling in cofh.core.network.PacketTile
+PASS D:\programs\Maincraft\Minecraft\game\mods\CoFHCore-[1.7.10]3.1.4-329.jar | cofh.core.network.PacketTile | hooks=3
+[FactoryFix] Patched redundant redraw handling in cofh.thermaldynamics.block.TileTDBase
+PASS D:\programs\Maincraft\Minecraft\game\mods\ThermalDynamics-[1.7.10]1.2.1-172.jar | cofh.thermaldynamics.block.TileTDBase | hooks=1
+[FactoryProbe] Added F9 timing scopes to net.minecraft.client.Minecraft
+PASS MCP net.minecraft.client.Minecraft begin=5 end=5
+[FactoryProbe] Added F9 timing scopes to net.minecraft.client.renderer.EntityRenderer
+PASS MCP net.minecraft.client.renderer.EntityRenderer begin=1 end=1
+[FactoryProbe] Added F9 timing scopes to net.minecraft.client.renderer.WorldRenderer
+PASS MCP net.minecraft.client.renderer.WorldRenderer begin=1 end=1
+[FactoryProbe] Added F9 timing scopes to net.minecraft.client.renderer.RenderGlobal
+[FactoryProbe] Instrumented net.minecraft.client.renderer.RenderGlobal
+PASS MCP net.minecraft.client.renderer.RenderGlobal begin=2 end=3
+[FactoryProbe] Added F9 timing scopes to net.minecraft.server.MinecraftServer
+PASS MCP net.minecraft.server.MinecraftServer begin=1 end=1
+[FactoryProbe] Added F9 timing scopes to net.minecraft.client.Minecraft
+PASS SRG net.minecraft.client.Minecraft begin=5 end=5
+[FactoryProbe] Added F9 timing scopes to net.minecraft.client.renderer.EntityRenderer
+PASS SRG net.minecraft.client.renderer.EntityRenderer begin=1 end=1
+[FactoryProbe] Added F9 timing scopes to net.minecraft.client.renderer.WorldRenderer
+PASS SRG net.minecraft.client.renderer.WorldRenderer begin=1 end=1
+[FactoryProbe] Added F9 timing scopes to net.minecraft.client.renderer.RenderGlobal
+[FactoryProbe] Instrumented net.minecraft.client.renderer.RenderGlobal
+PASS SRG net.minecraft.client.renderer.RenderGlobal begin=2 end=3
+[FactoryProbe] Added F9 timing scopes to net.minecraft.server.MinecraftServer
+PASS SRG net.minecraft.server.MinecraftServer begin=1 end=1
+Existing duct filter and loading plugin remain byte-identical
+[FactoryProbe] Added F9 timing scopes to net.minecraft.server.MinecraftServer
+Phase capture: inactive/nested/thread/reset/exception-recovery and verified transformed-execution checks passed
+Frame spike report: percentile, slow-frame, correlation and unavailable-metric checks passed

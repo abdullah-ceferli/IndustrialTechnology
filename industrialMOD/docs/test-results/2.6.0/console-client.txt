@@ -1,0 +1,9 @@
+PASS: Both native industrial cases and pixel displays render without missing textures or tile renderers
+PASS: Real history GUI shows live fluid, saved samples, net rate and target estimate
+PASS: Actual Enable GUI packet applies the 2M/1.8M rule and turns the real Yellow torch ON
+PASS: Controller holds through the middle band and turns OFF at the lower limit in the actual client/server world
+PASS: History monitor reads the whole 50M RF capacitor network in RF
+PASS: A real Yellow stick reports HBM battery HE in the new monitor without RF conversion
+PASS: Existing Yellow controls show actual battery HE alongside their unchanged redstone controls
+PASS: Console graphs, controller and terminal finish with no OpenGL errors
+Failed: 0

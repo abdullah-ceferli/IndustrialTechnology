@@ -1,0 +1,13 @@
+PASS: Actual world framebuffer shows lit cyan RF gauge pixels in the original Ender IO artwork
+PASS: Client renders six registered faces and synchronized quantized charge indicators, including a 3x3 wall
+PASS: Real open-GUI packet displays the complete shared 50M RF network and actual 45% charge
+PASS: Capacitor tooltips restore GUI light positions, lighting enable state and caller color
+PASS: Actual NEI item colors stay identical while hovering capacitor rate controls
+PASS: Real client/server packets apply rate, redstone and face controls without changing stored RF
+PASS: Stale or forged window IDs cannot change capacitor settings
+PASS: Actual NEI colors stay identical while hovering capacitor side mode
+PASS: Side diagram mode button changes the selected face through a real server command
+PASS: Server clamps a long-valued input limit to the physical multiblock maximum
+PASS: Capacitor GUI and NEI finish with no OpenGL errors
+PASS: Actual NEI crafting screen finds and displays the capacitor survival recipe
+Failed: 0

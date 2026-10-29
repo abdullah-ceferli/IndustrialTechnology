@@ -1,0 +1,13 @@
+{
+  "version": "2.4.1",
+  "sha256": "1851a14260605de1a0fa2980e1d7f12e024e8d15791220f65bcb1f91e0592721",
+  "bytes": 672558,
+  "counts": {
+    "initial": 25,
+    "restart": 1,
+    "client": 17,
+    "unit": 101
+  },
+  "checks": 144,
+  "nativeDirectory": "run-test-solar-no-ui-2.4.1"
+}

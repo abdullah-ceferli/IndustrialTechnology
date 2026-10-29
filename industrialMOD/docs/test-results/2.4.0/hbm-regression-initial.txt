@@ -1,0 +1,177 @@
+PASS: Legacy slow defaults migrate and loader RF configuration is removed
+PASS: MK1 real Fortune harvest and energy cost
+PASS: MK2 real Fortune harvest and energy cost
+PASS: MK3 real Fortune harvest and energy cost
+PASS: Silk Touch stone and ore, mutually exclusive modes
+PASS: Inventory TileEntities below the quarry remain intact with all their contents
+PASS: Metadata preserved through supported Silk harvest
+PASS: Bedrock and unbreakable blocks are skipped without RF charge
+PASS: Forge BreakEvent protection prevents removal and drops
+PASS: Zero RF and one 200-RF packet cannot mine
+PASS: RF simulation is side-effect free and six sides share one tick cap
+PASS: 200 RF/t work progress is one hundred times slower than 20000 RF/t
+PASS: Full output pauses before removing another block
+PASS: Event-modified drops wait before world removal and commit once output space is available
+PASS: ISidedInventory extraction rejects insertion and handles partial extraction
+PASS: Sparse 15-chunk selection forces exactly those chunks
+PASS: Real mining visits exactly 15 selected chunks and preserves all 10 excluded chunks
+PASS: Quarries do not harvest themselves or other technology machines
+PASS: Full-buffer throttling retains measured supply and stops after the reserve drains
+PASS: Standalone loaders independently force 25 and 15 chunks; ticket failure is visible
+PASS: Region changes release deselected chunks; disabling releases all
+PASS: NBT round trip preserves RF, inventory, mode, cursor, and sparse area
+PASS: Area completion stops mining without resetting progress
+PASS: All four survival crafting recipes resolve
+PASS: Y10 quarry protects its entire placement layer and starts at Y9 in all 25 chunks
+PASS: Legacy cursor loading clamps every selected chunk below the original placement height
+PASS: Block exclusions use registry identity and protect non-inventory TileEntities
+PASS: Void filter defaults OFF, deletes selected normal drops, and preserves Fortune diamonds
+PASS: Void filtering follows real Silk drops and allows all-filtered harvests with full storage
+PASS: Filter exact and metadata-insensitive modes both preserve NBT identity
+PASS: Ghost filter clicks preserve real items, reject hidden/shift clicks, and reject oversized icons
+PASS: Filter enabled state, metadata, tags, and all 18 icons survive NBT without becoming output
+PASS: Public description packets contain sparse selections, legal mining height, and only actual loaded chunks
+PASS: An idle full buffer retains the real fill supply and can reach the configured maximum
+PASS: Old 200-RF defaults migrate to 20000 RF/t, 4000 RF/block and five operations
+PASS: RF balance migration preserves custom settings and is not repeated
+PASS: Generic modded ores without Forge tool declarations use the pickaxe fallback
+PASS: Quarry virtual tools support high harvest levels and custom Forge tool classes
+PASS: Registered ore TileEntities preserve their resource variant while machines remain protected
+PASS: Changing a blocked ore TileEntity invalidates the cached drop plan
+PASS: Self-replacing ore callbacks preserve the original block until storage fits and apply their effect once
+PASS: Actual HBM ore_uranium mines with Fortune and supported Silk Touch
+PASS: Actual HBM ore_thorium mines with Fortune and supported Silk Touch
+PASS: Actual HBM ore_copper mines with Fortune and supported Silk Touch
+PASS: Actual HBM ore_lead mines with Fortune and supported Silk Touch
+PASS: Actual HBM ore_titanium mines with Fortune and supported Silk Touch
+PASS: Actual HBM ore_fluorite mines with Fortune and supported Silk Touch
+PASS: Actual HBM ore_niter mines with Fortune and supported Silk Touch
+PASS: Actual HBM ore_sulfur mines with Fortune and supported Silk Touch
+PASS: MK1 actual survival harvest pickup item NBT and placement retain every VOID entry and quarry setting
+PASS: MK2 actual survival harvest pickup item NBT and placement retain every VOID entry and quarry setting
+PASS: MK3 actual survival harvest pickup item NBT and placement retain every VOID entry and quarry setting
+PASS: Fortune and Silk Touch tools each drop exactly one configured quarry with separate output items
+PASS: Ordinary crafted quarries retain clean default settings on placement
+PASS: Drop queries return independent configuration copies without modifying live filter entries
+PASS: Portable settings reject runtime state and sanitize chunk masks and out-of-range VOID positions
+PASS: Missing large-filter profiles fail closed without claiming successful restoration
+PASS: Canceled native quarry breaking preserves the machine settings and every stored item
+PASS: Creative quarry destruction preserves vanilla no-block-drop behavior
+PASS: Full 50-entry NBT filters survive break placement and legacy item packets then remain stored for restart
+PASS: Automation Guide has a normal shapeless book redstone paper recipe
+PASS: Exact water 200mb program compiles against real registered fluids and linked controls
+PASS: Stable true scripts preserve their edge and never extend a live pulse
+PASS: Invalid saves keep the working source compiled rules and latches
+PASS: Fluid API failures pause without treating missing data as zero or resetting the latch
+PASS: Low fluid conditions pause on missing API data and fire only from real quantities
+PASS: Exposed same-fluid tank quantities are summed and shared by every script rule
+PASS: All inventory tank conditions and ON OFF actions evaluate real machine data
+PASS: The last simultaneous rising command wins without redstone oscillation
+PASS: Pulse command overrides manual output uses configured default and keeps saved settings
+PASS: Duplicate names are rejected while explicit authorized control IDs remain unambiguous
+PASS: Offline targets do not load chunks and an unavailable affected edge waits safely
+PASS: Switching SIMPLE CODE keeps both rule sets and only one mode executes
+PASS: Editor snapshots omit source text and foreign uploads cannot overwrite a selected program
+PASS: Missing saved registry IDs disable code instead of firing false low-resource rules
+PASS: Script persistence retains mode enabled source compiled target and trigger memory
+PASS: EVERY preserves a pending deadline on unchanged Save and endpoint NBT roundtrip
+PASS: EVERY false resets timing while unavailable fluid and offline controls preserve it
+PASS: Overdue EVERY runs once without burst and invalid repeat Save leaves timer intact
+PASS: Legacy NBT remains once-per-edge and corrupt saved repeat fields disable the program
+PASS: Actual HBM fluid code threshold reads TileEntityMachineChemicalPlant
+PASS: Actual HBM fluid code threshold reads TileEntityMachineFluidTank
+PASS: Actual HBM fluid code threshold reads TileEntityMachineBigAssTank
+PASS: All three colors place on the ground without sneaking or a terminal and consume exactly one item
+PASS: Unlinked torches remain placed and save their actual placer
+PASS: A terminal links previously placed Green Yellow and Blue torches without consuming another item
+PASS: Ground monitors safely report unsupported storage and Green Blue torches emit no redstone
+PASS: Normal right-click mounts on input output faces before an interactive machine opens
+PASS: Every colored torch mounts on all six floor wall ceiling faces and drops its correct item
+PASS: Occupied faces preserve the existing torch and do not consume an item or duplicate links
+PASS: Canceled Forge placement restores replaceable grass with no item charge or registration
+PASS: Another player cannot claim an unlinked torch placed by its owner
+PASS: Unlinking a physical Green torch drops exactly one stick and preserves machine contents
+PASS: Legacy virtual links still read real inventories and upgrade without losing identity or rules
+PASS: Edit permissions block placement and device limits leave a usable unlinked torch
+PASS: Wireless terminal binds a persistent owner network; independent terminals remain separate
+PASS: All four wireless survival recipes produce the registered terminal and colored sticks
+PASS: Tiered VOID filters retain legacy entries, have exactly 18/36/50 slots, and preserve the final slot
+PASS: VOID page validation prevents hidden edits and ghost icons never consume carried items
+PASS: Green, Yellow and Blue sticks register real targets on their selected face
+PASS: Green monitoring reads real chest contents without transferring items
+PASS: Forge monitoring reports both real tanks, quantities and capacities
+PASS: Unknown machine APIs show UNSUPPORTED instead of fabricated inventory values
+PASS: Offline and cross-dimension links never load chunks or initialize dimensions
+PASS: Replacing a target TileEntity invalidates its old monitoring identity
+PASS: Terminal ownership rejects stolen terminal copies and foreign endpoint selection
+PASS: Terminal rules use a validated ghost slot and linked Yellow targets only
+PASS: Yellow relays emit real weak power 15 and face-directed strong power, and light a lamp
+PASS: Every Yellow pulse setting uses its own server deadline from 100 through 200 ticks
+PASS: Automation conditions read item amounts, empty/full capacity, and missing items
+PASS: One Blue summary evaluates multiple independent rules and multiple Yellow targets
+PASS: Wireless NBT round trip preserves identities, owners, names, pulse settings and all eight rules
+PASS: Actual HBM monitoring adapter: TileEntityMachineArcFurnaceLarge
+PASS: Actual HBM monitoring adapter: TileEntityMachineChemicalPlant
+PASS: Actual HBM monitoring adapter: TileEntityMachineFluidTank
+PASS: Actual HBM monitoring adapter: TileEntityMachineBigAssTank
+PASS: Actual HBM multiblock proxy resolves loaded TileEntityMachineArcFurnaceLarge
+PASS: Actual HBM multiblock proxy resolves loaded TileEntityMachineChemicalPlant
+PASS: Reactor transfers preserve source extraction restrictions
+PASS: Reactor transfers preserve target insertion restrictions
+PASS: Reactor transfer rejects occupied targets and same inventories
+PASS: Reactor one-item transfer conserves a stacked source and copies its complete NBT
+PASS: Rejected target insertion restores the exact original source without duplication
+PASS: Real assembled ZIRNOX input/output proxy resolves the actual controller and 24-position native layout
+PASS: ZIRNOX monitor lists every actual fuel and empty position with metadata and correct depletion
+PASS: ZIRNOX temperature uses the native 20-to-800 Celsius conversion rather than raw heat units
+PASS: RBMK monitor reads real yield depletion separately from core and skin temperatures
+PASS: Read-only RBMK monitoring never initializes live fuel NBT and removal clears stale data
+PASS: Native RBMK top fuel access cap can be linked and resolves the same fuel column
+PASS: ZIRNOX Blue ghost assignment preserves the cursor item, rejects nonfuel and saves desired metadata
+PASS: Actual local feeder moves one real partially used fuel rod into its exact assigned native slot without NBT loss
+PASS: Occupied and wrong-fuel ZIRNOX targets are never overwritten and do not duplicate supply
+PASS: Missing fuel waits and resumed adjacent supply fills the configured position
+PASS: Reactor feeder honors cancellable source access permissions without consuming fuel
+PASS: Auto fuel supply skips an empty earlier neighbor and chooses extractable fuel for an empty assigned slot
+PASS: RBMK console reports mixed actual insertion and excludes an unrelated nearby reactor
+PASS: RBMK 0 10 50 90 100 percent insertion commands use reversed native extraction targets and leave actual motion intact
+PASS: RBMK protection reports partial success instead of claiming blocked rods changed
+PASS: Malformed percent and stale controller binding cannot change rod targets
+PASS: RBMK offline anchor does not generate or load target chunks
+PASS: Foreign terminal cannot select another owner's reactor endpoint
+PASS: Reactor monitor in another player dimension reports OTHER DIMENSION
+PASS: Saved reactor configuration retains bindings metadata enables and insertion request without storing live percentages
+PASS: Space registrations, dimensions, fluids and recipes are absent; green lamp remains
+PASS: Green lamp still crafts four blocks with its original glass, green dye, glowstone and redstone recipe
+PASS: Saved player from removed dimension 180 returns before login with inventory and XP intact
+PASS: Saved player from removed dimension 181 returns before login with inventory and XP intact
+PASS: Overworld player data is unaffected by retired dimension recovery
+PASS: Survival lever attaches to green lamp face DOWN and switches real light without falling off
+PASS: Survival lever attaches to green lamp face UP and switches real light without falling off
+PASS: Survival lever attaches to green lamp face NORTH and switches real light without falling off
+PASS: Survival lever attaches to green lamp face SOUTH and switches real light without falling off
+PASS: Survival lever attaches to green lamp face WEST and switches real light without falling off
+PASS: Survival lever attaches to green lamp face EAST and switches real light without falling off
+PASS: Several quarries obey the shared removal budget fairly
+PASS: Real stone code insertion produces exactly 100 ticks and stable truth never retriggers
+PASS: EVERY 6s emits a second actual five-second pulse after 120 ticks of stable 200mb water
+PASS: Real native HBM server ticks gradually move both connected manual control rods to requested insertion
+PASS: Real water rising through 200mb produces exactly 140 ticks of redstone then OFF
+PASS: Real Blue chest insertion produces a seven-second pulse lasting exactly 140 server ticks
+PASS: Keeping stone in the real chest does not continuously retrigger the relay
+PASS: Removing stone and adding it again produces a new false-to-true activation
+PASS: Sustained MK3 at 200 RF/t reaches 1 blocks/s
+PASS: Sustained MK3 at 2000 RF/t reaches 10 blocks/s
+PASS: Sustained MK3 at 5000 RF/t reaches 25 blocks/s
+PASS: Sustained MK3 at 10000 RF/t reaches 50 blocks/s
+PASS: Sustained MK3 at 15000 RF/t reaches 75 blocks/s
+PASS: Sustained MK3 at 20000 RF/t reaches 100 blocks/s
+PASS: Sustained MK1 at 20000 RF/t reaches 100 blocks/s
+PASS: Sustained MK2 at 20000 RF/t reaches 100 blocks/s
+PASS: STOP immediately releases tickets and preserves cursor/inventory while RF is connected
+PASS: EVERY keeps repeating with the GUI closed and saves a pending future deadline
+PASS: CODE automation runs without GUI players or duplicate SIMPLE actions
+PASS: Asynchronous automation completed during real server ticks without a GUI or online player
+PASS: START resumes existing mining cursors for multiple powered quarries
+PASS: Prepare real server-restart persistence fixtures
+Failed: 0

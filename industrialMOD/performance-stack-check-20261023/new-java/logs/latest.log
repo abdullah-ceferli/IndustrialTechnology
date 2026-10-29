@@ -1,0 +1,30 @@
+[23:08:17] [main/INFO]: Setting user: FPSCopyTest
+[23:08:18] [Client thread/INFO]: LWJGL Version: 2.9.1
+[23:08:31] [Client thread/INFO]: Reloading ResourceManager: Default, FMLFileResourcePack:Forge Mod Loader, FMLFileResourcePack:Minecraft Forge, FMLFileResourcePack:Not Enough Items, FMLFileResourcePack:Applied Energistics 2, FMLFileResourcePack:Baublelicious, FMLFileResourcePack:Baubles, FMLFileResourcePack:Better Builder's Wands, FMLFileResourcePack:Carpenter's Blocks, FMLFileResourcePack:Chisel, FMLFileResourcePack:CoFH Core, FMLFileResourcePack:Disposable copy FPS comparison, FMLFileResourcePack:EnderCore, FMLFileResourcePack:Ender IO, FMLFileResourcePack:Hbm's Nuclear Tech, FMLFileResourcePack:Industrial Technology, FMLFileResourcePack:Personal Factory Fix, FMLFileResourcePack:ProjectE, FMLFileResourcePack:Thermal Dynamics, FMLFileResourcePack:Thermal Expansion, FMLFileResourcePack:Thermal Foundation, FMLFileResourcePack:Waila
+[23:08:54] [Client thread/WARN]: File hbm:sounds/weapon/grenadeBounce2.ogg does not exist, cannot add it to event hbm:weapon.grenadeBounce
+[23:08:55] [Sound Library Loader/INFO]: Sound engine started
+[23:08:55] [Client thread/INFO]: Created: 16x16 textures/blocks-atlas
+[23:08:55] [Client thread/INFO]: Created: 16x16 textures/items-atlas
+[23:09:00] [Client thread/INFO]: Reloading ResourceManager: Default, FMLFileResourcePack:Forge Mod Loader, FMLFileResourcePack:Minecraft Forge, FMLFileResourcePack:Not Enough Items, FMLFileResourcePack:Applied Energistics 2, FMLFileResourcePack:Baublelicious, FMLFileResourcePack:Baubles, FMLFileResourcePack:Better Builder's Wands, FMLFileResourcePack:Carpenter's Blocks, FMLFileResourcePack:Chisel, FMLFileResourcePack:CoFH Core, FMLFileResourcePack:Disposable copy FPS comparison, FMLFileResourcePack:EnderCore, FMLFileResourcePack:Ender IO, FMLFileResourcePack:Hbm's Nuclear Tech, FMLFileResourcePack:Industrial Technology, FMLFileResourcePack:Personal Factory Fix, FMLFileResourcePack:ProjectE, FMLFileResourcePack:Thermal Dynamics, FMLFileResourcePack:Thermal Expansion, FMLFileResourcePack:Thermal Foundation, FMLFileResourcePack:Waila, FMLFileResourcePack:Carpenter's Blocks Cached Resources
+[23:09:06] [Client thread/ERROR]: Using missing texture, unable to load chisel:textures/blocks/endstone/EnderFrame.png, java.io.FileNotFoundException
+[23:09:06] [Client thread/INFO]: textures/blocks: dropping miplevel from 4 to 3, because of minTexel: 8
+[23:09:07] [Client thread/INFO]: Created: 2048x2048 textures/blocks-atlas
+[23:09:08] [Client thread/INFO]: Created: 2048x1024 textures/items-atlas
+[23:09:09] [Client thread/WARN]: File hbm:sounds/weapon/grenadeBounce2.ogg does not exist, cannot add it to event hbm:weapon.grenadeBounce
+[23:09:09] [Sound Library Loader/INFO]: Sound engine started
+[23:09:10] [Server thread/INFO]: Starting integrated minecraft server version 1.7.10
+[23:09:10] [Server thread/INFO]: Generating keypair
+[23:09:11] [Server thread/INFO]: Preparing start region for level 0
+[23:09:13] [Server thread/INFO]: Changing view distance to 16, from 10
+[23:09:14] [Server thread/INFO]: FPSCopyTest[local:E:0b3fc2cc] logged in with entity id 208 at (-246.71559306502013, 9.49496989832102, -470.39064639988317)
+[23:09:14] [Server thread/INFO]: FPSCopyTest joined the game
+[23:09:16] [Client thread/INFO]: [CHAT] Loaded world with Hbm's Nuclear Tech Mod 1.0.27 BETA (5771) for Minecraft 1.7.10!
+[23:09:16] [Client thread/INFO]: [CHAT] New version 1.0.27 BETA (5846) is available! Click [here] to download!
+[23:09:18] [Server thread/WARN]: Can't keep up! Did the system time change, or is the server overloaded? Running 4753ms behind, skipping 95 tick(s)
+[23:10:05] [Client thread/INFO]: Stopping!
+[23:10:05] [Server thread/INFO]: Stopping server
+[23:10:05] [Server thread/INFO]: Saving players
+[23:10:05] [Server thread/INFO]: Saving worlds
+[23:10:05] [Server thread/INFO]: Saving chunks for level 'FPS comparison COPY'/Overworld
+[23:10:05] [Server thread/INFO]: Saving chunks for level 'FPS comparison COPY'/Nether
+[23:10:05] [Server thread/INFO]: Saving chunks for level 'FPS comparison COPY'/The End

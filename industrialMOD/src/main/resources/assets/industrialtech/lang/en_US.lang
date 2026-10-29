@@ -17,3 +17,56 @@ tile.industrialtech.automation_stick.name=Blue Automation Stick
 item.industrialtech.automation_guide.name=Automation Guide
 
 tile.industrialtech.green_redstone_lamp.name=Green Redstone Lamp
+
+tile.industrialtech.advanced_capacitor_bank.name=Advanced Capacitor Bank
+
+tile.industrialtech.solar_0.name=Photovoltaic Cell
+tile.industrialtech.solar_1.name=Advanced Photovoltaic Cell
+tile.industrialtech.solar_2.name=Vibrant Photovoltaic Cell
+tile.industrialtech.solar_3.name=Enhanced Photovoltaic Cell
+tile.industrialtech.solar_4.name=Ultimate Photovoltaic Cell
+item.industrialtech.stock_0.name=Coal Steam Locomotive
+item.industrialtech.stock_1.name=Industrial RF Electric Locomotive
+item.industrialtech.stock_2.name=ACS-64 Passenger Electric
+item.industrialtech.stock_3.name=AZ8A Two-section Freight Electric
+item.industrialtech.stock_4.name=Freight Container Wagon
+item.industrialtech.stock_5.name=Passenger Coach
+item.industrialtech.track_0.name=Straight Track (16 m)
+item.industrialtech.track_1.name=Left Curve (R16 m)
+item.industrialtech.track_2.name=Right Curve (R16 m)
+item.industrialtech.track_3.name=Rising Track (16 x 1 m)
+item.industrialtech.track_4.name=Railway Switch
+item.industrialtech.track_5.name=Station / Stop Track
+tile.industrialtech.rail_station_0.name=RF Train Charging Station
+tile.industrialtech.rail_station_1.name=Rail Cargo Loader
+tile.industrialtech.rail_station_2.name=Rail Cargo Unloader
+item.industrialtech.rail_coupler.name=Railway Coupling Tool
+item.industrialtech.rail_bogie.name=Heavy Wheel Bogie
+item.industrialtech.rail_chassis.name=Reinforced Railway Chassis
+item.industrialtech.traction_motor.name=Electric Traction Motor
+item.industrialtech.steam_boiler.name=Locomotive Steam Boiler
+
+tile.industrialtech.bulk_steel_factory.name=Bulk Steel Factory
+item.industrialtech.steel_factory_core.name=Steel Factory Core
+container.industrialtech.bulk_steel_factory=Bulk Steel Factory
+
+tile.industrialtech.tank_history_monitor.name=Tank History Monitor
+tile.industrialtech.refinery_controller.name=Refinery Controller
+
+item.industrialtech.storage_bag_white.name=White Storage Bag
+item.industrialtech.storage_bag_orange.name=Orange Storage Bag
+item.industrialtech.storage_bag_magenta.name=Magenta Storage Bag
+item.industrialtech.storage_bag_light_blue.name=Light Blue Storage Bag
+item.industrialtech.storage_bag_yellow.name=Yellow Storage Bag
+item.industrialtech.storage_bag_lime.name=Lime Storage Bag
+item.industrialtech.storage_bag_pink.name=Pink Storage Bag
+item.industrialtech.storage_bag_gray.name=Gray Storage Bag
+item.industrialtech.storage_bag_light_gray.name=Light Gray Storage Bag
+item.industrialtech.storage_bag_cyan.name=Cyan Storage Bag
+item.industrialtech.storage_bag_purple.name=Purple Storage Bag
+item.industrialtech.storage_bag_blue.name=Blue Storage Bag
+item.industrialtech.storage_bag_brown.name=Brown Storage Bag
+item.industrialtech.storage_bag_green.name=Green Storage Bag
+item.industrialtech.storage_bag_red.name=Red Storage Bag
+item.industrialtech.storage_bag_black.name=Black Storage Bag
+container.industrialtech.storage_bag=Storage Bag

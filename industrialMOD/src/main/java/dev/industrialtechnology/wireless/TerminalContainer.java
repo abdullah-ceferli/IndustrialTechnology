@@ -131,6 +131,7 @@ public final class TerminalContainer extends Container {
             row.setBoolean("Signal",e.kind==WirelessEndpoint.Kind.CONTROL&&e.dimension==player.dimension&&WirelessAccess.signal(e,player.worldObj.getTotalWorldTime()));rows.appendTag(row);}n.setTag("Devices",rows);
         WirelessEndpoint e=endpoint();if(e==null){((Slot)inventorySlots.get(36)).yDisplayPosition=-10000;return n;}
         n.setString("Selected",e.id.toString());n.setString("Name",e.name);n.setString("Machine",e.machine);n.setString("Location","Dim "+e.dimension+"  "+e.x+", "+e.y+", "+e.z+"  "+net.minecraftforge.common.util.ForgeDirection.getOrientation(e.side));
+        n.setTag("Energy",dev.industrialtechnology.console.SensorReading.energy(e,player.dimension).write());
         n.setString("Status",WirelessAccess.status(e,player.dimension).toString());n.setInteger("Kind",e.kind.ordinal());n.setInteger("Dimension",e.dimension);n.setInteger("X",e.x);n.setInteger("Y",e.y);n.setInteger("Z",e.z);n.setInteger("Side",e.side);n.setInteger("DetailPage",detailPage);
         if(e.kind==WirelessEndpoint.Kind.CONTROL){n.setBoolean("Signal",e.dimension==player.dimension&&WirelessAccess.status(e,player.dimension)==WirelessAccess.Status.ONLINE&&WirelessAccess.signal(e,player.worldObj.getTotalWorldTime()));n.setBoolean("TimedOutput",e.powered&&e.pulseEnd>player.worldObj.getTotalWorldTime());n.setBoolean("PulseMode",e.pulseMode);n.setInteger("Seconds",e.pulseSeconds);n.setLong("Remaining",Math.max(0,e.pulseEnd-player.worldObj.getTotalWorldTime()));}
         else {

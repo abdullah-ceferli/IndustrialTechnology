@@ -1,0 +1,9 @@
+PASS: Distribution SHA256 matches all four exact native initial/restart runtime copies
+PASS: All pre-existing machine, quarry, wireless, reactor, lighting and RF API bytecode is unchanged outside five intentional core/client integration source files; the original snapshot runnable has identical instructions/signatures
+PASS: Existing artwork retained; seven capacitor PNGs exactly match the installed Ender IO source assets, with license/notice/credit
+PASS: Java 8 class files, valid archive, stable version; no space code, test fixtures, third-party mod classes or nested JARs
+PASS: 472 successful recorded executions including 78 unit tests, real cables, genuine chunk transitions/restarts, client pixels and actual NEI recipe
+PASS: Source archive and current handoff/guide match current source files
+SHA256: 866c94658ba98fc02da62a0d69758d6ab64c59bbb04a79bccc9d90063a3671b6
+Size: 405697 bytes
+Failed: 0

@@ -1,0 +1,22 @@
+PASS: Bank input is green and output red; empty banks still stack 64
+PASS: Full world meter level 16 is reserved for exact full capacity
+PASS: Retired solar GUI remains absent
+PASS: Factory is a real HBM HE receiver with overflow-safe remainder contract
+PASS: All six faces accept matching inputs, reject output insertion and expose steel only
+PASS: Registered coal dust from Thermal Foundation is accepted without accepting coal items
+PASS: Working and idle furnace artwork follows processing without replacing the tile or contents
+PASS: Exact 100-tick batch consumes 16 iron/4 coal and 50000 HE for 16 genuine HBM steel
+PASS: No ingredients or no HE consumes no energy or items
+PASS: Output backpressure and power shortage pause already-paid progress without loss
+PASS: NBT round-trip preserves exact partial work, HE and all ordinary item stacks
+PASS: Survival factory recipe requires 4 tungsten blocks, 2 HBM motors, circuits and expensive core
+PASS: Shift-click routes ingredients into correct slots and outputs into player inventory
+PASS: Container split-word HE synchronization preserves values above 32767 and updates progress
+PASS: AE2's real inventory adaptor inserts and extracts through every factory face
+PASS: Breaking factory drops each buffered material once
+PASS: HBM battery and cables create an actual HE route
+PASS: Thermal itemducts and servos create real ingredient and output routes
+PASS: HBM battery sends HE through three real red cables into working factory
+PASS: Real Thermal servo inserts iron and coal dust, extracts only HBM steel into chest
+PASS: World save persists paid partial work, materials and HE for actual JVM restart
+Failed: 0

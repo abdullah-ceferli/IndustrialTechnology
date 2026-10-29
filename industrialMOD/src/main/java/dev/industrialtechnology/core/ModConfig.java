@@ -17,6 +17,8 @@ public final class ModConfig {
         Configuration c = new Configuration(file);
         c.load();
         dev.industrialtechnology.wireless.WirelessConfig.load(c);
+        dev.industrialtechnology.capacitor.BankConfig.load(c);
+        dev.industrialtechnology.expansion.ExpansionConfig.load(c);
         migrateLegacyBalance(c);
         migrateHighPowerBalance(c);
         maxChunks = c.getInt("maximumSelectableChunks", "general", 25, 1, 25, "Hard upper bound: 25. Center is always selected.");

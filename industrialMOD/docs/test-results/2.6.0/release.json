@@ -1,0 +1,22 @@
+{
+  "version": "2.6.0",
+  "sha256": "009cde7843eca31b7b1b1658e1114c78591dac5560b494752a15969b7610aef9",
+  "bytes": 749369,
+  "nativeDirectories": [
+    "run-test-consoles-final2-2.6.0-hbm",
+    "run-test-consoles-final2-2.6.0-standalone",
+    "run-test-consoles-final2-2.6.0-steel"
+  ],
+  "clientDirectory": "run-test-console-client-2.6.0-b",
+  "checks": {
+    "console-hbm-initial.txt": 16,
+    "console-hbm-restart.txt": 1,
+    "console-standalone-initial.txt": 15,
+    "console-standalone-restart.txt": 1,
+    "steel-initial.txt": 30,
+    "steel-restart.txt": 1,
+    "console-client.txt": 8,
+    "JUnit": 121
+  },
+  "totalChecks": 193
+}

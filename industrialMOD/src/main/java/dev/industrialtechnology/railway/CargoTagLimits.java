@@ -1,0 +1,7 @@
+package dev.industrialtechnology.railway;
+import net.minecraft.nbt.*;
+/** Bounded structure checks before a logical template can reach a GUI packet or save. */
+public final class CargoTagLimits {
+ public static boolean valid(NBTBase tag){return tag==null||visit(tag,0,new int[]{512,8192});}
+ private static boolean visit(NBTBase tag,int depth,int[] left){if(tag==null||depth>12||--left[0]<0||(left[1]-=4)<0)return false;if(tag instanceof NBTTagCompound){NBTTagCompound c=(NBTTagCompound)tag;java.util.Set keys=c.func_150296_c();if(keys.size()>left[0])return false;for(Object key:keys){String k=(String)key;if(k.length()>8192)return false;left[1]-=k.getBytes(java.nio.charset.StandardCharsets.UTF_8).length+2;if(left[1]<0||!visit(c.getTag(k),depth+1,left))return false;}}else if(tag instanceof NBTTagList){NBTTagList l=(NBTTagList)tag;if(l.tagCount()>left[0])return false;java.util.List values=cpw.mods.fml.common.ObfuscationReflectionHelper.getPrivateValue(NBTTagList.class,l,"tagList","field_74747_a");for(Object child:values)if(!(child instanceof NBTBase)||!visit((NBTBase)child,depth+1,left))return false;}else if(tag instanceof NBTTagByteArray)left[1]-=((NBTTagByteArray)tag).func_150292_c().length;else if(tag instanceof NBTTagIntArray){int n=((NBTTagIntArray)tag).func_150302_c().length;if(n>4096)return false;left[1]-=n*4;}else if(tag instanceof NBTTagString){String s=((NBTTagString)tag).func_150285_a_();if(s.length()>8192)return false;left[1]-=s.getBytes(java.nio.charset.StandardCharsets.UTF_8).length+2;}else left[1]-=8;return left[1]>=0;}
+}

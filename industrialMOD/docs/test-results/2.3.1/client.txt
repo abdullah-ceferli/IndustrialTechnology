@@ -1,0 +1,16 @@
+PASS: Default bank casing has no forced meter on any face or in the world framebuffer
+PASS: Client renders six original casing faces and clean connected borders
+PASS: Corrected normal casing renders beside actual unconfigured Ender IO Vibrant banks
+PASS: Sneak plus empty-hand right-click enables one face's correctly cropped meter and synchronizes actual charge
+PASS: A second sneak-right-click restores the normal casing without changing stored RF
+PASS: Real open-GUI packet displays the complete shared 50M RF network and actual 45% charge
+PASS: Capacitor tooltips restore GUI light positions, lighting enable state and caller color
+PASS: Actual NEI item colors stay identical while hovering capacitor rate controls
+PASS: Real client/server packets apply rate, redstone and face controls without changing stored RF
+PASS: Stale or forged window IDs cannot change capacitor settings
+PASS: Actual NEI colors stay identical while hovering capacitor side mode
+PASS: Side diagram mode button changes the selected face through a real server command
+PASS: Server clamps a long-valued input limit to the physical multiblock maximum
+PASS: Capacitor GUI and NEI finish with no OpenGL errors
+PASS: Actual NEI crafting screen finds and displays the capacitor survival recipe
+Failed: 0

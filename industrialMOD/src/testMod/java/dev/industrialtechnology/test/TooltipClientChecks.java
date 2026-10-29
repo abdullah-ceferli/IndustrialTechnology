@@ -36,6 +36,31 @@ public final class TooltipClientChecks {
         GuiMachine machine=new GuiMachine(new MachineContainer(mc.thePlayer.inventory,quarry));mc.displayGuiScreen(machine);checkTooltipState(machine);pass.accept("Quarry tooltips preserve GUI lights during the foreground pass");compareIcons(mc,machine,0,"quarry-control");pass.accept("Actual NEI icon colors stay identical while hovering the quarry Start button");
         mc.displayGuiScreen(null);
     }
+    public static void steel(Minecraft mc,dev.industrialtechnology.client.GuiSteelFactory gui,Consumer<String> pass)throws Exception{
+        checkTooltipState(gui);pass.accept("Factory tooltips restore GUI light positions, lighting state and caller color");
+        int left=field(GuiContainer.class,"guiLeft").getInt(gui),top=field(GuiContainer.class,"guiTop").getInt(gui);
+        check(gui.steel.inventorySlots.size()==41,"Expected only 5 machine slots and 36 player slots");
+        check(dev.industrialtechnology.steel.SteelContainer.POS[4][1]-dev.industrialtechnology.steel.SteelContainer.POS[3][1]==20,"Upgrade slots need a small gap");
+        check(dev.industrialtechnology.steel.SteelContainer.POS[3][0]==174&&dev.industrialtechnology.steel.SteelContainer.POS[3][1]>70,"Upgrades must be below the HE bar");
+        check(dev.industrialtechnology.steel.SteelContainer.POS[3][0]>dev.industrialtechnology.steel.SteelContainer.POS[2][0],"Upgrades not on right");
+        int saved=gui.steel.shownProgress,ticks=gui.steel.shownTicks;
+        gui.steel.shownProgress=0;BufferedImage empty=shot(mc,gui,0,0,"steel-arrow-empty.png");
+        gui.steel.shownProgress=ticks/2;BufferedImage half=shot(mc,gui,0,0,"steel-arrow-half.png");
+        gui.steel.shownProgress=ticks;BufferedImage full=shot(mc,gui,0,0,"steel-arrow-full.png");gui.steel.shownProgress=saved;
+        int halfChanges=0,fullChanges=0;
+        for(int dy=-2;dy<19;dy++)for(int dx=-2;dx<26;dx++){int px=(left+66+dx)*3+1,py=(top+35+dy)*3+1;int a=empty.getRGB(px,py),b=half.getRGB(px,py),c=full.getRGB(px,py);if(a!=b)halfChanges++;if(a!=c){fullChanges++;check((a&0xffffff)==0x8b8b8b,"Fill painted outside the gray arrow shape: "+Integer.toHexString(a));check((c&0xffffff)==0xffffff,"Arrow fill was tinted: "+Integer.toHexString(c));}if(dx<0||dx>=24||dy<0||dy>=17)check(a==b&&a==c,"Arrow overlay escaped its base");if(dx>=12)check(a==b,"Half arrow filled beyond midpoint");}
+        check(halfChanges>0&&fullChanges>halfChanges,"Arrow does not visibly fill from empty to full");pass.accept("Arrow starts empty, fills left to right inside its own shape and never draws outside its base");
+        pass.accept("Compact screen has 3 material slots, 2 right-hand upgrades and no buffer section");
+        shot(mc,gui,left+176,top+32,"steel-energy-tooltip.png");
+        shot(mc,gui,left+177,top+79,"steel-upgrade-tooltip.png");
+        check(GL11.glGetError()==GL11.GL_NO_ERROR,"Factory hover GL error");pass.accept("HBM energy and real upgrade-item tooltips render with no OpenGL errors");
+    }
+    public static void bank(Minecraft mc,GuiCapacitorBank gui,Consumer<String> pass)throws Exception{
+        icons.add(new ItemStack(ModRegistry.capacitorBank));checkTooltipState(gui);pass.accept("Capacitor tooltips restore GUI light positions, lighting enable state and caller color");
+        compareIcons(mc,gui,0,"capacitor-energy");pass.accept("Actual NEI item colors stay identical while hovering capacitor rate controls");
+    }
+    public static void railway(Minecraft mc,GuiExpansion gui,Consumer<String> pass)throws Exception{checkTooltipState(gui);compareIcons(mc,gui,0,"railway-controls");pass.accept("Actual NEI icon colors remain identical while hovering train controls; GUI lighting is preserved");}
+    public static void bankSides(Minecraft mc,GuiCapacitorBank gui,Consumer<String> pass)throws Exception{compareIcons(mc,gui,3,"capacitor-sides");pass.accept("Actual NEI colors stay identical while hovering capacitor side mode");}
     public static void prepare(Minecraft mc)throws Exception{
         Class<?> config=Class.forName("codechicken.nei.NEIClientConfig");
         config.getMethod("setEnabled",boolean.class).invoke(null,true);config.getMethod("setInternalEnabled",boolean.class).invoke(null,true);

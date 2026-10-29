@@ -1,0 +1,7 @@
+PASS: Original ProjectE atlas aligns all 104 bag slots and 36 player slots; all 16 original colored icons load
+PASS: Real vanilla shift-click packets transfer a named stack into the server bag and synchronize its NBT
+PASS: Actual number-key and throw packets cannot move the currently open bag
+PASS: A second Blue bag opens the same live inventory, including the visible final slot
+PASS: Red bag keeps a separate inventory and accepts normal synchronized item transfers
+PASS: All 104 real storage slots render together without pages or overlaps, alongside 16 color variants and NEI; no GL errors
+Failed: 0

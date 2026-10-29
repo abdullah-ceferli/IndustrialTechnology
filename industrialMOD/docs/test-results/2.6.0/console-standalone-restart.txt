@@ -1,0 +1,2 @@
+PASS: Genuine JVM restart restores network ownership, exact history and controller limits
+Failed: 0

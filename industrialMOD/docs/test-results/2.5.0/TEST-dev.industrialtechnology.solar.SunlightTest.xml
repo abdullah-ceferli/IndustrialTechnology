@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.industrialtechnology.solar.SunlightTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-25T12:28:51" hostname="DESKTOP-K160Q2I" time="0.001">
+  <properties/>
+  <testcase name="nightIsZero" classname="dev.industrialtechnology.solar.SunlightTest" time="0.001"/>
+  <testcase name="noSkyDimensionIsZero" classname="dev.industrialtechnology.solar.SunlightTest" time="0.0"/>
+  <testcase name="roofIsZero" classname="dev.industrialtechnology.solar.SunlightTest" time="0.0"/>
+  <testcase name="dayRepeatsIncludingNegativeTime" classname="dev.industrialtechnology.solar.SunlightTest" time="0.0"/>
+  <testcase name="morningAndEveningLowerThanNoon" classname="dev.industrialtechnology.solar.SunlightTest" time="0.0"/>
+  <testcase name="weatherReducesOutput" classname="dev.industrialtechnology.solar.SunlightTest" time="0.0"/>
+  <testcase name="noonPeaks" classname="dev.industrialtechnology.solar.SunlightTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

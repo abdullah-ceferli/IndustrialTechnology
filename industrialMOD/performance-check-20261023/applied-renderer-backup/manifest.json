@@ -1,0 +1,30 @@
+{
+  "game": "D:\\programs\\Maincraft\\Minecraft\\game",
+  "old": [
+    {
+      "path": "D:\\programs\\Maincraft\\Minecraft\\game\\mods\\CodeChickenCore-1.4.22.jar",
+      "backup": "D:\\IndustrialTechnology\\industrialMOD\\performance-check-20261023\\applied-renderer-backup\\old-mods\\CodeChickenCore-1.4.22.jar",
+      "sha256": "0ff66294703701f156fb493265bf5b3572c4566127ce895095332d2cfe9205c1"
+    },
+    {
+      "path": "D:\\programs\\Maincraft\\Minecraft\\game\\mods\\CodeChickenLib-1.3.0.jar",
+      "backup": "D:\\IndustrialTechnology\\industrialMOD\\performance-check-20261023\\applied-renderer-backup\\old-mods\\CodeChickenLib-1.3.0.jar",
+      "sha256": "44f57f35713a11c922a527b457af77dbd0c79b50dad86f8354b471ba105c1264"
+    }
+  ],
+  "new": [
+    {
+      "path": "D:\\programs\\Maincraft\\Minecraft\\game\\mods\\CodeChickenCore-1.7.10-1.0.7.48-universal.jar",
+      "sha256": "98b33b39c05e83fe76d7bfedda76db686acccd53c0e996c11da75838b15a1399"
+    },
+    {
+      "path": "D:\\programs\\Maincraft\\Minecraft\\game\\mods\\1.7.10\\CodeChickenLib-1.7.10-1.1.3.141-universal.jar",
+      "sha256": "49131e1960b8a968bdaf7806e595a73a9e96f7db1c128aaeb7b25a6a13c2788c"
+    },
+    {
+      "path": "D:\\programs\\Maincraft\\Minecraft\\game\\mods\\OptiFine_1.7.10_HD_U_E7_MOD.jar",
+      "sha256": "b93bc44418f3bb6e6bb5e9cecaa895061a8df0c48665bb3e7217afdce8aaf063"
+    }
+  ],
+  "settingsChanged": false
+}

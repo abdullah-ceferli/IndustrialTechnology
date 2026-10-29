@@ -1,0 +1,26 @@
+PASS: All five solar tiers ignore right-click and have no server GUI
+PASS: All five solar tiers and all railway recipes register
+PASS: Logical cargo uses three slots, 100 items / 300 coal and safe extraction
+PASS: Oversized and deeply nested item templates are rejected without consuming cargo
+PASS: Three bounded high-entropy cargo templates round-trip the real legacy GUI packet
+PASS: Cargo metadata and NBT identity stay separate; corrupt counts clamp
+PASS: Rail distance cursor crosses joins and quarter curves continuously
+PASS: Night and opaque roofs stop generation; weather reduces it
+PASS: Solar RF queries and extraction simulations do not generate energy outside world ticks
+PASS: Horizontal arrays preserve cached topology, split RF ownership and same-tick budgets
+PASS: Rail stock NBT preserves owner, custom inventories and energy, restores parked
+PASS: Persistent physical couplings link a stopped engine to three freight wagons
+PASS: Server ownership rejects foreign drivers, cargo access and coupling
+PASS: RF charging does not bypass same-tick limits through repeated calls
+PASS: Four Ultimate photovoltaic cells generate 20480 RF/t and feed the actual bank
+PASS: Rail cargo loader and unloader transfer ordinary stacks without overflow
+PASS: Station charges an actual electric locomotive with shared RF budget
+PASS: Active entity tickets cover the whole consist and each loaded rail anchor
+PASS: Actual electric engine accelerates along track and consumes real RF
+PASS: Steam burns stored coal and builds real boiler heat
+PASS: Real optional mod cable routes charge electric trains from solar
+PASS: A connected wagon follows the engine by its own rail cursor
+PASS: Brakes stop the train without deleting cargo
+PASS: Warmed steam locomotive moves using pressure and consumes water
+PASS: Real solar array -> capacitor -> Quarry sustains 100 blocks/second at 20 TPS
+Failed: 0

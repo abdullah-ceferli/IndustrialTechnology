@@ -65,13 +65,13 @@ public final class ServerIntegrationMod {
     private static final int RESTORE_QX = 1800, RESTORE_LX = 1820, RESTORE_Z = 1800;
 
     @Mod.EventHandler public void init(FMLInitializationEvent event) {
-        OreCompatibilityFixtures.register();WirelessTestFixtures.register();
+        OreCompatibilityFixtures.register();WirelessTestFixtures.register();BankReceiverFixture.register();
         FMLCommonHandler.instance().bus().register(this); MinecraftForge.EVENT_BUS.register(this);
         proxy.init();
     }
     @Mod.EventHandler public void serverStarted(FMLServerStartedEvent event) { started = true; }
     @SubscribeEvent public void tick(TickEvent.ServerTickEvent event) {
-        if (Boolean.getBoolean("industrialtech.removalUpgrade") || !started || finished || !MinecraftServer.getServer().isDedicatedServer()) return;
+        if (Boolean.getBoolean("industrialtech.bagTest") || Boolean.getBoolean("industrialtech.consoleTest") || Boolean.getBoolean("industrialtech.steelTest") || Boolean.getBoolean("industrialtech.railTest") || Boolean.getBoolean("industrialtech.bankTest") || Boolean.getBoolean("industrialtech.removalUpgrade") || !started || finished || !MinecraftServer.getServer().isDedicatedServer()) return;
         if (speedStage > 0) {
             if (event.phase == TickEvent.Phase.START) {
                 for (int i=0;i<speedQuarries.length;i++) received[i]+=speedQuarries[i].receiveEnergy(ForgeDirection.NORTH,speedInputs[i],false);

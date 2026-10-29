@@ -1,0 +1,19 @@
+{
+  "version": "2.7.0",
+  "sha256": "0af5bad1b21ede37837db37a82eaa3d23782f1876505f8eed319938228781b34",
+  "bytes": 778744,
+  "nativeDirectories": [
+    "run-test-bags-final-2.7.0-standalone",
+    "run-test-bags-final-2.7.0-projecte"
+  ],
+  "clientDirectory": "run-test-bags-client-2.7.0-a",
+  "checks": {
+    "bags-standalone-initial.txt": 17,
+    "bags-standalone-restart.txt": 1,
+    "bags-projecte-initial.txt": 17,
+    "bags-projecte-restart.txt": 1,
+    "bags-client.txt": 6,
+    "JUnit": 125
+  },
+  "totalChecks": 167
+}

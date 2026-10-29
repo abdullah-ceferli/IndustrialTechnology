@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.industrialtechnology.automation.ScriptCompilerTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-10-25T11:11:16" hostname="DESKTOP-K160Q2I" time="0.005">
+  <properties/>
+  <testcase name="unitsAndAmountsAreStrict" classname="dev.industrialtechnology.automation.ScriptCompilerTest" time="0.001"/>
+  <testcase name="allConditionsAndActionsCompile" classname="dev.industrialtechnology.automation.ScriptCompilerTest" time="0.001"/>
+  <testcase name="repeatErrorsIdentifyTheActualLine" classname="dev.industrialtechnology.automation.ScriptCompilerTest" time="0.001"/>
+  <testcase name="multipleRulesKeepTheirLines" classname="dev.industrialtechnology.automation.ScriptCompilerTest" time="0.0"/>
+  <testcase name="repeatDoesNotChangeActionAndRuleLimits" classname="dev.industrialtechnology.automation.ScriptCompilerTest" time="0.0"/>
+  <testcase name="repeatSecondsMinutesHoursAndCaseCompile" classname="dev.industrialtechnology.automation.ScriptCompilerTest" time="0.001"/>
+  <testcase name="unknownCommandsAndMissingEndAreRejected" classname="dev.industrialtechnology.automation.ScriptCompilerTest" time="0.0"/>
+  <testcase name="extraSpacesCaseAndCommentsWork" classname="dev.industrialtechnology.automation.ScriptCompilerTest" time="0.001"/>
+  <testcase name="invalidNamesDoNotBecomeZero" classname="dev.industrialtechnology.automation.ScriptCompilerTest" time="0.0"/>
+  <testcase name="invalidControlsAndDurationsHaveActionLine" classname="dev.industrialtechnology.automation.ScriptCompilerTest" time="0.0"/>
+  <testcase name="exactWaterExampleCompiles" classname="dev.industrialtechnology.automation.ScriptCompilerTest" time="0.0"/>
+  <testcase name="eightRulesAndCharacterBoundsAreEnforced" classname="dev.industrialtechnology.automation.ScriptCompilerTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

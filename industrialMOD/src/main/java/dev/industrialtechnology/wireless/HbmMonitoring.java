@@ -9,8 +9,8 @@ import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.init.Blocks;
 import net.minecraftforge.common.util.ForgeDirection;
 /** Optional, reflection-isolated adapter verified against HBM 1.0.27_X5808 public APIs. */
-final class HbmMonitoring {
-    static Object resolve(TileEntity tile)throws ReflectiveOperationException{
+public final class HbmMonitoring {
+    public static Object resolve(TileEntity tile)throws ReflectiveOperationException{
         if(!tile.getClass().getName().startsWith("com.hbm."))return tile;
         Class<?> proxy;
         try{proxy=Class.forName("com.hbm.tileentity.TileEntityProxyBase");}catch(ClassNotFoundException absent){return tile;}

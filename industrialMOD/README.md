@@ -1,6 +1,24 @@
-# Industrial Technology — Minecraft 1.7.10
+# Industrial Technology Р Р†Р вЂљРІР‚Сњ Minecraft 1.7.10
 
-Version **2.2.1** removes the space expansion while retaining all quarry, chunk-loader,
+Version **2.7.0** adds [16 colored Storage Bags](BAG_GUIDE.md), each with 104 slots, original ProjectE bag/screen textures, and personal storage shared by color. ProjectE is optional.
+
+Version **2.6.1** fixes flickering/striped monitor and controller screens when facing sideways. See [the fix](docs/CHANGES-2.6.1.md).
+
+Version **2.6.0** adds the [Tank History Monitor and Refinery Controller](CONSOLE_GUIDE.md), saved fluid/energy graphs, Blue-to-Yellow threshold rules, and HBM HE/capacitor RF readings on Yellow sticks. Both new blocks use native pixel displays with no AI-generated textures.
+
+Version **2.5.1** adds two HBM upgrade slots to the steel factory, the HBM blast-furnace screen with an HE bar, and an NEI processing recipe for HBM steel. See [the guide](STEEL_FACTORY_GUIDE.md).
+
+Version **2.5.0** adds the [Bulk Steel Factory](STEEL_FACTORY_GUIDE.md): real HBM HE, 16 steel every 5 seconds, AE2/itemduct automation, and HBM Nuclear Blast Furnace (LEGACY) textures. Capacitor input is green, output red, and full charge gold.
+
+Version **2.4.2** lets empty Advanced Capacitor Banks stack to 64; charged banks remain separate to preserve RF.
+
+Version **2.4.1** removes the solar-panel interface. Panels generate and connect automatically; train, station and other machine screens remain available.
+
+Version **2.3.1** corrects the bank's default appearance: normal casing, with an optional per-face gauge enabled by sneak + empty-hand right-click. See [appearance fix](docs/CHANGES-2.3.1.md).
+
+Version **2.3.0** adds the **Advanced Capacitor Bank**: 25M RF and shared 25k RF/t input/output per connected block, automatic six-face multiblocks, saved RF, side controls and redstone modes. At the user's later request it uses the original installed Ender IO Vibrant bank texture files. See [the capacitor guide](docs/CAPACITOR_BANK.md) and [2.3.0 changes](docs/CHANGES-2.3.0.md).
+
+Version **2.2.1** removed the space expansion while retaining all quarry, chunk-loader,
 wireless, automation and HBM reactor features. The **Green Redstone Lamp remains**;
 its faces are plain green and glow bright green when powered. Attach a lever directly
 to any of its six faces to switch the light. See [lamp appearance](docs/CHANGES-2.2.1.md).
@@ -12,13 +30,12 @@ precise chunk loader. Both share an extensible machine and ticket framework.
 ## Install
 
 Use **Minecraft 1.7.10, Forge 10.13.4.1614, and Java 8**. Put
-`IndustrialTechnology-1.7.10-2.2.1.jar` from `build/libs` into `mods` on both
+`IndustrialTechnology-1.7.10-2.7.0.jar` from `build/libs` into `mods` on both
 the client and dedicated server. Replace the older Industrial Technology JAR; keep only one version in `mods`. The sources JAR is for developers.
 No Thermal Expansion, HBM, BuildCraft, or CoFHCore installation is required.
 The small official CoFH RF API is bundled with its version annotation.
 
-Quarries need an RF power source in survival. This mod does not yet add a
-generator: connect an existing RF network, or a compatible HE-to-RF converter.
+Quarries need an RF power source in survival. Use the new photovoltaic panels, an existing RF network, or a compatible HE-to-RF converter.
 The standalone Chunk Loader always works without RF, HE, fuel, batteries, or any energy storage.
 
 ## Wireless monitoring and automation
@@ -42,8 +59,8 @@ for 100 blocks/s at 20 TPS**, with its existing ore/protection behavior.
 
 ## HBM reactor monitoring and automation
 
-Version **1.6.0** adds real RBMK fuel depletion and core/skin temperatures in °C,
-all 24 native ZIRNOX fuel positions with depletion and reactor temperature in °C,
+Version **1.6.0** adds real RBMK fuel depletion and core/skin temperatures in Р вЂ™Р’В°C,
+all 24 native ZIRNOX fuel positions with depletion and reactor temperature in Р вЂ™Р’В°C,
 local slot-specific ZIRNOX fuel loading, and manual RBMK rod group controls.
 Every Wireless Terminal tab has local device search, clear, and filtered pages.
 Version **1.6.2** removes the device-count label and shows the complete 24-position
@@ -120,7 +137,7 @@ separately. The moved quarry starts stopped with a fresh scan at its new locatio
 RF, output items, progress and the previous owner/identity are not copied into it.
 See [the patch notes](docs/CHANGES-1.6.1.md) for large-NBT filter handling.
 
-Click cells in the 5 × 5 map to draft a selection. The center remains selected.
+Click cells in the 5 Р вЂњРІР‚вЂќ 5 map to draft a selection. The center remains selected.
 **1**, **3x3**, **All**, and **R** select the center, central nine chunks, all
 permitted chunks, and reset back to center. **Apply** saves the draft on the
 server. Hover cells for exact chunk and block coordinates; hover the count for
@@ -380,7 +397,7 @@ This workspace also has a downloaded portable, checksum-verified Temurin Java 8
 JDK under `.toolchain/jdk8`; the script uses it when present. The build cache is
 project-local at `.gradle-user`. On other platforms use `./gradlew` with Java 8.
 
-The reobfuscated installable JAR is `build/libs/IndustrialTechnology-1.7.10-2.2.1.jar`.
+The reobfuscated installable JAR is `build/libs/IndustrialTechnology-1.7.10-2.3.1.jar`.
 The `-sources.jar` contains the complete mod/API source and assets. **Run `build`
 after `runClient`/`runServer` before distributing**: a development run can replace
 the release archive with its unreobfuscated development input.
@@ -403,7 +420,7 @@ For actual client GUI tests, run:
 .\tools\build.ps1 -Tasks @('runClient', '-PtestClient', '-PtestRunDir=run-test-client-new')
 ```
 
-Use a new test folder. The test client opens a 960 × 720 window, creates a
+Use a new test folder. The test client opens a 960 Р вЂњРІР‚вЂќ 720 window, creates a
 disposable integrated world, exercises the actual controls/packets/slots, saves
 screenshots, and exits. The separate test harness JAR is never part of the
 release mod. See `docs/TESTING.md` for actual results and remaining integrations.

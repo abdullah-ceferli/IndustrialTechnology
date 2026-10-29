@@ -12,13 +12,12 @@ import java.io.*;
 import java.lang.reflect.*;
 import java.util.*;
 
-@Mod(modid="factoryprobe", name="Personal Factory Fix", version="0.2.1", acceptableRemoteVersions="*")
+@Mod(modid="factoryprobe", name="Personal Factory Fix", version="0.2.4", acceptableRemoteVersions="*")
 public final class FactoryProbe {
     private static volatile boolean active;
     private static long deadline, started, requests, sampled, frames, previousFrame;
-    private static boolean automaticDone;
-    private static long firstRegion;
     private static long startPackets,startIdentical,startSuppressed,startRedraws;
+    private static long startEnderPackets,startEnderIdentical,startEnderSuppressed,startEnderRedraws;
     private static final Map<String,Long> sites = new HashMap<String,Long>();
     private static final Map<String,Long> sources = new HashMap<String,Long>();
     private static final Map<String,long[]> renderers = new HashMap<String,long[]>();
@@ -33,24 +32,21 @@ public final class FactoryProbe {
         if (FMLCommonHandler.instance().getSide().isClient()) FMLCommonHandler.instance().bus().register(this);
     }
     @SubscribeEvent public void tick(TickEvent.RenderTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
-        if (!automaticDone && firstRegion != 0 && System.nanoTime()-firstRegion >= 15000000000L) {
-            automaticDone=true;
-            if(!active)start();
-        }
+        if (event.phase != TickEvent.Phase.END) { PhaseCapture.beginFrame(); return; }
         if (!active) return;
         long now = System.nanoTime();
         if (previousFrame != 0) {
+            FrameSpikeCapture.frame(now - previousFrame);
             long ms = (now - previousFrame) / 1000000;
             frameBuckets[ms < 17 ? 0 : ms < 34 ? 1 : ms < 50 ? 2 : ms < 100 ? 3 : 4]++;
         }
+        PhaseCapture.frame(previousFrame == 0 ? 0 : now - previousFrame);
         previousFrame = now; frames++;
         if (now >= deadline) finish();
     }
     @SubscribeEvent public void key(InputEvent.KeyInputEvent event) {
         if(Keyboard.getEventKey()==Keyboard.KEY_F10 && Keyboard.getEventKeyState() && !Keyboard.isRepeatEvent())DuctPacketFix.toggle();
         if(Keyboard.getEventKey()==Keyboard.KEY_F9 && Keyboard.getEventKeyState() && !Keyboard.isRepeatEvent()) {
-            automaticDone=true;
             if(active)finish();else start();
         }
     }
@@ -58,8 +54,12 @@ public final class FactoryProbe {
         sites.clear(); sources.clear(); renderers.clear(); Arrays.fill(frameBuckets,0);
         hookErrors.setLength(0); timers.get().clear(); requests=sampled=frames=previousFrame=0;
         started=System.nanoTime(); deadline=started+30000000000L; active=true;
+        FrameSpikeCapture.start();
+        PhaseCapture.start();
         startPackets=DuctPacketFix.packets;startIdentical=DuctPacketFix.identical;
         startSuppressed=DuctPacketFix.suppressed;startRedraws=DuctPacketFix.redraws;
+        startEnderPackets=DuctPacketFix.enderPackets;startEnderIdentical=DuctPacketFix.enderIdentical;
+        startEnderSuppressed=DuctPacketFix.enderSuppressed;startEnderRedraws=DuctPacketFix.enderRedraws;
         System.out.println("[FactoryProbe] Recording 30 seconds. Face the affected factory. F9 stops early.");
     }
     public static void beginRender() { if(active)timers.get().push(System.nanoTime()); }
@@ -75,7 +75,6 @@ public final class FactoryProbe {
         } catch (RuntimeException error) { error(error); }
     }
     public static void region(Object global, int x1,int y1,int z1,int x2,int y2,int z2) {
-        if(firstRegion==0)firstRegion=System.nanoTime();
         if (!active) return;
         requests++;
         // Sample only one in 16 invalidations. Counts below are sampled request sites, not rebuild counts.
@@ -84,10 +83,15 @@ public final class FactoryProbe {
         try {
             int x=x1+(x2-x1)/2, y=y1+(y2-y1)/2, z=z1+(z2-z1)/2;
             Object world=null;
-            for (Field field:global.getClass().getDeclaredFields()) {
-                String type=field.getType().getName();
-                if (type.equals("net.minecraft.client.multiplayer.WorldClient") || field.getName().equals("field_72769_h") || field.getName().equals("theWorld")) {
-                    field.setAccessible(true); world=field.get(global); break;
+            for (Class<?> type=global.getClass(); type!=null && world==null; type=type.getSuperclass()) {
+                for (Field field:type.getDeclaredFields()) {
+                    String fieldType=field.getType().getName();
+                    if (fieldType.equals("net.minecraft.client.multiplayer.WorldClient") || field.getName().equals("world")
+                        || field.getName().equals("field_72769_h") || field.getName().equals("theWorld")) {
+                        field.setAccessible(true);
+                        Object value=field.get(global);
+                        if(value instanceof net.minecraft.world.World){world=value;break;}
+                    }
                 }
             }
             String block="unknown", tile="none";
@@ -120,15 +124,19 @@ public final class FactoryProbe {
     }
     private static synchronized void finish() {
         active=false;
+        PhaseCapture.stop();
         File base=(File)FMLInjectionData.data()[6];
         File output=new File(base,"logs/factoryprobe-"+System.currentTimeMillis()+".txt");
         try(PrintWriter out=new PrintWriter(new OutputStreamWriter(new FileOutputStream(output),"UTF-8"))) {
             double seconds=(System.nanoTime()-started)/1e9;
-            out.println("Personal Factory Fix 0.2.1; itemduct redundant redraw filter="+DuctPacketFix.enabled);
+            out.println("Personal Factory Fix 0.2.4; itemduct redundant redraw filter="+DuctPacketFix.enabled);
             out.printf(Locale.ROOT,"Seconds %.2f; frames %d; average %.1f FPS%n",seconds,frames,frames/seconds);
             out.println("Frame intervals <17/<34/<50/<100/>=100 ms: "+Arrays.toString(frameBuckets));
+            FrameSpikeCapture.finish(out);
+            PhaseCapture.finish(out, frames);
             out.println("Render invalidation calls: "+requests+"; sampled: "+sampled);
             out.println("Itemduct packets="+(DuctPacketFix.packets-startPackets)+"; identical="+(DuctPacketFix.identical-startIdentical)+"; skipped redraw calls="+(DuctPacketFix.suppressed-startSuppressed)+"; accepted redraws="+(DuctPacketFix.redraws-startRedraws));
+            out.println("Ender itemduct subset: packets="+(DuctPacketFix.enderPackets-startEnderPackets)+"; identical="+(DuctPacketFix.enderIdentical-startEnderIdentical)+"; skipped redraw calls="+(DuctPacketFix.enderSuppressed-startEnderSuppressed)+"; accepted redraws="+(DuctPacketFix.enderRedraws-startEnderRedraws));
             out.println("Sampled region centers (may be neighboring blocks, not the initiating machine):");
             dumpCounts(out,sites);
             out.println("Sampled invalidation call stacks:");dumpCounts(out,sources);

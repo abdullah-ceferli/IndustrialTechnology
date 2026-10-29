@@ -1,0 +1,22 @@
+PASS: Single bank has default 25M RF capacity and shared 25k RF/t limits
+PASS: Every six-face adjacency merges; diagonal adjacency stays independent
+PASS: Two, five, vertical, 3x3 wall, 3x3x3 cube and irregular L layouts aggregate exact limits
+PASS: Shared input at one end is extractable at the other without internal RF cycling
+PASS: 250M RF survives ten-bank split, single charged drop claim, replace and merge
+PASS: 200-bank capacity exceeds int safely and idle ticks retain one cached network
+PASS: Four face modes gate real RF calls and internal connectivity remains independent
+PASS: Whole-network transfer limits clamp on split and return to physical maximum in Auto
+PASS: Redstone at any member pauses output without erasing RF or blocking input
+PASS: Partial RF receiver refunds its source and budget; reentrant callbacks cannot take extra RF
+PASS: Actual chunk unload removes inaccessible RF; reload restores owners and network without tickets
+PASS: Real survival harvest emits one charged item and placement consumes it retaining local sides/settings
+PASS: Expensive standalone survival recipe uses real ingredients and outputs one empty bank
+PASS: Optional installed RF pipes create actual cable routes
+PASS: Generator -> five-bank shared network -> real Quarry sustains 100 blocks/second at 20000 RF/t
+PASS: Actual Quarry chain conserves received RF including buffers and mining consumption
+PASS: 130 active ticks never rebuild cached topology for energy changes
+PASS: Thermal Dynamics resonant fluxducts move real RF from output bank through three cable blocks into input bank (sink 1000000 RF)
+PASS: Ender IO ender energy conduits move real RF from output bank through three cable blocks into input bank (sink 1000000 RF)
+PASS: Optional real RF cable routes
+PASS: Persistent bank saves only its own RF and shared settings in ordinary world NBT
+Failed: 0

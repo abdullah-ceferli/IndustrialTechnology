@@ -11,7 +11,7 @@ $sources = Get-ChildItem (Join-Path $PSScriptRoot 'src') -Recurse -Filter '*.jav
 if ($LASTEXITCODE -ne 0) { throw 'Compilation failed' }
 $manifestPath = Join-Path $jarDir 'MANIFEST.MF'
 [IO.File]::WriteAllText($manifestPath,"Manifest-Version: 1.0`r`nFMLCorePlugin: personal.factory.LoadingPlugin`r`nFMLCorePluginContainsFMLMod: true`r`n`r`n",[Text.UTF8Encoding]::new($false))
-$jarPath = Join-Path $jarDir 'PersonalFactoryFix-0.2.1.jar'
+$jarPath = Join-Path $jarDir 'PersonalFactoryFix-0.2.4.jar'
 & (Join-Path $jdkRoot 'bin\jar.exe') cfm $jarPath $manifestPath -C $classesDir .
 if ($LASTEXITCODE -ne 0) { throw 'Packaging failed' }
 Get-FileHash -LiteralPath $jarPath

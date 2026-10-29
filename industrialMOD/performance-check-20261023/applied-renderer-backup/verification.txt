@@ -1,0 +1,3 @@
+PASS: Installed JAR names and SHA256 match the tested old-stack pack (test helper excluded).
+PASS: All 795 original world file hashes remain unchanged.
+PASS: No graphics options or Java launch settings changed.

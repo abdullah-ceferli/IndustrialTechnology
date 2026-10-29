@@ -1,0 +1,9 @@
+PASS: Only capacitor renderer, activation, local display NBT and version metadata changed from sealed 2.3.0
+PASS: Every RF ledger/network, GUI, recipe and other machine class is byte-identical to the validated prior release
+PASS: All texture PNGs, license files and prior assets remain byte-identical
+PASS: Exact distribution passes native bank tests and genuine JVM restart; runtime and sealed hashes match
+PASS: 114 current successful checks including 78 unit tests and real Ender IO/NEI client comparison
+PASS: Java 8 archive, matching source JAR and current handoff/guide
+SHA256: 6a0c1b1b39ce4575e1c9453ab4aaa8050967d453660f84ab8c5e6dd4f3332817
+Size: 406303 bytes
+Failed: 0

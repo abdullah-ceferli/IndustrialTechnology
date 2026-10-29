@@ -239,6 +239,7 @@ public final class GuiWirelessTerminal extends GuiTooltips {
             text("Redstone: "+(state.getBoolean("Signal")?"15":"0"),123,78,0xc9d0cd);
             if(state.getBoolean("Signal")&&state.getBoolean("TimedOutput"))text(String.format(java.util.Locale.ROOT,"%.1fs",state.getLong("Remaining")/20.0),249,78,0xd8c17d);
             slider(250,116,53,13,state.getBoolean("Signal"),"ONLINE".equals(status));
+            net.minecraft.nbt.NBTTagCompound energy=state.getCompoundTag("Energy");if(energy.getBoolean("Available"))text(shorten(dev.industrialtechnology.client.GuiConsole.compact(energy.getLong("Amount"))+" / "+dev.industrialtechnology.client.GuiConsole.compact(energy.getLong("Capacity"))+" "+energy.getString("Unit"),180),123,132,0x8bc9c3);
         }else if(code()){
             String error=state.getString("ScriptError");String label=!editor.notice.isEmpty()?editor.notice:!error.isEmpty()?error:editor.dirty?"Unsaved changes":state.getBoolean("ScriptEnabled")?state.getString("AutomationStatus"):"Script disabled";
             text(shorten(label,178),123,222,error.isEmpty()&&editor.notice.isEmpty()?0x9fb4b4:0xdd9a89);

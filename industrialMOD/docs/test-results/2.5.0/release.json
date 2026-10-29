@@ -1,0 +1,22 @@
+{
+  "version": "2.5.0",
+  "sha256": "feada01d7d32489a2608617dd73f30deabd386c9aa8e6b9d630641beb69d761c",
+  "bytes": 692961,
+  "checks": {
+    "steel-initial.txt": 21,
+    "steel-restart.txt": 1,
+    "steel-standalone.txt": 4,
+    "bank-initial.txt": 24,
+    "bank-restart.txt": 1,
+    "steel-client.txt": 9,
+    "JUnit": 101
+  },
+  "totalChecks": 161,
+  "nativeDirectory": "run-test-steel-2.5.0-final",
+  "standaloneDirectory": "run-test-steel-2.5.0-standalone",
+  "bankDirectory": "run-test-bank-2.5.0-final",
+  "clientDirectory": "run-test-steel-client-2.5.0-b",
+  "hbmVersion": "X5771",
+  "ae2Version": "rv3-beta-6",
+  "thermalDynamicsVersion": "1.2.1-172"
+}

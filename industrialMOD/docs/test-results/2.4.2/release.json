@@ -1,0 +1,12 @@
+{
+  "version": "2.4.2",
+  "sha256": "bc3b34c176801c32285ba54fc52de47ded1a8cedaa95417aa8bd8e7dafe58fab",
+  "bytes": 673644,
+  "checks": 128,
+  "counts": {
+    "initial": 26,
+    "restart": 1,
+    "unit": 101
+  },
+  "nativeDirectory": "run-test-capacitor-stack-2.4.2"
+}

@@ -1,0 +1,9 @@
+# 2.5.1 — HBM furnace screen, two upgrades, NEI recipe
+
+- Steel factory screen now uses the original HBM legacy blast-furnace layout, with HBM's electrical energy texture instead of a lava tank. Coal above iron, a large steel output, an HE meter on the right and two upgrade slots directly below it with small gaps, player inventory, live HE/t/time, and energy/recipe/upgrade tooltips fit one compact screen. Removed buffer rows and the horizontal connector line. Flames overlay their exact base region; the arrow fills within its base from empty to full.
+- Exactly two physical HBM upgrade items, one per slot. Speed, Power Saving, Effectiveness and Overdrive tiers I–III work; combined levels of each type cap at III. Input/output automation cannot insert or extract upgrades. Only the three visible material slots accept automated transfers. Unrelated HBM upgrades are rejected.
+- Recipe parameters lock when a batch starts, preserving exact material and HE costs across upgrade swaps, pauses and restarts. Old eight-slot 2.5.0 NBT retains every item, HE and partial progress; retired buffer items drain into visible slots automatically, and old partial recipes complete at the base cost. No new material or energy type is introduced.
+- Added optional NEI recipe/usage handler: looking up real HBM steel includes the factory's 16 iron + 4 coal dust -> 16 steel / 100 ticks / 500 HE/t recipe. Iron and coal-dust usage lookups show it too. Existing HBM recipes remain. NEI/HBM classes and assets are not bundled.
+- HE intake raised to 20,000 HE/t to cover the highest supported upgrade load. Base recipe, existing registry IDs, factory appearance, RF bank colors/stacking, solar, railways, quarry and wireless code remain unchanged.
+
+Crafting, upgrade effects and automation: [Steel Factory Guide](../STEEL_FACTORY_GUIDE.md). Validation: [Testing](TESTING.md).

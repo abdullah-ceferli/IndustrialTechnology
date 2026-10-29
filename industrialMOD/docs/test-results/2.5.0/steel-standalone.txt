@@ -1,0 +1,5 @@
+PASS: Bank input is green and output red; empty banks still stack 64
+PASS: Full world meter level 16 is reserved for exact full capacity
+PASS: Retired solar GUI remains absent
+PASS: Without HBM the mod and inert factory load with no HBM classes
+Failed: 0

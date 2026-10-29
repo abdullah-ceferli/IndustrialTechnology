@@ -4,6 +4,46 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 VERSION=re.search(r"(?m)^version = '([^']+)'",(ROOT/'build.gradle').read_text()).group(1)
+if VERSION=='2.7.0':
+    import audit_bag_release
+    audit_bag_release.main()
+    raise SystemExit(0)
+if VERSION=='2.6.1':
+    import audit_console_screen_release
+    audit_console_screen_release.main()
+    raise SystemExit(0)
+if VERSION=='2.6.0':
+    import audit_console_release
+    audit_console_release.main()
+    raise SystemExit(0)
+if VERSION=='2.5.1':
+    import audit_steel_upgrade_release
+    audit_steel_upgrade_release.main()
+    raise SystemExit(0)
+if VERSION=='2.5.0':
+    import audit_steel_release
+    audit_steel_release.main()
+    raise SystemExit(0)
+if VERSION=='2.4.2':
+    import audit_capacitor_stack_release
+    audit_capacitor_stack_release.main()
+    raise SystemExit(0)
+if VERSION=='2.4.1':
+    import audit_no_solar_ui_release
+    audit_no_solar_ui_release.main()
+    raise SystemExit(0)
+if VERSION=='2.4.0':
+    import audit_solar_rail_release
+    audit_solar_rail_release.main()
+    raise SystemExit(0)
+if VERSION=='2.3.1':
+    import audit_capacitor_style_release
+    audit_capacitor_style_release.main()
+    raise SystemExit(0)
+if VERSION=='2.3.0':
+    import audit_capacitor_release
+    audit_capacitor_release.main()
+    raise SystemExit(0)
 if VERSION=='2.2.1':
     import audit_lamp_release
     audit_lamp_release.main()

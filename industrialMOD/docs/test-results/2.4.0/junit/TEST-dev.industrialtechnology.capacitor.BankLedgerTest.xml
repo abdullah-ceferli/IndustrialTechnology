@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.industrialtechnology.capacitor.BankLedgerTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-10-24T19:34:50" hostname="DESKTOP-K160Q2I" time="0.027">
+  <properties/>
+  <testcase name="mergeRetainsOwnershipAndAlreadySpentBudget" classname="dev.industrialtechnology.capacitor.BankLedgerTest" time="0.001"/>
+  <testcase name="splitCannotResetQuotaOrCopyEnergy" classname="dev.industrialtechnology.capacitor.BankLedgerTest" time="0.0"/>
+  <testcase name="rejectedOutputReservesRefundSpace" classname="dev.industrialtechnology.capacitor.BankLedgerTest" time="0.001"/>
+  <testcase name="singleBankDefault" classname="dev.industrialtechnology.capacitor.BankLedgerTest" time="0.0"/>
+  <testcase name="billionsDoNotOverflow" classname="dev.industrialtechnology.capacitor.BankLedgerTest" time="0.001"/>
+  <testcase name="aggregateRatesAboveIntAcceptSafeIntCalls" classname="dev.industrialtechnology.capacitor.BankLedgerTest" time="0.0"/>
+  <testcase name="oneSharedBudgetAcrossCalls" classname="dev.industrialtechnology.capacitor.BankLedgerTest" time="0.0"/>
+  <testcase name="mergeRetainsPreviousTickStatsAfterThisTickHasStarted" classname="dev.industrialtechnology.capacitor.BankLedgerTest" time="0.0"/>
+  <testcase name="cannotSettleTwice" classname="dev.industrialtechnology.capacitor.BankLedgerTest" time="0.0"/>
+  <testcase name="capacityBoundAndNegativeRequests" classname="dev.industrialtechnology.capacitor.BankLedgerTest" time="0.001"/>
+  <testcase name="partialReceiverRefundsOriginalCellsAndQuota" classname="dev.industrialtechnology.capacitor.BankLedgerTest" time="0.0"/>
+  <testcase name="inputSimulationDoesNotSpend" classname="dev.industrialtechnology.capacitor.BankLedgerTest" time="0.0"/>
+  <testcase name="idleAndSkippedEpochsReportZero" classname="dev.industrialtechnology.capacitor.BankLedgerTest" time="0.0"/>
+  <testcase name="randomizedConservationWithTopologyChanges" classname="dev.industrialtechnology.capacitor.BankLedgerTest" time="0.021"/>
+  <testcase name="outputSimulationDoesNotSpend" classname="dev.industrialtechnology.capacitor.BankLedgerTest" time="0.0"/>
+  <testcase name="configuredLimitsClamp" classname="dev.industrialtechnology.capacitor.BankLedgerTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

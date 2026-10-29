@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.industrialtechnology.console.ConsoleMathTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-10-28T09:40:43" hostname="DESKTOP-K160Q2I" time="0.002">
+  <properties/>
+  <testcase name="unloadGapDoesNotProduceFalseRate" classname="dev.industrialtechnology.console.ConsoleMathTest" time="0.0"/>
+  <testcase name="flatStorageIsZeroNet" classname="dev.industrialtechnology.console.ConsoleMathTest" time="0.001"/>
+  <testcase name="duplicateOrBackwardsTicksAreRejected" classname="dev.industrialtechnology.console.ConsoleMathTest" time="0.0"/>
+  <testcase name="snapshotsAreCopies" classname="dev.industrialtechnology.console.ConsoleMathTest" time="0.0"/>
+  <testcase name="invalidDataFailsClosed" classname="dev.industrialtechnology.console.ConsoleMathTest" time="0.0"/>
+  <testcase name="offlineGapNeverBecomesAnEmptyTank" classname="dev.industrialtechnology.console.ConsoleMathTest" time="0.0"/>
+  <testcase name="releaseHasStableMiddleBand" classname="dev.industrialtechnology.console.ConsoleMathTest" time="0.0"/>
+  <testcase name="refillReversesLimits" classname="dev.industrialtechnology.console.ConsoleMathTest" time="0.0"/>
+  <testcase name="largeAmountsRemainLong" classname="dev.industrialtechnology.console.ConsoleMathTest" time="0.0"/>
+  <testcase name="restorePreservesGapsAndLongValues" classname="dev.industrialtechnology.console.ConsoleMathTest" time="0.001"/>
+  <testcase name="ringKeepsNewest720" classname="dev.industrialtechnology.console.ConsoleMathTest" time="0.0"/>
+  <testcase name="rateUsesActualSampleTicks" classname="dev.industrialtechnology.console.ConsoleMathTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

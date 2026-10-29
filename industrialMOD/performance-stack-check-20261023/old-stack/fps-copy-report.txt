@@ -1,0 +1,6 @@
+Launching disposable world copy; original is never opened
+Loaded copy; position=8.5,66.62000000476837,8.5 yaw=-180.0 pitch=0.0 size=1280x720
+Settling distance=16
+Measuring distance=16 for 20 seconds, fixed saved view
+RESULT distance=16 seconds=20.033 frames=1243 fps=62.05 p95_ms=25.758 pos=-246.71559306502013,9.620000004768372,-470.39064639988317
+Complete
