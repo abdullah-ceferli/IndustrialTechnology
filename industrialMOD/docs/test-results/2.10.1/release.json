@@ -1,0 +1,23 @@
+{
+  "version": "2.10.1",
+  "sha256": "96d716a42f54f6fcc8386faac6c06669525479d2bb19d116a49fb5d38d6c2262",
+  "bytes": 17566605,
+  "sourcesSha256": "73bc157cb0daaff1348599345d23902442260d9f8945ff9659636aec02253860",
+  "junit": 130,
+  "native": 57,
+  "graphical": 16,
+  "totalChecks": 203,
+  "reports": [
+    "equip-2.10.1-standalone-final-initial.txt",
+    "equip-2.10.1-standalone-final-restart.txt",
+    "equip-2.10.1-projecte-hbm-final-initial.txt",
+    "equip-2.10.1-projecte-hbm-final-restart.txt",
+    "client-equip-2.10.1-projecte-clean.txt"
+  ],
+  "nativeFolders": [
+    "equip-2.10.1-standalone-final",
+    "equip-2.10.1-projecte-hbm-final"
+  ],
+  "baselineExpectedFailures": 2,
+  "savedWorldsAccessed": false
+}

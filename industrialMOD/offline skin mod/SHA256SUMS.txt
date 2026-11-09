@@ -1,0 +1,2 @@
+12e7f70f1f6319380d1a9b501cdc74e3242bd01e456ffe5f82fa3cb87977de6b  OfflineSkins-1.7.10-1.2.0.jar
+d0c49c892aa570a9277c3809d75c090245fcc04244632531c06d239036d67463  friends-service/OfflineSkins-Friends-Service-1.2.0.jar

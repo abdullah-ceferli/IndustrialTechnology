@@ -1,0 +1,12 @@
+{
+  "status": "installed-and-verified",
+  "installedJar": "D:\\programs\\Maincraft\\Minecraft\\game\\mods\\IndustrialTechnology-1.7.10-2.7.2.jar",
+  "sha256": "001104c6ef0138bc08fcc5ccb63a3a2c51ac62c0305e5c7ce16aee80737c8680",
+  "backup": "D:\\programs\\Maincraft\\Minecraft\\game\\mod-backups\\industrialtech-name-cleanup-20261030",
+  "preservedFiles": {
+    "D:\\programs\\Maincraft\\Minecraft\\game\\mods\\HBM-NTM-.1.0.27_X5771.jar": "5C17AB050042C6E9DD22D281DE2CEBEF5DBE0FA495A8B34BBFEE05C5D64168A4",
+    "D:\\programs\\Maincraft\\Minecraft\\game\\config\\hbmRecipes\\hbmAssemblyMachine.json": "CC3A050F8BA8F2B46323703A50959A1B044DFC478237E37B83D1FF35F06614F9",
+    "D:\\programs\\Maincraft\\Minecraft\\game\\config\\industrialtech.cfg": "25D7A49098EA68505C9FE64CA668685892079EA2E14A23F7DDA83EC2BCE33D76"
+  },
+  "savedWorldsTouched": false
+}

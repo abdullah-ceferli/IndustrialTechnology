@@ -15,6 +15,8 @@ $env:JAVA_HOME = $taskJdkPath
 $env:GRADLE_USER_HOME = Join-Path $projectPath '.gradle-user'
 Push-Location $projectPath
 try {
-    & .\gradlew.bat @Tasks --console=plain
+    $taskPython=Join-Path $env:USERPROFILE '.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe'
+    if(-not (Test-Path -LiteralPath $taskPython)){$taskPython=(Get-Command python -ErrorAction Stop).Source}
+    & .\gradlew.bat @Tasks "-PbundlePython=$taskPython" --console=plain
     if ($LASTEXITCODE -ne 0) { throw "Gradle exited with code $LASTEXITCODE" }
 } finally { Pop-Location }

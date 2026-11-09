@@ -1,0 +1,5 @@
+PASS: Original OpenOS boots from its supplied floppy with original Lua BIOS and GPU/screen
+PASS: Original case hardware GUI and textures render without OpenGL errors
+PASS: Original full-screen terminal renders the live OpenOS framebuffer
+PASS: Original screen input packets reach OpenOS and execute a shell command
+Failed: 0

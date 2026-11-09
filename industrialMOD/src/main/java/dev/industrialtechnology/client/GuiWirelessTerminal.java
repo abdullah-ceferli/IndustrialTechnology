@@ -63,6 +63,7 @@ public final class GuiWirelessTerminal extends GuiTooltips {
     }
     private String editKey="";
     private int condition,targetPage,monitorMode,tankPage;
+    private List<String> energyTooltip;private int energyTooltipX,energyTooltipY;
     private boolean ruleEnabled,dirtyRule,choosingTarget;
     private final List<MetalButton> controls=new ArrayList<MetalButton>();
     private static final String[] CONDITIONS={"Contains item","Item amount reached","Inventory full","Inventory empty","Item missing"};
@@ -79,8 +80,10 @@ public final class GuiWirelessTerminal extends GuiTooltips {
         button(14,123,91,180,13,CONDITIONS[0],"Cycle condition; item rules compare exact item, metadata, and NBT");
         button(15,123,131,72,13,"Disabled","Enable or disable this rule; click Apply to save");button(16,200,131,103,13,"Apply rule","Save the ghost item, quantity, condition, and linked Yellow target");
         button(17,213,111,90,14,"Target...","Choose a linked Yellow Stick; its own pulse settings apply");
-        button(18,123,70,54,12,"Items","View accessible slots on the registered face");button(19,181,70,54,12,"Tanks","View each real tank separately");
-        button(20,242,70,18,12,"<","Previous inventory/tank page");button(21,285,70,18,12,">","Next inventory/tank page");
+        button(18,123,70,40,12,"Items","View accessible slots on the registered face");button(19,166,70,40,12,"Tanks","View each real tank separately");
+        button(20,264,70,12,12,"<","Previous inventory/tank page");button(21,291,70,12,12,">","Next inventory/tank page");
+        button(28,209,70,52,12,"Energy","Stored energy and live battery input/output");
+        button(29,136,134,167,12,"Batteries: Single","Toggle a straight row of touching batteries, using this battery as the center; longest axis is selected");
         button(22,123,52,73,13,"SIMPLE","Use saved button-based rules");button(23,200,52,103,13,"CODE","Use the saved command program; SIMPLE rules stay saved");
         button(24,123,205,49,13,"Save","Validate and save this draft; invalid text never replaces a working script");
         button(25,177,205,42,13,"Help","Read the classic Automation Guide without losing your draft");
@@ -107,7 +110,7 @@ public final class GuiWirelessTerminal extends GuiTooltips {
         if(editor!=null){editor.model.limit=n.hasKey("MaxScriptLength")?n.getInteger("MaxScriptLength"):4096;editor.errorLine=n.getInteger("ScriptErrorLine");if(code()&&!wasCode)editor.focused=true;}
         String key=n.getString("Selected")+":"+n.getInteger("Rule");
         if(!key.equals(editKey)){
-            editKey=key;dirtyRule=false;monitorMode=tankPage=0;choosingTarget=false;
+            editKey=key;dirtyRule=false;monitorMode=n.getCompoundTag("Energy").getBoolean("Available")?2:0;tankPage=0;choosingTarget=false;
             if(name!=null){name.setText(n.getString("Name"));name.setCursorPositionZero();}if(quantity!=null)quantity.setText(Integer.toString(Math.max(1,n.getInteger("Minimum"))));
         }
         if(!dirtyRule){condition=Math.max(0,Math.min(4,n.getInteger("Condition")));ruleEnabled=n.getBoolean("RuleEnabled");if(quantity!=null&&!quantity.isFocused())quantity.setText(Integer.toString(Math.max(1,n.getInteger("Minimum"))));}
@@ -120,6 +123,7 @@ public final class GuiWirelessTerminal extends GuiTooltips {
         for(MetalButton b:controls){b.visible=true;b.enabled=true;b.selected=false;
             if(b.id<=3){b.selected=b.id-1==terminal.tab;continue;}
             if(b.id>=40){if(reactor!=null)reactor.update(b);else b.visible=false;continue;}
+            if(b.id==28||b.id==29){NBTTagCompound energy=state.getCompoundTag("Energy");b.visible=selected()&&terminal.tab==0&&!state.getBoolean("ReactorView")&&(b.id==28||monitorMode==2);if(b.id==28)b.selected=monitorMode==2;else{b.enabled=energy.getBoolean("Available")&&energy.getBoolean("Groupable");b.displayString=energy.getBoolean("Network")?"Capacitor network":energy.getBoolean("Row")?"Batteries: Row ("+energy.getString("Axis")+")":"Batteries: Single";b.selected=energy.getBoolean("Row");}continue;}
             if(b.id==27){b.visible=true;b.enabled=!query().isEmpty();continue;}
             if(b.id==4){b.enabled=listPages[terminal.tab]>0;continue;}if(b.id==5){b.enabled=listPages[terminal.tab]+1<DeviceSearch.pages(matches().size());continue;}
             b.visible=selected();if(b.id==7){b.width=state.getBoolean("ReactorView")?38:58;b.yPosition=guiTop+(state.getBoolean("ReactorView")?185:181);}if(b.id==6||b.id==7)continue;
@@ -135,7 +139,7 @@ public final class GuiWirelessTerminal extends GuiTooltips {
                 if(b.id==16)b.enabled=state.getTagList("Targets",10).tagCount()>0;continue;}
             if(b.id==22||b.id==23){b.visible=selected()&&terminal.tab==2;b.selected=b.id==23?code():!code()&&!state.getBoolean("ReactorView");boolean extra=state.getCompoundTag("Reactor").getInteger("Type")>0;b.xPosition=guiLeft+(b.id==22?123:extra?181:200);b.width=extra?54:b.id==22?73:103;continue;}
             if(b.id>=24){b.visible=code();if(b.id==26){b.displayString=state.getBoolean("ScriptEnabled")?"Disable":"Enable";b.selected=state.getBoolean("ScriptEnabled");}continue;}
-            if(b.id>=18){b.visible=selected()&&terminal.tab==0&&!state.getBoolean("ReactorView");
+            if(b.id>=18){b.visible=selected()&&terminal.tab==0&&!state.getBoolean("ReactorView")&&(b.id<20||monitorMode<2);
                 if(b.id==18)b.selected=monitorMode==0;if(b.id==19)b.selected=monitorMode==1;
                 if(b.id==20)b.enabled=(monitorMode==0?state.getInteger("DetailPage"):tankPage)>0;
                 if(b.id==21)b.enabled=monitorMode==0?state.getInteger("DetailPage")+1<state.getInteger("InventoryPages"):(tankPage+1)*4<state.getTagList("Tanks",10).tagCount();
@@ -164,7 +168,8 @@ public final class GuiWirelessTerminal extends GuiTooltips {
             case 25:openGuide();break;
             case 26:send(WirelessCommand.SCRIPT_ENABLE,0,0,"");break;
             case 17:targetPage=0;choosingTarget=true;break;
-            case 18:monitorMode=0;break;case 19:monitorMode=1;break;
+            case 18:monitorMode=0;break;case 19:monitorMode=1;break;case 28:monitorMode=2;break;
+            case 29:send(WirelessCommand.ENERGY_ROW,state.getCompoundTag("Energy").getBoolean("Row")?0:1,0,"");break;
             case 20:case 21:if(monitorMode==0)send(WirelessCommand.DETAIL,Math.max(0,state.getInteger("DetailPage")+(b.id==21?1:-1)),0,"");else tankPage=Math.max(0,tankPage+(b.id==21?1:-1));break;
             default:break;
         }updateButtons();
@@ -207,7 +212,7 @@ public final class GuiWirelessTerminal extends GuiTooltips {
     @Override public void updateScreen(){super.updateScreen();if(editor!=null)editor.tick();if(name!=null)name.updateCursorCounter();if(quantity!=null)quantity.updateCursorCounter();if(search!=null)search.updateCursorCounter();updateButtons();}
     @Override public void drawScreen(int x,int y,float partial){
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);GL11.glPushClientAttrib(GL11.GL_CLIENT_VERTEX_ARRAY_BIT);
-        try{GL11.glColor4f(1,1,1,1);if(guide!=null)guide.drawScreen(x,y,partial);else super.drawScreen(x,y,partial);}finally{GL11.glPopClientAttrib();GL11.glPopAttrib();}
+        try{energyTooltip=null;GL11.glColor4f(1,1,1,1);if(guide!=null)guide.drawScreen(x,y,partial);else super.drawScreen(x,y,partial);if(energyTooltip!=null)drawHoveringText(energyTooltip,energyTooltipX,energyTooltipY,fontRendererObj);}finally{GL11.glPopClientAttrib();GL11.glPopAttrib();}
     }
     @Override protected void drawGuiContainerBackgroundLayer(float partial,int mouseX,int mouseY){
         GL11.glColor4f(1,1,1,1);mc.getTextureManager().bindTexture(new ResourceLocation("industrialtech","textures/gui/wireless_terminal.png"));
@@ -255,7 +260,8 @@ public final class GuiWirelessTerminal extends GuiTooltips {
         else for(MetalButton b:controls)if(b.hovered(mx,my))tooltip(Arrays.asList(b.tooltip),mx,my);
     }
     private void drawMonitor(int x,int y){
-        text(Integer.toString((monitorMode==0?state.getInteger("DetailPage"):tankPage)+1),266,72,0xb4bdbc);
+        if(monitorMode==2){drawEnergy(x,y);return;}
+        text(Integer.toString((monitorMode==0?state.getInteger("DetailPage"):tankPage)+1),278,72,0xb4bdbc);
         if(!"ONLINE".equals(state.getString("Status")))return;
         if(monitorMode==0){
             NBTTagList items=state.getTagList("Items",10);
@@ -272,6 +278,26 @@ public final class GuiWirelessTerminal extends GuiTooltips {
                 drawRect(123,py+9,303,py+12,0xff151e24);int bar=(int)Math.min(180,180.0*amount/Math.max(1,capacity));drawRect(123,py+9,123+bar,py+12,0xff000000|(tank.getInteger("Color")&0xffffff));
                 if(x>=123&&x<303&&y>=py&&y<py+14)tooltip(Arrays.asList(tankName(tank),"Fluid ID: "+(tank.getString("FluidId").isEmpty()?"empty":tank.getString("FluidId")),"Tank "+(i+1)+" in exposed set",amount+" / "+capacity+" "+tank.getString("Unit"),String.format(java.util.Locale.ROOT,"%.1f%%",100.0*amount/Math.max(1,capacity))),x+guiLeft,y+guiTop);
             }
+        }
+    }
+    
+    private void drawEnergy(int x,int y){
+        NBTTagCompound e=state.getCompoundTag("Energy");
+        if(!e.getBoolean("Available")){text(shorten(e.getString("Status").replace('_',' '),180),123,90,0xb7a372);return;}
+        String unit=e.getString("Unit");long amount=e.getLong("Amount"),capacity=e.getLong("Capacity");
+        text(shorten(GuiConsole.compact(amount)+" / "+GuiConsole.compact(capacity)+" "+unit,180),123,85,0xd2dfdc);
+        drawRect(123,96,303,100,0xff111a20);drawRect(123,96,123+(int)Math.min(180,180.0*amount/Math.max(1,capacity)),100,0xff5fa8bd);
+        boolean rates=e.getBoolean("RatesAvailable");
+        text(shorten("In:  "+(rates?"+"+GuiConsole.compact(e.getLong("Input"))+" "+unit+"/t":e.getBoolean("Exact")?"Measuring...":"unavailable"),180),123,103,0x82cf89);
+        text(shorten("Out: "+(rates?"-"+GuiConsole.compact(e.getLong("Output"))+" "+unit+"/t":e.getBoolean("Exact")?"measuring...":"unavailable"),180),123,114,0xe28b80);
+        String count=e.getInteger("Count")+(e.getInteger("Count")==1?" battery":" batteries")+(e.getBoolean("Partial")?" (partial row)":e.getBoolean("Row")?" / row "+e.getString("Axis"):e.getBoolean("Network")?" / network":"");text(shorten(count,180),123,125,e.getBoolean("Partial")?0xd8b46d:0x98abb1);
+        if(x>=123&&x<303&&y>=84&&y<134){List<String> lines=new ArrayList<String>();lines.add(amount+" / "+capacity+" "+unit);
+            if(rates){lines.add("Incoming: +"+e.getLong("Input")+" "+unit+"/t");lines.add("Outgoing: -"+e.getLong("Output")+" "+unit+"/t");lines.add(e.getBoolean("Network")?"Last completed tick":"Average over the last 20 completed game ticks");}
+            else lines.add(e.getBoolean("Exact")?"Collecting live transfer samples...":"This battery exposes stored energy but no separate transfer meter.");
+            if(e.getBoolean("NetAvailable"))lines.add("Stored energy change: "+e.getLong("Net")+" "+unit+"/t");
+            if(e.getBoolean("Row")){lines.add("Row totals sum each battery's input and output.");lines.add("Transfers between row members count in both directions.");}
+            if(e.getBoolean("Partial"))lines.add("Row scan stopped at an unloaded chunk or the 32-block-per-side limit.");
+            energyTooltip=new ArrayList<String>();for(String line:lines)energyTooltip.addAll(fontRendererObj.listFormattedStringToWidth(line,174));energyTooltipX=x+guiLeft;energyTooltipY=y+guiTop;
         }
     }
     private static String tankName(NBTTagCompound n){String key=n.getString("Key");if(!key.isEmpty()){String translated=net.minecraft.util.StatCollector.translateToLocal(key);if(!translated.equals(key))return translated;}return n.getString("Name");}

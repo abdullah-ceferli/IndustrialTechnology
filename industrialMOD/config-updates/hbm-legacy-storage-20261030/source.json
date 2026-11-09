@@ -1,0 +1,10 @@
+{
+  "commit": "ef2b20d357ce159f7c3861cfecf8169796023a83",
+  "selection": "Last original recipes immediately before the battery rework, parent of de2a11389c4e6209945ada236870f757bb6aba10",
+  "assemblerRecipes": [
+    "ass.battery",
+    "ass.batterylithium",
+    "ass.batteryschrabidium",
+    "ass.batterydnt"
+  ]
+}

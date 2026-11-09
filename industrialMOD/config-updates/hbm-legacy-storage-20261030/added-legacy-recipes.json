@@ -1,0 +1,125 @@
+[
+  {
+    "name": "ass.battery",
+    "inputItem": [
+      [
+        "dict",
+        "plateSextupleSteel"
+      ],
+      [
+        "dict",
+        "dustSulfur",
+        12
+      ],
+      [
+        "dict",
+        "dustLead",
+        12
+      ]
+    ],
+    "outputItem": [
+      [
+        "single",
+        [
+          "hbm:tile.machine_battery"
+        ]
+      ]
+    ],
+    "duration": 100,
+    "power": 100
+  },
+  {
+    "name": "ass.batterylithium",
+    "inputItem": [
+      [
+        "dict",
+        "ingotAnyPlastic",
+        8
+      ],
+      [
+        "dict",
+        "dustCobalt",
+        12
+      ],
+      [
+        "dict",
+        "dustLithium",
+        12
+      ]
+    ],
+    "outputItem": [
+      [
+        "single",
+        [
+          "hbm:tile.machine_lithium_battery"
+        ]
+      ]
+    ],
+    "duration": 100,
+    "power": 100
+  },
+  {
+    "name": "ass.batteryschrabidium",
+    "inputItem": [
+      [
+        "dict",
+        "ingotWorkersAlloy",
+        16
+      ],
+      [
+        "dict",
+        "dustNeptunium237",
+        12
+      ],
+      [
+        "dict",
+        "dustSchrabidium",
+        12
+      ]
+    ],
+    "outputItem": [
+      [
+        "single",
+        [
+          "hbm:tile.machine_schrabidium_battery"
+        ]
+      ]
+    ],
+    "duration": 200,
+    "power": 100
+  },
+  {
+    "name": "ass.batterydnt",
+    "inputItem": [
+      [
+        "dict",
+        "ingotDineutronium",
+        24
+      ],
+      [
+        "item",
+        "hbm:item.powder_spark_mix",
+        12
+      ],
+      [
+        "item",
+        "industrialtech:legacy_battery_spark_cell_1000"
+      ],
+      [
+        "dict",
+        "ingotCMBSteel",
+        32
+      ]
+    ],
+    "outputItem": [
+      [
+        "single",
+        [
+          "hbm:tile.machine_dineutronium_battery"
+        ]
+      ]
+    ],
+    "duration": 400,
+    "power": 100
+  }
+]

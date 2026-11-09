@@ -1,0 +1,119 @@
+{
+  "archives": [
+    {
+      "file": "Baubles-1.7.10-1.0.1.10.jar",
+      "sha256": "05ae8f11b8f9012ebebbf179227b010829739c6284e30da5dd3db220ee682f8a"
+    },
+    {
+      "file": "baublelicious-1.7.10-1.2.2-final.jar",
+      "sha256": "a9432a180a2c39d458319bccc0c410dd70e86e8f160ac11622c41af811c74d47"
+    },
+    {
+      "file": "ProjectE-1.7.10-PE1.10.1.jar",
+      "sha256": "a9000e69ca7756cfc5b32cfb95040fffd5a146037b4269569837db84a021d5f9"
+    }
+  ],
+  "assets": [
+    {
+      "sourceJar": "baublelicious-1.7.10-1.2.2-final.jar",
+      "source": "assets/baublelicious/textures/items/ItemFlyingRing.png",
+      "target": "assets/industrialtech/textures/items/accessories/flight_ring.png",
+      "sha256": "6d5533cf8764e37b9fd6ba73f2c0a8c6b1bf68f1d8f98b76ba7cf971d0421040"
+    },
+    {
+      "sourceJar": "baublelicious-1.7.10-1.2.2-final.jar",
+      "source": "assets/baublelicious/textures/items/ItemsAmuletNightvision.png",
+      "target": "assets/industrialtech/textures/items/accessories/nightvision_amulet.png",
+      "sha256": "5e809c3b0b4a0f6677a055b2edcffba152f2ab77f412bc8a6fe9525218d42493"
+    },
+    {
+      "sourceJar": "baublelicious-1.7.10-1.2.2-final.jar",
+      "source": "assets/baublelicious/textures/items/ItemRing.png",
+      "target": "assets/industrialtech/textures/items/accessories/plain_ring.png",
+      "sha256": "aee74c6c3c0e80491fd47126524cd7d1be81f70d3d29a0f27d75bf560e89f02a"
+    },
+    {
+      "sourceJar": "baublelicious-1.7.10-1.2.2-final.jar",
+      "source": "assets/baublelicious/textures/items/ItemAmulet.png",
+      "target": "assets/industrialtech/textures/items/accessories/plain_amulet.png",
+      "sha256": "7e116f97e9099bb863d6cefcc8b6b5d220444a76ee6fb74af39b6666683aa276"
+    },
+    {
+      "sourceJar": "baublelicious-1.7.10-1.2.2-final.jar",
+      "source": "assets/baublelicious/textures/items/ItemMagicCore0.png",
+      "target": "assets/industrialtech/textures/items/accessories/magic_core_0.png",
+      "sha256": "0707bdc782e3ac3c753bf9cd9e456e847589e73a824bd2a712e03611f8940b2f"
+    },
+    {
+      "sourceJar": "baublelicious-1.7.10-1.2.2-final.jar",
+      "source": "assets/baublelicious/textures/items/ItemMagicCore1.png",
+      "target": "assets/industrialtech/textures/items/accessories/magic_core_1.png",
+      "sha256": "88c3d6e9b0767d2ec962a9c8ead1fb1e704761f8ee3dc8ad4d13cca9190d4e52"
+    },
+    {
+      "sourceJar": "baublelicious-1.7.10-1.2.2-final.jar",
+      "source": "assets/baublelicious/textures/items/ItemMagicCore2.png",
+      "target": "assets/industrialtech/textures/items/accessories/magic_core_2.png",
+      "sha256": "352fdb57f635dd4b5e8b3b6f56b18e73c0716e4fc0f92a84635e8bc0126fc4c3"
+    },
+    {
+      "sourceJar": "ProjectE-1.7.10-PE1.10.1.jar",
+      "source": "assets/projecte/textures/items/destruction_catalyst.png",
+      "target": "assets/industrialtech/textures/items/accessories/destruction_catalyst.png",
+      "sha256": "1587c0450f02ea804895a4f98e247149dca90c184c737537abe327addad45db2"
+    },
+    {
+      "sourceJar": "ProjectE-1.7.10-PE1.10.1.jar",
+      "source": "assets/projecte/textures/items/hyper_lens.png",
+      "target": "assets/industrialtech/textures/items/accessories/hyperkinetic_lens.png",
+      "sha256": "47062bb09688193dad51c955486d57c037940d411b774efe31aab20db54c5532"
+    },
+    {
+      "sourceJar": "ProjectE-1.7.10-PE1.10.1.jar",
+      "source": "assets/projecte/textures/items/catalitic_lens.png",
+      "target": "assets/industrialtech/textures/items/accessories/catalytic_lens.png",
+      "sha256": "2ffcfa8fbd04d7091c028063fa0cc1169ecab6b218edabfd247280083697dd56"
+    },
+    {
+      "sourceJar": "ProjectE-1.7.10-PE1.10.1.jar",
+      "source": "assets/projecte/textures/items/entities/lens_explosive.png",
+      "target": "assets/industrialtech/textures/items/accessories/lens_projectile.png",
+      "sha256": "8c8b00eff55f2c1f2ade446ae056f1bbbc8675033fc4726e3641ba6de2328ec6"
+    },
+    {
+      "sourceJar": "ProjectE-1.7.10-PE1.10.1.jar",
+      "source": "assets/projecte/textures/items/entities/loot_ball.png",
+      "target": "assets/industrialtech/textures/items/accessories/loot_ball.png",
+      "sha256": "a88bdf8745ac425b2e53f81e907e5fdd40faf9d403f27f373a47f7a8e5d2ae46"
+    },
+    {
+      "sourceJar": "ProjectE-1.7.10-PE1.10.1.jar",
+      "source": "assets/projecte/sounds/item/pedestruct.ogg",
+      "target": "assets/industrialtech/sounds/accessories/pedestruct.ogg",
+      "sha256": "8ba30e76325faf768360ee83282f499a6bedab2bb2d69f2e67dc11f76f9dfc81"
+    },
+    {
+      "sourceJar": "ProjectE-1.7.10-PE1.10.1.jar",
+      "source": "assets/projecte/sounds/item/peuncharge.ogg",
+      "target": "assets/industrialtech/sounds/accessories/peuncharge.ogg",
+      "sha256": "60b7094d491068d71b6faf90b21eade206c206ad66480ec3f1b9c0684f5eb99b"
+    },
+    {
+      "sourceJar": "ProjectE-1.7.10-PE1.10.1.jar",
+      "source": "assets/projecte/sounds/item/pecharge.ogg",
+      "target": "assets/industrialtech/sounds/accessories/pecharge.ogg",
+      "sha256": "4e102023e68acc033634583bb12fc9136ed644e3f703d51f63b850ceed40a974"
+    },
+    {
+      "sourceJar": "ProjectE-1.7.10-PE1.10.1.jar",
+      "source": "assets/projecte/sounds/item/pepower.ogg",
+      "target": "assets/industrialtech/sounds/accessories/pepower.ogg",
+      "sha256": "e8ffb0c22b70963d836c5aaad21ac09a97ec19c21637caa7e1da8c0b758c4fbf"
+    }
+  ],
+  "identifiedScreenshotOrder": [
+    "Destruction Catalyst",
+    "Hyperkinetic Lens",
+    "Catalytic Lens"
+  ]
+}

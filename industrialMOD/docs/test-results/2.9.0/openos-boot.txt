@@ -1,0 +1,51 @@
+Booting OpenOS 1.8.10...                                                                                                                                        
+Initializing package management...                                                                                                                              
+> /lib/package.lua                                                                                                                                              
+> /lib/buffer.lua                                                                                                                                               
+> /lib/filesystem.lua                                                                                                                                           
+> /lib/io.lua                                                                                                                                                   
+Initializing file system...                                                                                                                                     
+Running boot scripts...                                                                                                                                         
+> boot/00_base.lua                                                                                                                                              
+> boot/01_process.lua                                                                                                                                           
+> boot/02_os.lua                                                                                                                                                
+> boot/03_io.lua                                                                                                                                                
+> boot/04_component.lua                                                                                                                                         
+> boot/10_devfs.lua                                                                                                                                             
+> boot/89_rc.lua                                                                                                                                                
+> boot/90_filesystem.lua                                                                                                                                        
+> boot/91_gpu.lua                                                                                                                                               
+> boot/92_keyboard.lua                                                                                                                                          
+> boot/93_term.lua                                                                                                                                              
+> boot/94_shell.lua                                                                                                                                             
+Initializing components...                                                                                                                                      
+Initializing system...                                                                                                                                          
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+

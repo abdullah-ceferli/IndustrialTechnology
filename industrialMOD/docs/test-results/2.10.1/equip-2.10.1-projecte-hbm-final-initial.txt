@@ -1,0 +1,30 @@
+PASS: Survival right-click amulet goes through vanilla ItemInWorldManager without a null return
+PASS: Survival right-click rings fill both slots and a third ring stays in hand
+PASS: Right-click with an occupied amulet slot preserves both items
+PASS: Creative right-click equips amulet and ring while retaining held items
+INFO: original mods present=true,false
+PASS: Standalone content loads without requiring ProjectE or Baublelicious
+PASS: Alternative Destruction Catalyst recipe uses only ordinary materials
+PASS: Alternative Hyperkinetic Lens recipe uses only ordinary materials
+PASS: Alternative Catalytic Lens recipe combines our two tools and vanilla materials
+PASS: Flight and nightvision original accessory recipes have standalone base/core ingredients
+PASS: Real Baubles slots accept rings/amulets and reject incorrect equipment types
+PASS: Survival flight grants creative-style flight and removes it on unequip
+PASS: Flight ring does not revoke Creative flight
+PASS: A second worn flight ring continues granting flight
+PASS: Nightvision uses original strength/duration, refreshes and removes on unequip
+PASS: Coal fuel accepts coal, charcoal and coal blocks
+PASS: Wood, sticks, saplings, lava, blaze and redstone cannot fuel the tools
+PASS: All HBM Coal/Lignite/Petroleum Coke variants are accepted
+PASS: Fuel scans the full player inventory and preserves paid change
+PASS: Insufficient coal is atomic and never consumes wood or partial coal
+PASS: Original charge limits, mining depths and projectile costs are retained
+PASS: Charge controls increase/decrease and preserve fuel NBT
+PASS: All six mining directions produce the original 3x3xdepth box
+PASS: Real catalyst mines nine blocks, skips bedrock/obsidian and creates collected loot
+PASS: Forge break cancellation prevents mining protected blocks
+PASS: Loot survives NBT and partial inventory pickup without loss/duplication
+PASS: Original nova blast destroys blocks and collects drops without damaging entities
+PASS: Actual lens firing pays the original projectile cost and refuses wood
+PASS: Saved world keeps charged tools and stored coal credit
+Failed: 0

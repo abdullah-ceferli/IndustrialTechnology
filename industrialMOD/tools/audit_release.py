@@ -4,6 +4,30 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 VERSION=re.search(r"(?m)^version = '([^']+)'",(ROOT/'build.gradle').read_text()).group(1)
+if VERSION=='2.10.1':
+    import audit_accessory_equip_release
+    audit_accessory_equip_release.main()
+    raise SystemExit(0)
+if VERSION=='2.10.0':
+    import audit_accessories_release
+    audit_accessories_release.main()
+    raise SystemExit(0)
+if VERSION=='2.9.0':
+    import audit_opencomputers_release
+    audit_opencomputers_release.main()
+    raise SystemExit(0)
+if VERSION=='2.8.0':
+    import audit_battery_monitor_release
+    audit_battery_monitor_release.main()
+    raise SystemExit(0)
+if VERSION=='2.7.2':
+    import audit_legacy_names_release
+    audit_legacy_names_release.main()
+    raise SystemExit(0)
+if VERSION=='2.7.1':
+    import audit_legacy_storage_release
+    audit_legacy_storage_release.main()
+    raise SystemExit(0)
 if VERSION=='2.7.0':
     import audit_bag_release
     audit_bag_release.main()

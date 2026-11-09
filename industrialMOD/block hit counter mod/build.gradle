@@ -1,0 +1,38 @@
+buildscript {
+    repositories { mavenCentral(); maven { url = 'https://maven.minecraftforge.net/' } }
+    dependencies { classpath 'com.anatawa12.forge:ForgeGradle:1.2-1.1.1' }
+}
+apply plugin: 'forge'
+version = '1.0.0'
+group = 'personal.blockhits'
+archivesBaseName = 'BlockHitCounter-1.7.10'
+sourceCompatibility = targetCompatibility = '1.8'
+minecraft { version = '1.7.10-10.13.4.1614-1.7.10'; runDir = 'run' }
+repositories { mavenCentral() }
+dependencies { testImplementation 'junit:junit:4.13.2' }
+tasks.withType(JavaCompile) { options.encoding = 'UTF-8' }
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('mcmod.info') { expand 'version': project.version }
+}
+jar { from('LICENSE') { into 'META-INF' } }
+task sourcesJar(type: Jar, dependsOn: classes) {
+    archiveClassifier.set('sources')
+    from sourceSets.main.allSource
+    from 'README.md', 'LICENSE'
+}
+artifacts { archives sourcesJar }
+sourceSets {
+    testMod {
+        java.srcDir 'src/testMod/java'
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+task testModJar(type: Jar, dependsOn: testModClasses) {
+    archiveBaseName.set('block-hit-test-harness')
+    from sourceSets.testMod.output
+}
+if (project.hasProperty('integrationTest')) {
+    tasks.reobf.reobf(tasks.testModJar) { spec -> spec.classpath = sourceSets.testMod.compileClasspath }
+}

@@ -1,0 +1,27 @@
+{
+  "project": "OpenComputers",
+  "version": "1.8.10",
+  "minecraft": "1.7.10",
+  "commit": "667626d",
+  "releaseUrl": "https://github.com/MightyPirates/OpenComputers/releases/tag/1.7.10-forge/1.8.10",
+  "modrinthVersionId": "YY5V1Q9b",
+  "officialDownload": "https://cdn.modrinth.com/data/YiAbZis2/versions/YY5V1Q9b/OpenComputers-MC1.7.10-1.8.10%2B667626d-universal.jar",
+  "officialSha512": "814f7f38bb4cfbfd1b267744b38de119ca03caa7d20d5d0160274c99a394c73f1ac3d0758ad4f9514e4f5fb4eb7a3ee17788bb3084672b7198737fbd712100bf",
+  "files": [
+    {
+      "name": "OpenComputers-MC1.7.10-1.8.10+667626d-universal.jar",
+      "sha256": "40dbd0857efe6eff0c8b40965a7b98b689bf0b328194dfa1ac458088073376e9",
+      "bytes": 16883767
+    },
+    {
+      "name": "OpenComputers-MC1.7.10-1.8.10+667626d-dev.jar",
+      "sha256": "ef0b96e02fb48a1bf95e7ee947339d72f496c9f040afd3983bdd76fe8cf36599",
+      "bytes": 16643241
+    },
+    {
+      "name": "OpenComputers-MC1.7.10-1.8.10+667626d-sources.jar",
+      "sha256": "4a0c5030860c4f57c94b6b6118554b7c1850e5e5b9087a080e04b32bf2c205fa",
+      "bytes": 1138095
+    }
+  ]
+}

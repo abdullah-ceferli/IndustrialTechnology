@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.industrialtechnology.energy.FlowWindowTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-01T07:43:06" hostname="DESKTOP-K160Q2I" time="0.0">
+  <properties/>
+  <testcase name="idleWindowExpiresToZero" classname="dev.industrialtechnology.energy.FlowWindowTest" time="0.0"/>
+  <testcase name="simultaneousTransfersRemainSeparate" classname="dev.industrialtechnology.energy.FlowWindowTest" time="0.0"/>
+  <testcase name="currentTickIsNotMistakenForCompletedTick" classname="dev.industrialtechnology.energy.FlowWindowTest" time="0.0"/>
+  <testcase name="initialWindowDoesNotClaimHistoricalSamples" classname="dev.industrialtechnology.energy.FlowWindowTest" time="0.0"/>
+  <testcase name="invalidBalancesAreIgnoredAndLongAmountsDoNotWrap" classname="dev.industrialtechnology.energy.FlowWindowTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

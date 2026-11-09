@@ -1,0 +1,13 @@
+PASS: Complete original content registers its native blocks, hardware and robotics
+PASS: Original OpenOS, Lua firmware, native libraries and default recipe resources are accessible
+INFO: OC crafting recipes=196
+PASS: Original survival crafting recipes are loaded
+INFO: OC descriptors=168
+PASS: All original item descriptors are recorded for comparison with stock OC
+PASS: A real creative computer accepts CPU, RAM and an EEPROM
+PASS: Combined core loader preserves the existing HBM battery observation transformer
+PASS: The original computer starts its real Lua machine
+INFO: VM=li.cil.oc.server.machine.luac.NativeLua53Architecture
+PASS: Original native Lua VM executes EEPROM firmware and writes a real filesystem
+PASS: Full original computer hardware and machine state save for a real restart
+Failed: 0

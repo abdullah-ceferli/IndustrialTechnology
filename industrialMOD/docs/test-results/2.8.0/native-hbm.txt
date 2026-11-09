@@ -1,0 +1,15 @@
+PASS: Installed HBM legacy class has actual transfer observation hooks
+PASS: Green stick reads exact HE and capacity of its attached HBM battery
+PASS: One real center Green toggles five mixed-tier HBM blocks as one row
+PASS: Row choice persists without breaking old endpoint NBT
+PASS: Forged foreign selection, Yellow selection and invalid row value are rejected
+PASS: Z and vertical rows, even counts, gaps and unrelated machines are handled
+PASS: Unloaded row boundary is reported and never loads the neighboring chunk
+PASS: Oversized rows stop at 65 batteries and mark the total as partial
+PASS: Advanced Capacitor Bank multiblock is counted once with full long RF totals
+PASS: Repeated snapshots do not alter energy or battery configuration
+PASS: HBM item charging is metered through production tick-method energy writes
+PASS: Real simultaneous HBM transfers show +1500 HE/t and -500 HE/t across the row
+PASS: Single mode restores one battery without adding or consuming energy
+PASS: Replacement or missing target never returns a stale stored-energy total
+Failed: 0

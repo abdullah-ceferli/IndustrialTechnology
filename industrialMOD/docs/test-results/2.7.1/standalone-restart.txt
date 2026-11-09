@@ -1,0 +1,2 @@
+PASS: Enabled optional Spark integration loads without HBM and adds no fake cells
+Failed: 0

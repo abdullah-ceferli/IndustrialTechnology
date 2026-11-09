@@ -20,6 +20,8 @@ public final class ClientProxy extends CommonProxy {
     @Override public void openAutomationGuide(){net.minecraft.client.Minecraft.getMinecraft().displayGuiScreen(new GuiAutomationGuide(null));}
     @Override public void acceptExpansion(final int window,final NBTTagCompound state){queue.add(()->{Minecraft mc=Minecraft.getMinecraft();if(mc.currentScreen instanceof GuiExpansion){GuiExpansion g=(GuiExpansion)mc.currentScreen;if(g.expansion.windowId==window)g.receive(state);}});}
     @Override public void init() {
+        FMLCommonHandler.instance().bus().register(new AccessoryInput());
+        ((net.minecraft.client.resources.IReloadableResourceManager)Minecraft.getMinecraft().getResourceManager()).registerReloadListener(new RestoredStorageNames());
         ((net.minecraft.client.resources.IReloadableResourceManager)Minecraft.getMinecraft().getResourceManager()).registerReloadListener(new RailResources());
         dev.industrialtechnology.solar.BlockSolar.renderId=cpw.mods.fml.client.registry.RenderingRegistry.getNextAvailableRenderId();
         cpw.mods.fml.client.registry.RenderingRegistry.registerBlockHandler(new SolarRenderer());

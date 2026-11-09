@@ -1,0 +1,5 @@
+PASS: The original computer starts its real Lua machine
+INFO: VM=li.cil.oc.server.machine.luac.NativeLua53Architecture
+PASS: Original native Lua VM executes EEPROM firmware and writes a real filesystem
+PASS: Computer hardware survives a genuine server restart
+Failed: 0

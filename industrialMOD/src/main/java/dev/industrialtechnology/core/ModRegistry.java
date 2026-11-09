@@ -49,6 +49,8 @@ public final class ModRegistry {
         dev.industrialtechnology.steel.SteelRegistry.register();
         dev.industrialtechnology.console.ConsoleRegistry.register();
         dev.industrialtechnology.bag.BagRegistry.register();
+        dev.industrialtechnology.integration.LegacyHbmRecipes.registerItems();
+        dev.industrialtechnology.accessories.AccessoryRegistry.register();
         MinecraftForge.EVENT_BUS.register(new DropCapture());
     }
     private static Item component(String name) {
@@ -61,6 +63,8 @@ public final class ModRegistry {
         dev.industrialtechnology.steel.SteelRegistry.recipes();
         dev.industrialtechnology.console.ConsoleRegistry.recipes();
         dev.industrialtechnology.bag.BagRegistry.recipes();
+        dev.industrialtechnology.integration.LegacyHbmRecipes.register();
+        dev.industrialtechnology.accessories.AccessoryRegistry.recipes();
         GameRegistry.addRecipe(new ItemStack(capacitorBank),"DGD","CRC","DGD",'D',Items.diamond,'G',Blocks.gold_block,'C',circuit,'R',Blocks.redstone_block);
         GameRegistry.addRecipe(new net.minecraftforge.oredict.ShapedOreRecipe(new ItemStack(greenLamp,4),"GGG","DLD","GRG",'G',Blocks.glass,'D',new ItemStack(Items.dye,1,2),'L',Blocks.glowstone,'R',Items.redstone));
         GameRegistry.addShapelessRecipe(new ItemStack(automationGuide),Items.book,Items.redstone,Items.paper);

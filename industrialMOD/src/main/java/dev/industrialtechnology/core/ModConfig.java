@@ -16,6 +16,7 @@ public final class ModConfig {
     public static void load(File file) {
         Configuration c = new Configuration(file);
         c.load();
+        dev.industrialtechnology.integration.LegacyHbmRecipes.load(c);
         dev.industrialtechnology.wireless.WirelessConfig.load(c);
         dev.industrialtechnology.capacitor.BankConfig.load(c);
         dev.industrialtechnology.expansion.ExpansionConfig.load(c);

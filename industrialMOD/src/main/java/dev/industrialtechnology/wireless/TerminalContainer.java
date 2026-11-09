@@ -12,6 +12,7 @@ public final class TerminalContainer extends Container {
     public final int lockedSlot;
     public final UUID network;
     public final ReactorTerminal reactors=new ReactorTerminal(this);
+    private final BatteryMonitor batteries=new BatteryMonitor();
     public final InventoryBasic ghost=new InventoryBasic("Rule icon",true,1);
     public int tab,page,detailPage,ruleIndex;
     public UUID selected,draftTarget;
@@ -90,6 +91,9 @@ public final class TerminalContainer extends Container {
                 if(e==null||!e.codeMode||e.kind!=WirelessEndpoint.Kind.AUTOMATION||e.dimension!=player.dimension)return;
                 if(e.scriptRules.isEmpty()){e.scriptError="Save a valid script before enabling it.";e.scriptErrorLine=0;return;}
                 e.scriptEnabled=!e.scriptEnabled;e.lastPoll=Long.MIN_VALUE;data.markDirty();break;
+            case WirelessCommand.ENERGY_ROW:
+                if(e==null||tab!=0||e.kind!=WirelessEndpoint.Kind.MONITOR||e.dimension!=player.dimension||a<0||a>1||WirelessAccess.status(e,player.dimension)!=WirelessAccess.Status.ONLINE)return;
+                if(!batteries.snapshot(e,player.dimension).getBoolean("Groupable"))return;e.batteryRow=a==1;data.markDirty();break;
             case WirelessCommand.DETAIL:if(a>=0&&a<=455)detailPage=a;break;
             default:return;
         }
@@ -131,11 +135,11 @@ public final class TerminalContainer extends Container {
             row.setBoolean("Signal",e.kind==WirelessEndpoint.Kind.CONTROL&&e.dimension==player.dimension&&WirelessAccess.signal(e,player.worldObj.getTotalWorldTime()));rows.appendTag(row);}n.setTag("Devices",rows);
         WirelessEndpoint e=endpoint();if(e==null){((Slot)inventorySlots.get(36)).yDisplayPosition=-10000;return n;}
         n.setString("Selected",e.id.toString());n.setString("Name",e.name);n.setString("Machine",e.machine);n.setString("Location","Dim "+e.dimension+"  "+e.x+", "+e.y+", "+e.z+"  "+net.minecraftforge.common.util.ForgeDirection.getOrientation(e.side));
-        n.setTag("Energy",dev.industrialtechnology.console.SensorReading.energy(e,player.dimension).write());
+        n.setTag("Energy",e.kind==WirelessEndpoint.Kind.MONITOR?batteries.snapshot(e,player.dimension):dev.industrialtechnology.console.SensorReading.energy(e,player.dimension).write());
         n.setString("Status",WirelessAccess.status(e,player.dimension).toString());n.setInteger("Kind",e.kind.ordinal());n.setInteger("Dimension",e.dimension);n.setInteger("X",e.x);n.setInteger("Y",e.y);n.setInteger("Z",e.z);n.setInteger("Side",e.side);n.setInteger("DetailPage",detailPage);
         if(e.kind==WirelessEndpoint.Kind.CONTROL){n.setBoolean("Signal",e.dimension==player.dimension&&WirelessAccess.status(e,player.dimension)==WirelessAccess.Status.ONLINE&&WirelessAccess.signal(e,player.worldObj.getTotalWorldTime()));n.setBoolean("TimedOutput",e.powered&&e.pulseEnd>player.worldObj.getTotalWorldTime());n.setBoolean("PulseMode",e.pulseMode);n.setInteger("Seconds",e.pulseSeconds);n.setLong("Remaining",Math.max(0,e.pulseEnd-player.worldObj.getTotalWorldTime()));}
         else {
-            MachineInspector.Reading reading=e.kind==WirelessEndpoint.Kind.AUTOMATION&&e.codeMode?new MachineInspector.Reading():MachineInspector.inspect(e,player.dimension,e.kind==WirelessEndpoint.Kind.MONITOR);if(e.kind==WirelessEndpoint.Kind.AUTOMATION&&e.codeMode)reading.status=WirelessAccess.status(e,player.dimension);n.setString("Status",reading.status.toString());n.setString("Message",reading.message);n.setString("Adapter",reading.adapter);
+            MachineInspector.Reading reading=e.kind==WirelessEndpoint.Kind.AUTOMATION&&e.codeMode?new MachineInspector.Reading():MachineInspector.inspect(e,player.dimension,e.kind==WirelessEndpoint.Kind.MONITOR);if(e.kind==WirelessEndpoint.Kind.AUTOMATION&&e.codeMode)reading.status=WirelessAccess.status(e,player.dimension);n.setString("Status",e.kind==WirelessEndpoint.Kind.MONITOR&&n.getCompoundTag("Energy").getBoolean("Available")&&reading.status==WirelessAccess.Status.UNSUPPORTED?"ONLINE":reading.status.toString());n.setString("Message",reading.message);n.setString("Adapter",reading.adapter);
             MachineInspector.InventoryView inv=reading.inventory;if(inv!=null){n.setInteger("Slots",inv.slots.length);n.setInteger("Occupied",inv.occupied);n.setBoolean("HasInventory",true);}
             if(e.kind==WirelessEndpoint.Kind.MONITOR){
                 detailPage=Math.min(detailPage,inv==null?0:Math.max(0,(inv.slots.length-1)/27));n.setInteger("DetailPage",detailPage);

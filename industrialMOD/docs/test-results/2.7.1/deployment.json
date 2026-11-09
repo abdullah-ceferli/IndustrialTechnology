@@ -1,0 +1,15 @@
+{
+  "status": "installed-and-verified",
+  "game": "D:\\programs\\Maincraft\\Minecraft\\game",
+  "backup": "D:\\programs\\Maincraft\\Minecraft\\game\\mod-backups\\industrialtech-legacy-storage-20261030",
+  "previousJar": "D:\\programs\\Maincraft\\Minecraft\\game\\mods\\IndustrialTechnology-1.7.10-2.7.0.jar",
+  "installedJar": "D:\\programs\\Maincraft\\Minecraft\\game\\mods\\IndustrialTechnology-1.7.10-2.7.1.jar",
+  "previousJarSHA256": "0af5bad1b21ede37837db37a82eaa3d23782f1876505f8eed319938228781b34",
+  "previousConfigSHA256": "c92584cc814e53c7e28a4a8f443ab4752f61fc416d09aefb906d0a83ddb82171",
+  "activeAssemblerConfigPreviouslyExisted": false,
+  "installedJarSHA256": "dc015deb60763603ea8898d9af215fbf0493761642252556e208fcaedbb5d881",
+  "installedAssemblerSHA256": "cc3a050f8ba8f2b46323703a50959a1b044dfc478237e37b83d1ff35f06614f9",
+  "sourceCommit": "ef2b20d357ce159f7c3861cfecf8169796023a83",
+  "savedWorldsTouched": false,
+  "installedConfigSHA256": "8039b11e954653a13335f97b61843f10e63925251d1b3812383273b4673ad9e8"
+}

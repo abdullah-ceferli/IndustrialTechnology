@@ -8,7 +8,7 @@ public final class WirelessEndpoint {
     public Kind kind=Kind.MONITOR;
     public int dimension,x,y,z,side,pulseSeconds=5;
     public String name="Device", block="", machine="";
-    public boolean enabled=true, pulseMode, powered, physical;
+    public boolean enabled=true, pulseMode, powered, physical, batteryRow;
     public boolean hasPhysicalStick(){return kind==Kind.CONTROL||physical;}
     public long pulseEnd;
     public boolean codeMode,scriptEnabled;
@@ -32,7 +32,7 @@ public final class WirelessEndpoint {
         NBTTagCompound n=new NBTTagCompound();n.setString("Id",id.toString());n.setString("Network",network.toString());n.setString("Owner",owner.toString());
         if(tileToken!=null)n.setString("TileToken",tileToken.toString());
         n.setInteger("Kind",kind.ordinal());n.setInteger("Dimension",dimension);n.setInteger("X",x);n.setInteger("Y",y);n.setInteger("Z",z);n.setInteger("Side",side);
-        n.setString("Name",name);n.setString("Block",block);n.setString("Machine",machine);n.setBoolean("Enabled",enabled);n.setBoolean("Physical",physical);
+        n.setString("Name",name);n.setString("Block",block);n.setString("Machine",machine);n.setBoolean("Enabled",enabled);n.setBoolean("Physical",physical);n.setBoolean("BatteryRow",batteryRow);
         n.setBoolean("PulseMode",pulseMode);n.setInteger("PulseSeconds",pulseSeconds);n.setBoolean("Powered",powered);n.setLong("PulseEnd",pulseEnd);
         NBTTagList list=new NBTTagList();for(AutomationRule r:rules)list.appendTag(r.write());n.setTag("Rules",list);
         n.setTag("ReactorSettings",reactor.write());n.setInteger("ReactorType",reactorType);n.setInteger("ReactorLastTarget",reactorLastTarget);
@@ -45,7 +45,7 @@ public final class WirelessEndpoint {
         if(e.id==null||e.network==null||e.owner==null)return null;e.tileToken=WirelessData.uuid(n.getString("TileToken"));
         e.kind=Kind.values()[Math.max(0,Math.min(2,n.getInteger("Kind")))];e.dimension=n.getInteger("Dimension");e.x=n.getInteger("X");e.y=n.getInteger("Y");e.z=n.getInteger("Z");
         e.side=Math.max(0,Math.min(5,n.getInteger("Side")));e.name=WirelessData.clean(n.getString("Name"),32);e.block=WirelessData.clean(n.getString("Block"),128);e.machine=WirelessData.clean(n.getString("Machine"),64);
-        e.enabled=n.getBoolean("Enabled");e.physical=n.getBoolean("Physical");e.pulseMode=n.getBoolean("PulseMode");e.pulseSeconds=Math.max(5,Math.min(10,n.getInteger("PulseSeconds")));
+        e.enabled=n.getBoolean("Enabled");e.physical=n.getBoolean("Physical");e.batteryRow=n.getBoolean("BatteryRow");e.pulseMode=n.getBoolean("PulseMode");e.pulseSeconds=Math.max(5,Math.min(10,n.getInteger("PulseSeconds")));
         e.powered=n.getBoolean("Powered");e.pulseEnd=Math.max(0,n.getLong("PulseEnd"));NBTTagList rules=n.getTagList("Rules",10);
         for(int i=0;i<Math.min(8,rules.tagCount());i++)e.rules[i]=AutomationRule.read(rules.getCompoundTagAt(i));
         e.reactor=ReactorSettings.read(n.getCompoundTag("ReactorSettings"));e.reactorType=Math.max(0,Math.min(3,n.getInteger("ReactorType")));e.reactorCore=WirelessData.uuid(n.getString("ReactorCore"));

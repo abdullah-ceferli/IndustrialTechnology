@@ -1,0 +1,62 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        maven { url = 'https://maven.minecraftforge.net/' }
+    }
+    dependencies { classpath 'com.anatawa12.forge:ForgeGradle:1.2-1.1.1' }
+}
+apply plugin: 'forge'
+version = '1.2.0'
+group = 'personal.offlineskins'
+archivesBaseName = 'OfflineSkins-1.7.10'
+sourceCompatibility = targetCompatibility = '1.8'
+minecraft {
+    version = '1.7.10-10.13.4.1614-1.7.10'
+    runDir = 'run'
+}
+repositories { mavenCentral() }
+dependencies { testImplementation 'junit:junit:4.13.2' }
+tasks.withType(JavaCompile) { options.encoding = 'UTF-8' }
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('mcmod.info') { expand 'version': project.version }
+}
+jar { from('LICENSE') { into 'META-INF' } }
+task sourcesJar(type: Jar, dependsOn: classes) {
+    archiveClassifier.set('sources')
+    from sourceSets.main.allSource
+    from('src/relay/java') { into 'relay' }
+    from 'README.md', 'LICENSE'
+    from('friends-service') { include '*.md', '*.ps1', '*.cmd'; into 'friends-service' }
+}
+artifacts { archives sourcesJar }
+
+sourceSets {
+    relay {
+        java.srcDir 'src/relay/java'
+        compileClasspath += sourceSets.main.output
+    }
+    testMod {
+        java.srcDir 'src/testMod/java'
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+sourceSets.test.compileClasspath += sourceSets.relay.output
+sourceSets.test.runtimeClasspath += sourceSets.relay.output
+compileTestJava.dependsOn relayClasses
+task relayJar(type: Jar, dependsOn: [classes, relayClasses]) {
+    archiveBaseName.set('OfflineSkins-Friends-Service')
+    from sourceSets.relay.output
+    from(sourceSets.main.output) { include 'personal/offlineskins/SkinImage.class', 'personal/offlineskins/friends/**' }
+    from('LICENSE') { into 'META-INF' }
+    manifest { attributes 'Main-Class': 'personal.offlineskins.relay.FriendsRelay' }
+}
+assemble.dependsOn relayJar
+task testModJar(type: Jar, dependsOn: testModClasses) {
+    archiveBaseName.set('offline-skins-test-harness')
+    from sourceSets.testMod.output
+}
+if (project.hasProperty('integrationTest')) {
+    tasks.reobf.reobf(tasks.testModJar) { spec -> spec.classpath = sourceSets.testMod.compileClasspath }
+}

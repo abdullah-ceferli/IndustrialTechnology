@@ -1,0 +1,29 @@
+[15:24:38] [Server thread/INFO] [FML]: An error occured trying to load a proxy into IndustrialTechnology.proxy. Did you declare your mod as 'class' instead of 'object'?
+java.lang.ClassNotFoundException: dev.industrialtechnology.core.IndustrialTechnology$
+	at net.minecraft.launchwrapper.LaunchClassLoader.findClass(LaunchClassLoader.java:191) ~[launchwrapper-1.12.jar:?]
+	at java.lang.ClassLoader.loadClass(ClassLoader.java:418) ~[?:1.8.0_504]
+	at java.lang.ClassLoader.loadClass(ClassLoader.java:351) ~[?:1.8.0_504]
+	at java.lang.Class.forName0(Native Method) ~[?:1.8.0_504]
+	at java.lang.Class.forName(Class.java:348) ~[?:1.8.0_504]
+	at cpw.mods.fml.common.ILanguageAdapter$ScalaAdapter.setProxy(ILanguageAdapter.java:51) [ILanguageAdapter$ScalaAdapter.class:?]
+	at cpw.mods.fml.common.ProxyInjector.inject(ProxyInjector.java:71) [ProxyInjector.class:?]
+
+[15:24:47] [Server thread/ERROR] [industrialtech]: Survival right-click amulet goes through vanilla ItemInWorldManager without a null return
+java.lang.NullPointerException
+	at net.minecraft.server.management.ItemInWorldManager.func_73085_a(ItemInWorldManager.java:336) ~[mx.class:?]
+	at dev.industrialtechnology.test.AccessoryServerChecks.useHeld(AccessoryServerChecks.java:17) ~[AccessoryServerChecks.class:?]
+	at dev.industrialtechnology.test.AccessoryServerChecks.lambda$checks$0(AccessoryServerChecks.java:19) ~[AccessoryServerChecks.class:?]
+	at dev.industrialtechnology.test.AccessoryServerChecks.test(AccessoryServerChecks.java:9) [AccessoryServerChecks.class:?]
+	at dev.industrialtechnology.test.AccessoryServerChecks.checks(AccessoryServerChecks.java:19) [AccessoryServerChecks.class:?]
+	at dev.industrialtechnology.test.AccessoryServerChecks.tick(AccessoryServerChecks.java:49) [AccessoryServerChecks.class:?]
+	at cpw.mods.fml.common.eventhandler.ASMEventHandler_181_AccessoryServerChecks_tick_ServerTickEvent.invoke(.dynamic) [?:?]
+
+[15:24:47] [Server thread/ERROR] [industrialtech]: Survival right-click rings fill both slots and a third ring stays in hand
+java.lang.NullPointerException
+	at net.minecraft.server.management.ItemInWorldManager.func_73085_a(ItemInWorldManager.java:336) ~[mx.class:?]
+	at dev.industrialtechnology.test.AccessoryServerChecks.useHeld(AccessoryServerChecks.java:17) ~[AccessoryServerChecks.class:?]
+	at dev.industrialtechnology.test.AccessoryServerChecks.lambda$checks$1(AccessoryServerChecks.java:20) ~[AccessoryServerChecks.class:?]
+	at dev.industrialtechnology.test.AccessoryServerChecks.test(AccessoryServerChecks.java:9) [AccessoryServerChecks.class:?]
+	at dev.industrialtechnology.test.AccessoryServerChecks.checks(AccessoryServerChecks.java:20) [AccessoryServerChecks.class:?]
+	at dev.industrialtechnology.test.AccessoryServerChecks.tick(AccessoryServerChecks.java:49) [AccessoryServerChecks.class:?]
+	at cpw.mods.fml.common.eventhandler.ASMEventHandler_181_AccessoryServerChecks_tick_ServerTickEvent.invoke(.dynamic) [?:?]

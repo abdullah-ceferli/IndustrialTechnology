@@ -1,0 +1,5 @@
+PASS: Green opens directly to live HBM HE with separate green input and red output
+PASS: Actual terminal button combines five center-linked HBM batteries and their live transfer rates
+PASS: Row setting survives reopening; Items/Tanks and GUI scale 2 render without GL errors
+PASS: Same button restores a single HBM battery through the real server command
+Failed: 0

@@ -1,0 +1,10 @@
+{
+  "version": "1.2.0",
+  "installed_jar": "D:\\programs\\Maincraft\\Minecraft\\game\\mods\\OfflineSkins-1.7.10-1.2.0.jar",
+  "sha256": "12e7f70f1f6319380d1a9b501cdc74e3242bd01e456ffe5f82fa3cb87977de6b",
+  "skin_config_files_unchanged": true,
+  "automated_tests": 22,
+  "lan_evidence": "build/lan-1.2.0-final-2/RESULT.json",
+  "friends_evidence": "build/friends-1.2.0-final/RESULT.json",
+  "android_physical_device_tested": false
+}

@@ -1,0 +1,12 @@
+PASS: All original assembler JSON entries remain unchanged and only four legacy recipes are appended
+PASS: All four loaded HBM recipes match the last original ingredients, quantities, HE and duration
+PASS: Every restored assembler ingredient resolves to real registered items or material ore entries
+PASS: Real HBM assembler module crafts ass.battery and consumes the exact original HE/materials
+PASS: Real HBM assembler module crafts ass.batterylithium and consumes the exact original HE/materials
+PASS: Real HBM assembler module crafts ass.batteryschrabidium and consumes the exact original HE/materials
+PASS: Real HBM assembler module crafts ass.batterydnt and consumes the exact original HE/materials
+PASS: Original 3x3 Spark cell crafting layouts produce the right cells with zero charge
+PASS: Restored cells retain the original 600M/2.5G/10G/100G HE capacities
+PASS: Opt-in setting is active and unrelated modern capacitor recipes remain registered
+PASS: Legacy storage test fixture
+Failed: 0

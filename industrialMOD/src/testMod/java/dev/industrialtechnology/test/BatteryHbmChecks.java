@@ -1,0 +1,52 @@
+package dev.industrialtechnology.test;
+import java.util.*;
+import com.hbm.blocks.ModBlocks;
+
+import dev.industrialtechnology.wireless.*;import dev.industrialtechnology.energy.*;import dev.industrialtechnology.core.*;import dev.industrialtechnology.capacitor.*;
+import net.minecraft.block.Block;import net.minecraft.init.Blocks;import net.minecraft.world.*;import net.minecraft.item.*;import net.minecraft.nbt.*;import net.minecraftforge.common.util.*;
+import net.minecraftforge.common.util.FakePlayer;
+public final class BatteryHbmChecks {
+    
+    private static final class HbmBattery {
+        final Object tile;HbmBattery(Object tile){this.tile=tile;}
+        long getPower(){return value("getPower");}long getMaxPower(){return value("getMaxPower");}
+        long value(String method){try{return ((Number)tile.getClass().getMethod(method).invoke(tile)).longValue();}catch(Exception e){throw new RuntimeException(e);}}
+        void call(String method,long value){try{tile.getClass().getMethod(method,long.class).invoke(tile,value);}catch(Exception e){throw new RuntimeException(e);}}
+        void setPower(long value){call("setPower",value);}void transferPower(long value){call("transferPower",value);}void usePower(long value){call("usePower",value);}
+        void modes(int mode){try{tile.getClass().getField("redLow").setShort(tile,(short)mode);tile.getClass().getField("redHigh").setShort(tile,(short)mode);}catch(Exception e){throw new RuntimeException(e);}}
+        int mode(String name){try{return tile.getClass().getField(name).getShort(tile);}catch(Exception e){throw new RuntimeException(e);}}
+    }
+    private final WorldServer w;private final BatteryServerChecks tests;private FakePlayer p;private UUID network;private WirelessEndpoint green;private TerminalContainer terminal;
+    private final List<HbmBattery> row=new ArrayList<HbmBattery>();private long totalCapacity;private int transfers;private HbmBattery itemBattery;
+    BatteryHbmChecks(WorldServer w,BatteryServerChecks tests){this.w=w;this.tests=tests;}
+    private static void check(boolean b,String s){if(!b)throw new AssertionError(s);}
+    private HbmBattery battery(int x,int y,int z,Block block){w.getChunkFromChunkCoords(x>>4,z>>4);w.setBlock(x,y,z,block,0,3);HbmBattery b=new HbmBattery(w.getTileEntity(x,y,z));b.modes(3);b.setPower(100000);return b;}
+    private WirelessEndpoint link(int x,int y,int z,WirelessEndpoint.Kind kind){p.setPosition(x+.5,y,z+2);ItemStack s=new ItemStack(ItemWirelessStick.item(kind));int side=3;for(int candidate:new int[]{3,2,5,4,1,0}){ForgeDirection d=ForgeDirection.getOrientation(candidate);if(w.isAirBlock(x+d.offsetX,y+d.offsetY,z+d.offsetZ)){side=candidate;break;}}ForgeDirection d=ForgeDirection.getOrientation(side);((ItemWirelessStick)s.getItem()).onItemUseFirst(s,p,w,x,y,z,side,.5F,.5F,1);TileRedstoneRelay relay=(TileRedstoneRelay)w.getTileEntity(x+d.offsetX,y+d.offsetY,z+d.offsetZ);check(relay!=null&&relay.endpoint!=null,"Actual torch placement");return WirelessData.get(w).devices.get(relay.endpoint);}
+    public void setup(){
+        p=new FakePlayer(w,new com.mojang.authlib.GameProfile(UUID.fromString("2fdc4832-9388-4d47-b635-11811028e281"),"BatteryTester")){@Override public void sendPlayerAbilities(){}@Override public void addChatMessage(net.minecraft.util.IChatComponent s){}};p.theItemInWorldManager.setGameType(WorldSettings.GameType.SURVIVAL);p.inventory.mainInventory[0]=new ItemStack(ModRegistry.terminal);network=WirelessAccess.terminal(p,p.getHeldItem(),true);
+        Block[] blocks={ModBlocks.machine_battery,ModBlocks.machine_lithium_battery,ModBlocks.machine_schrabidium_battery,ModBlocks.machine_battery,ModBlocks.machine_battery};for(int i=0;i<5;i++){HbmBattery b=battery(100+i,70,60,blocks[i]);row.add(b);totalCapacity+=b.getMaxPower();}
+        green=link(102,70,60,WirelessEndpoint.Kind.MONITOR);terminal=new TerminalContainer(p);terminal.selected=green.id;
+        tests.test("Installed HBM legacy class has actual transfer observation hooks",()->check(row.get(0).tile instanceof MeteredBattery,"Core plugin did not instrument HBM"));
+        tests.test("Green stick reads exact HE and capacity of its attached HBM battery",()->{NBTTagCompound n=terminal.snapshot().getCompoundTag("Energy");check(n.getBoolean("Available")&&n.getLong("Amount")==100000&&n.getLong("Capacity")==row.get(2).getMaxPower()&&"HE".equals(n.getString("Unit"))&&n.getInteger("Count")==1,"single HE");});
+        tests.test("One real center Green toggles five mixed-tier HBM blocks as one row",()->{terminal.action(WirelessCommand.ENERGY_ROW,1,0,"");NBTTagCompound n=terminal.snapshot().getCompoundTag("Energy");check(green.batteryRow&&n.getInteger("Count")==5&&n.getLong("Amount")==500000&&n.getLong("Capacity")==totalCapacity&&"X".equals(n.getString("Axis")),"row total: "+n);});
+        tests.test("Row choice persists without breaking old endpoint NBT",()->{check(WirelessEndpoint.read(green.write()).batteryRow,"saved row");NBTTagCompound old=green.write();old.removeTag("BatteryRow");check(!WirelessEndpoint.read(old).batteryRow,"old endpoints must start single");});
+        tests.test("Forged foreign selection, Yellow selection and invalid row value are rejected",()->{UUID owner=green.owner;green.owner=UUID.randomUUID();terminal.action(WirelessCommand.ENERGY_ROW,0,0,"");check(green.batteryRow,"foreign changed");green.owner=owner;green.kind=WirelessEndpoint.Kind.CONTROL;terminal.action(WirelessCommand.ENERGY_ROW,0,0,"");check(green.batteryRow,"Yellow changed");green.kind=WirelessEndpoint.Kind.MONITOR;terminal.action(WirelessCommand.ENERGY_ROW,2,0,"");check(green.batteryRow,"invalid value changed");});
+        tests.test("Z and vertical rows, even counts, gaps and unrelated machines are handled",()->{
+            battery(120,70,80,ModBlocks.machine_battery);battery(120,70,81,ModBlocks.machine_battery);battery(120,70,83,ModBlocks.machine_battery);WirelessEndpoint z=link(120,70,80,WirelessEndpoint.Kind.MONITOR);z.batteryRow=true;NBTTagCompound n=new BatteryMonitor().snapshot(z,0);check(n.getInteger("Count")==2&&"Z".equals(n.getString("Axis")),"gap/even Z row "+n);
+            for(int y=70;y<=72;y++)battery(130,y,90,ModBlocks.machine_battery);WirelessEndpoint v=link(130,71,90,WirelessEndpoint.Kind.MONITOR);v.batteryRow=true;n=new BatteryMonitor().snapshot(v,0);check(n.getInteger("Count")==3&&"Y".equals(n.getString("Axis")),"vertical row");
+        });
+        tests.test("Unloaded row boundary is reported and never loads the neighboring chunk",()->{int x=800,z=800;battery(x,70,z,ModBlocks.machine_battery);WirelessEndpoint edge=link(x,70,z,WirelessEndpoint.Kind.MONITOR);edge.batteryRow=true;int before=w.theChunkProviderServer.getLoadedChunkCount();NBTTagCompound n=new BatteryMonitor().snapshot(edge,0);check(n.getInteger("Count")==1&&w.theChunkProviderServer.getLoadedChunkCount()==before,"row forced a chunk");edge.x=48000;check(!new BatteryMonitor().snapshot(edge,0).getBoolean("Available")&&w.theChunkProviderServer.getLoadedChunkCount()==before,"offline target forced a chunk");});
+        tests.test("Oversized rows stop at 65 batteries and mark the total as partial",()->{for(int x=1967;x<=2033;x++)battery(x,70,160,ModBlocks.machine_battery);WirelessEndpoint big=link(2000,70,160,WirelessEndpoint.Kind.MONITOR);big.batteryRow=true;NBTTagCompound n=new BatteryMonitor().snapshot(big,0);check(n.getInteger("Count")==65&&n.getBoolean("Partial"),"unbounded row "+n);});
+        tests.test("Advanced Capacitor Bank multiblock is counted once with full long RF totals",()->{for(int i=0;i<3;i++)w.setBlock(140+i,70,100,ModRegistry.capacitorBank,0,3);WirelessEndpoint bank=link(141,70,100,WirelessEndpoint.Kind.MONITOR);bank.batteryRow=true;NBTTagCompound n=new BatteryMonitor().snapshot(bank,0);check(n.getBoolean("Available")&&"RF".equals(n.getString("Unit"))&&n.getInteger("Count")==3&&n.getLong("Capacity")==75000000&&!n.getBoolean("Groupable"),"RF network counted multiple times");});
+        tests.test("Repeated snapshots do not alter energy or battery configuration",()->{long sum=0;for(HbmBattery b:row)sum+=b.getPower();for(int i=0;i<10;i++)terminal.snapshot();long after=0;for(HbmBattery b:row){after+=b.getPower();check(b.mode("redLow")==3&&b.mode("redHigh")==3,"mode modified");}check(sum==after,"monitor moved HE");});
+        // Refresh after every test so all five observation windows begin before real transfers.
+        terminal.snapshot();
+    }
+    public void transfer(){if(++transfers==24){itemBattery=battery(150,70,120,ModBlocks.machine_battery);((net.minecraft.inventory.IInventory)itemBattery.tile).setInventorySlotContents(1,api.hbm.energymk2.IBatteryItem.emptyBattery(com.hbm.items.machine.ItemBatteryPack.EnumBatteryPack.BATTERY_LEAD.stack()));check(((api.hbm.energymk2.IBatteryItem)((net.minecraft.inventory.IInventory)itemBattery.tile).getStackInSlot(1).getItem()).getChargeRate(((net.minecraft.inventory.IInventory)itemBattery.tile).getStackInSlot(1))>0,"fixture battery must be rechargeable");BatteryFlowMeter.watch(itemBattery.tile);((net.minecraft.tileentity.TileEntity)itemBattery.tile).updateEntity();}for(HbmBattery b:row){b.transferPower(300);b.usePower(100);}terminal.snapshot();}
+    public void finish(){
+        tests.test("HBM item charging is metered through production tick-method energy writes",()->{long[] flow=BatteryFlowMeter.watch(itemBattery.tile);check(itemBattery.getPower()<100000&&flow!=null&&flow[1]>0,"direct tick writes were not observed: stored="+itemBattery.getPower()+" flow="+java.util.Arrays.toString(flow));});
+        tests.test("Real simultaneous HBM transfers show +1500 HE/t and -500 HE/t across the row",()->{NBTTagCompound n=terminal.snapshot().getCompoundTag("Energy");check(n.getBoolean("RatesAvailable")&&n.getLong("Input")==1500&&n.getLong("Output")==500,"separate rates: "+n);});
+        tests.test("Single mode restores one battery without adding or consuming energy",()->{terminal.action(WirelessCommand.ENERGY_ROW,0,0,"");NBTTagCompound n=terminal.snapshot().getCompoundTag("Energy");check(n.getInteger("Count")==1&&n.getLong("Input")==300&&n.getLong("Output")==100,"single rates");});
+        tests.test("Replacement or missing target never returns a stale stored-energy total",()->{BatteryMonitor m=new BatteryMonitor();check(m.snapshot(green,0).getBoolean("Available"),"setup");green.block="missing:block";check(!m.snapshot(green,0).getBoolean("Available"),"stale total survived disconnect");});
+    }
+}

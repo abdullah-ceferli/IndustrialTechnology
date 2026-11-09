@@ -1,0 +1,12 @@
+/.gradle/
+/build/
+/run/
+/.idea/
+*.iml
+*.log
+/config/
+/skins/*.png
+/friends-service/data/
+*.jks
+*.p12
+*.password

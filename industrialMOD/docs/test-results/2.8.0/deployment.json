@@ -1,0 +1,14 @@
+{
+  "version": "2.8.0",
+  "installed": "D:\\programs\\Maincraft\\Minecraft\\game\\mods\\IndustrialTechnology-1.7.10-2.8.0.jar",
+  "sha256": "c08ab3d5adf63ce71e88322295b0186b4a9738f28aa99c2e390de5e1c0079c9d",
+  "backup": "D:\\programs\\Maincraft\\Minecraft\\game\\mod-backups\\industrialtech-battery-monitor-20261030\\IndustrialTechnology-1.7.10-2.7.2.jar",
+  "previousSha256": "001104C6EF0138BC08FCC5CCB63A3A2C51AC62C0305E5C7CE16AEE80737C8680",
+  "unchanged": {
+    "config/hbmRecipes/hbmAssemblyMachine.json": "CC3A050F8BA8F2B46323703A50959A1B044DFC478237E37B83D1FF35F06614F9",
+    "config/industrialtech.cfg": "25D7A49098EA68505C9FE64CA668685892079EA2E14A23F7DDA83EC2BCE33D76",
+    "mods/HBM-NTM-.1.0.27_X5771.jar": "5C17AB050042C6E9DD22D281DE2CEBEF5DBE0FA495A8B34BBFEE05C5D64168A4"
+  },
+  "savesAccessed": false,
+  "timeUtc": "2026-10-30T17:46:09.4252386Z"
+}

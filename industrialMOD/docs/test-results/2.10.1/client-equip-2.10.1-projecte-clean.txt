@@ -1,0 +1,18 @@
+PASS: Original gold-ring inventory button opens the real Baubles equipment screen
+PASS: Vanilla inventory clicks equip our ring/amulet and synchronize flight/nightvision from the server
+PASS: Removing both accessories through the real equipment screen removes their effects
+PASS: Actual client/server charge packet updates the held tool and synchronizes its NBT
+PASS: Server rejects a charge packet naming a different hotbar slot
+PASS: NEI displays the standalone Ring of Flight recipe and original icon
+PASS: NEI displays the standalone Amulet of Nightvision recipe and original icon
+PASS: NEI displays the standalone Destruction Catalyst recipe and original icon
+PASS: NEI displays the standalone Hyperkinetic Lens recipe and original icon
+PASS: NEI displays the standalone Catalytic Lens recipe and original icon
+INFO: original mods present=true,false
+PASS: Disposable Survival world opens to LAN before exercising real right-click packets
+PASS: Actual LAN right-click packet equips the amulet, consumes the Survival held item and synchronizes nightvision without crashing
+PASS: Actual LAN right-click packet equips the flight ring and synchronizes Survival flight
+PASS: A second right-click ring equips without losing flight or duplicating the held item
+PASS: Right-clicking with both ring slots occupied retains the held ring
+PASS: Right-clicking with an occupied amulet slot preserves both amulets and nightvision
+Failed: 0

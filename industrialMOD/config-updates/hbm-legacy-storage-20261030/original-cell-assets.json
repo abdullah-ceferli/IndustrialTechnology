@@ -1,0 +1,18 @@
+{
+  "src/main/resources/assets/industrialtech/textures/items/legacy_hbm/battery_spark_cell_6.png": {
+    "source": "https://raw.githubusercontent.com/HbmMods/Hbm-s-Nuclear-Tech-GIT/ef2b20d357ce159f7c3861cfecf8169796023a83/src/main/resources/assets/hbm/textures/items/battery_spark_cell_6.png",
+    "sha256": "b6107422f19b5de1377d637de24b4264808fdb82b5c3dc7a5c7c10a9f1739f0b"
+  },
+  "src/main/resources/assets/industrialtech/textures/items/legacy_hbm/battery_spark_cell_25.png": {
+    "source": "https://raw.githubusercontent.com/HbmMods/Hbm-s-Nuclear-Tech-GIT/ef2b20d357ce159f7c3861cfecf8169796023a83/src/main/resources/assets/hbm/textures/items/battery_spark_cell_25.png",
+    "sha256": "bfe28ffa5b5b7e37bf78aaea61eba18ee1a57c786af23e9a1643d9674a6dc36d"
+  },
+  "src/main/resources/assets/industrialtech/textures/items/legacy_hbm/battery_spark_cell_100.png": {
+    "source": "https://raw.githubusercontent.com/HbmMods/Hbm-s-Nuclear-Tech-GIT/ef2b20d357ce159f7c3861cfecf8169796023a83/src/main/resources/assets/hbm/textures/items/battery_spark_cell_100.png",
+    "sha256": "a4f8aacc324c10007e4e22c6cf7c73f8c70ed52b7c44b5c7af113a95bcbabd6f"
+  },
+  "src/main/resources/assets/industrialtech/textures/items/legacy_hbm/battery_spark_cell_1000.png": {
+    "source": "https://raw.githubusercontent.com/HbmMods/Hbm-s-Nuclear-Tech-GIT/ef2b20d357ce159f7c3861cfecf8169796023a83/src/main/resources/assets/hbm/textures/items/battery_spark_cell_1000.png",
+    "sha256": "e56cd5879b72c1849bd06646faa09e95264dbf01bd0b42a4f31885e889283e7a"
+  }
+}

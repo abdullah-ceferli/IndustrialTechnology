@@ -71,7 +71,7 @@ public final class ServerIntegrationMod {
     }
     @Mod.EventHandler public void serverStarted(FMLServerStartedEvent event) { started = true; }
     @SubscribeEvent public void tick(TickEvent.ServerTickEvent event) {
-        if (Boolean.getBoolean("industrialtech.bagTest") || Boolean.getBoolean("industrialtech.consoleTest") || Boolean.getBoolean("industrialtech.steelTest") || Boolean.getBoolean("industrialtech.railTest") || Boolean.getBoolean("industrialtech.bankTest") || Boolean.getBoolean("industrialtech.removalUpgrade") || !started || finished || !MinecraftServer.getServer().isDedicatedServer()) return;
+        if (Boolean.getBoolean("industrialtech.ocTest")||Boolean.getBoolean("industrialtech.accessoryTest") || Boolean.getBoolean("industrialtech.bagTest") || Boolean.getBoolean("industrialtech.consoleTest") || Boolean.getBoolean("industrialtech.steelTest") || Boolean.getBoolean("industrialtech.railTest") || Boolean.getBoolean("industrialtech.bankTest") || Boolean.getBoolean("industrialtech.removalUpgrade") || !started || finished || !MinecraftServer.getServer().isDedicatedServer()) return;
         if (speedStage > 0) {
             if (event.phase == TickEvent.Phase.START) {
                 for (int i=0;i<speedQuarries.length;i++) received[i]+=speedQuarries[i].receiveEnergy(ForgeDirection.NORTH,speedInputs[i],false);

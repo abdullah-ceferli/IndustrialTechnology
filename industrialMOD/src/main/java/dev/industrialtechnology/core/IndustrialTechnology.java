@@ -17,12 +17,12 @@ import net.minecraftforge.common.MinecraftForge;
 import cpw.mods.fml.common.FMLCommonHandler;
 import org.apache.logging.log4j.Logger;
 
-@Mod(modid = IndustrialTechnology.MODID, name = "Industrial Technology", version = "2.7.0",
-     acceptedMinecraftVersions = "[1.7.10]", dependencies = "required-after:Forge@[10.13.4.1614,);after:hbm")
+@Mod(modid = IndustrialTechnology.MODID, name = "Industrial Technology", version = "2.10.1",
+     acceptedMinecraftVersions = "[1.7.10]", dependencies = "required-after:Forge@[10.13.4.1614,);required-after:Baubles;after:ProjectE;after:baublelicious;after:hbm;required-after:OpenComputers@[1.8.10,)")
 public final class IndustrialTechnology {
     public static final String MODID = "industrialtech";
     @Mod.Instance(MODID) public static IndustrialTechnology instance;
-    @SidedProxy(clientSide = "dev.industrialtechnology.client.ClientProxy",
+    @SidedProxy(modId = MODID, clientSide = "dev.industrialtechnology.client.ClientProxy",
                 serverSide = "dev.industrialtechnology.core.CommonProxy")
     public static CommonProxy proxy;
     public static SimpleNetworkWrapper network;
@@ -36,6 +36,7 @@ public final class IndustrialTechnology {
         FMLCommonHandler.instance().bus().register(recovery);
         ModRegistry.register();
         network = NetworkRegistry.INSTANCE.newSimpleChannel(MODID);
+        network.registerMessage(dev.industrialtechnology.accessories.AccessoryCommand.Handler.class,dev.industrialtechnology.accessories.AccessoryCommand.class,13,Side.SERVER);
         network.registerMessage(ControlPacket.Handler.class, ControlPacket.class, 0, Side.SERVER);
         // The common handler delegates to the client proxy: no client class is linked on a server.
         network.registerMessage(SnapshotPacket.Handler.class, SnapshotPacket.class, 1, Side.CLIENT);
@@ -69,6 +70,7 @@ public final class IndustrialTechnology {
         MinecraftForge.EVENT_BUS.register(new dev.industrialtechnology.railway.TrackWorld());
         MinecraftForge.EVENT_BUS.register(new dev.industrialtechnology.railway.RailwayWorld());
         FMLCommonHandler.instance().bus().register(new dev.industrialtechnology.console.ConsoleService());
+        dev.industrialtechnology.integration.FactoryComputerDriver.register();
         proxy.init();
     }
     @Mod.EventHandler public void serverStopped(cpw.mods.fml.common.event.FMLServerStoppedEvent event){dev.industrialtechnology.console.ConsoleService.clear();dev.industrialtechnology.capacitor.BankManager.clear();dev.industrialtechnology.solar.SolarArrays.clear();dev.industrialtechnology.railway.TrackWorld.clear();dev.industrialtechnology.railway.RailwayWorld.clear();}

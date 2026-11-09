@@ -6,7 +6,7 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import dev.industrialtechnology.core.ServerWork;
 import net.minecraftforge.common.ForgeHooks;
 public final class WirelessCommand implements IMessage {
-    public static final int OPEN=0,TAB=1,PAGE=2,SELECT=3,RENAME=4,UNLINK=5,TOGGLE=6,MODE=7,DURATION=8,RULE=9,TARGET=10,SAVE_RULE=11,DETAIL=12,TRIGGER=13,CODE_MODE=14,SCRIPT_ENABLE=15;
+    public static final int OPEN=0,TAB=1,PAGE=2,SELECT=3,RENAME=4,UNLINK=5,TOGGLE=6,MODE=7,DURATION=8,RULE=9,TARGET=10,SAVE_RULE=11,DETAIL=12,TRIGGER=13,CODE_MODE=14,SCRIPT_ENABLE=15,ENERGY_ROW=25;
     private int window,action,a,b;private String text="";
     public WirelessCommand(){}
     public WirelessCommand(int window,int action,int a,int b,String text){this.window=window;this.action=action;this.a=a;this.b=b;this.text=text==null?"":text;}

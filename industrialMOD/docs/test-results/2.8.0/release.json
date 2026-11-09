@@ -1,0 +1,12 @@
+{
+  "version": "2.8.0",
+  "sha256": "c08ab3d5adf63ce71e88322295b0186b4a9738f28aa99c2e390de5e1c0079c9d",
+  "bytes": 816719,
+  "sourcesSha256": "7480e26ceb6c996c5a5f8c1d94bfc92b9b728777c92af6951615aab56aba84ca",
+  "junit": 130,
+  "nativeHbm": 14,
+  "nativeStandalone": 1,
+  "client": 4,
+  "totalChecks": 149,
+  "clientDirectory": "run-test-batteries-client-2.8.0-d"
+}

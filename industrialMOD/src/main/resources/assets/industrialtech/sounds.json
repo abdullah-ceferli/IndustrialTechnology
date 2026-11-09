@@ -61,5 +61,29 @@
         "stream": false
       }
     ]
+  },
+  "accessories.pedestruct": {
+    "category": "player",
+    "sounds": [
+      "industrialtech:accessories/pedestruct"
+    ]
+  },
+  "accessories.peuncharge": {
+    "category": "player",
+    "sounds": [
+      "industrialtech:accessories/peuncharge"
+    ]
+  },
+  "accessories.pecharge": {
+    "category": "player",
+    "sounds": [
+      "industrialtech:accessories/pecharge"
+    ]
+  },
+  "accessories.pepower": {
+    "category": "player",
+    "sounds": [
+      "industrialtech:accessories/pepower"
+    ]
   }
 }

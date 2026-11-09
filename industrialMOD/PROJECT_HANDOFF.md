@@ -1,6 +1,65 @@
-# Industrial Technology handoff - 2.7.0
+# Industrial Technology handoff - 2.10.1
 
-## Current expansion: colored Storage Bags (2.7.0)
+## Current fix: wearable right-click crash (2.10.1)
+
+Minecraft 1.7.10 ItemInWorldManager.tryUseItem dereferences the returned ItemStack before clearing an empty hand. ItemWearable must return the consumed, zero-count stack rather than null. Client-side prediction remains unchanged; vanilla sends the authoritative inventory update. Both amulet and flight ring share the fix. Do not restore Baublelicious to mask this bug. Native regression checks invoke the real vanilla manager, and graphical checks send real item-use packets in a disposable Survival LAN world with ProjectE present and Baublelicious absent.
+
+The main @SidedProxy now declares modId=MODID. Forge explicitly requires this ownership selector for mixed Java/Scala mods in one JAR; it prevents OpenComputers' Scala adapter from trying to inject our Java proxy. Original OC classes/resources remain unchanged.
+
+Release evidence: docs/test-results/2.10.1. Back up installed 2.10.0 outside mods, install only the sealed production 2.10.1 JAR after Minecraft is closed, preserve the current mod/config hashes, and never open or modify user worlds.
+
+
+## Previous update: independent accessories / catalysts (2.10.0)
+
+User requests original Baublelicious Flight Ring/Nightvision Amulet, real gold-ring Baubles equipment UI, and three pictured ProjectE tools. Exact color comparison identifies the pictured items as Destruction Catalyst, Hyperkinetic Lens, Catalytic Lens; do not add Life/Soul/Body stones. User explicitly wants independent copies and will remove ProjectE/Baublelicious later, but forbids us deleting them now. Their final corrections require alternative ordinary-material recipes for the three tools, no colored ProjectE fuels/matter chain, and coal-family-only runtime fuel including HBM Petroleum Coke; no trees/wood/other fuels.
+
+accessories/ adds item registration after previous legacy parts, real IBauble wearables, passive effects, ItemCatalyst charge/actions, CoalFuel atomic inventory draw/change NBT, original adapted NovaExplosion, lens projectile and persisted collected loot entities. It does not import any original mod entry points. Standard Baubles is required for the original equipment slots/button and remains separately installed. ProjectE/Baublelicious are optional; after-order preserves original V/R key bindings when present. HBM coal identities come from optional cached reflection on actual ModItems fields, because registry names are not plain field names. Ore names are narrowly coal/coke only; furnace burnability alone never qualifies an item.
+
+Packet 13 is AccessoryCommand, server-thread held-slot validation and a short action bound. Entity IDs 2/3 are new lens projectile/loot ball; rolling stock stays 1. Item IDs and existing classes are preserved except registration/init/client input/version. Original sprites/audio live under industrialtech/accessories; source/hashes in development-assets/accessories/original-assets.json. Existing ProjectE MC17 credits are retained, and original-source adaptation/asset credits are documented.
+
+tools/prepare_accessory_development.py verifies vendor/baubles original API and translates globally unique SRG names in a development-only JAR, never bundled. compileJava prepares it; runtime development uses the real Baubles mod. Original ProjectE/Baublelicious development copies are test-only.
+
+Tests: AccessoryServerChecks and AccessoryClientChecks, tools/verify-accessories-{production,client}.ps1; new worlds exclusively .toolchain/accessory-tests. Native checks cover no-original-mod loading, crafting, effects, coal rejection/credit, actual HBM coke, mining/break protection, original charge tables, loot partial pickup/NBT, entity-safe Nova blast, firing and actual JVM persistence. Client uses the original Baubles button/container packets, effect sync/removal, our command packets and all five NEI pages. Use a final production build after graphical tests. Never open/edit/delete installed saves; never remove original mods without a later explicit request. Keep first/last-three run-test folders untouched.
+
+Guide: ACCESSORIES_GUIDE.md. Release evidence: docs/test-results/2.10.0. Deploy only the final tested combined IT JAR after verifying Minecraft is closed, backing up 2.9.0 outside mods, and checking all existing mod/config hashes.
+
+## Previous update: full OpenComputers (2.9.0)
+
+User explicitly requested complete original OpenComputers inside our mod, with no AI. Official MC1.7.10 1.8.10 commit 667626d is vendored with pinned hashes and original sources/notices under vendor/opencomputers. tools/bundle_opencomputers.py merges the original universal archive AFTER reobf, preserving original classes/resources unchanged and explicit parent directories for OC ZIP filesystems. Only manifest, mcmod.info and pack.mcmeta metadata are combined. Original OpenComputers mod ID/registry namespaces remain. CombinedCorePlugin supplies original OC ClassTransformer/CoreModContainer plus the unchanged battery transformer. FMLAT remains oc_at.cfg. Do not also install a standalone OC JAR.
+
+FactoryComputerDriver is a passive read-only original Adapter driver for capacitor banks, physically valid Green monitors and consoles. It uses existing snapshots/cached channels, validates tile identity/loaded access and Green placer ownership, and exposes industrialtech methods getInfo/getEnergy/getTanks/getChannels. Server-thread callbacks, no tick hook. Large energy values have exact decimal strings alongside numeric fields. No wireless action/control methods.
+
+Build tools/build.ps1; original OC development jar is stripped ONLY of its competing coreloader manifest via tools/prepare_oc_development.py. Client/server development use CombinedCorePlugin once. Production must be rebuilt after runClient. New disposable checks go ONLY in .toolchain/oc-tests (not more run-test folders). tools/verify-opencomputers-production.ps1 supports stock Reference, WithPack and Restart; tools/verify-opencomputers-client.ps1 exercises original OpenOS and original GUI/input. Reports and final package comparison are recorded in docs/test-results/2.9.0.
+
+Guide: OPENCOMPUTERS_GUIDE.md. The user previously authorized pruning old run-test folders; retain exactly run-test and the last three 2.8.0 battery test folders. No user worlds may be opened, edited or deleted. Before deployment ensure Minecraft is closed, back up installed 2.8.0 outside mods, preserve existing configs/HBM JAR and install only the verified combined 2.9.0 runtime.
+
+## Previous update: Green battery energy and row totals (2.8.0)
+
+User wants a Green stick on a battery to show stored energy, incoming energy in green, outgoing energy in red, and a terminal button combining a straight touching row through the center battery. User confirmed the main target is HBM Energy Storage Blocks.
+
+BatteryMonitor creates the Green endpoint's Energy snapshot, discovers the longest bounded X/Z/Y row, sums 64-bit amounts/capacities and real per-battery flow, marks partial scans, and never follows cables or loads chunks. WirelessEndpoint.BatteryRow is saved and defaults false on old NBT. WirelessCommand.ENERGY_ROW is 25 (reactor actions already occupy 16Р Р†Р вЂљРІР‚Сљ24); server validates endpoint owner/network, type, dimension, status and mode. GUI buttons 28/29 add Energy and row toggle without changing GUI IDs or packet IDs. Item/Tank tabs are retained. Existing capacitor network totals are counted once.
+
+Exact HBM transfer rates cannot be obtained from HBM's net log or charge limits. energy/core/BatteryMeterPlugin registers a narrow, idempotent ASM transformer for HBM's TileEntityMachineBattery and TileEntityBatterySocket. Original calculations/writes/calls remain; observations are inserted afterward. HBM tick method is updateEntity in development and func_145845_h in production. This captures direct item-charging assignments as well as network setPower calls. MeteredBattery marker advertises installed hooks; optional classes are isolated. BatteryFlowMeter watches only viewed batteries with weak keys and 40-tick expiry. FlowWindow holds 21 buckets so the current tick cannot overwrite the oldest of the last 20 completed ticks. Unsupported flow APIs report unavailable rather than disguising net charge as separate I/O. Row totals include internal member-to-member transfers in both directions; see BATTERY_MONITOR_GUIDE.md.
+
+Targeted checks: FlowWindowTest, BatteryServerChecks/BatteryHbmChecks, BatteryClientChecks; launchers tools/verify-battery-production.ps1 and tools/prepare-battery-client.ps1. Client runClient overwrites runtime output with a dev JAR: perform a final production build/reobf before release/install. No user worlds may be opened, edited, or deleted. Documentation: docs/CHANGES-2.8.0.md and BATTERY_MONITOR_GUIDE.md.
+
+## Previous patch: clean restored-item display names (2.7.2)
+
+User requested removing LEGACY from the names of the newly craftable items, not removing items. Client RestoredStorageNames runs after LanguageManager through the normal resource-reload listener list. It strips the literal parenthesized marker from exactly eight current translated item names and updates Forge's StringTranslate table using its public inject API. It preserves the selected language and reruns on resource/language reloads. Initial cross-domain language resources lost to HBM load order, so those attempted files were removed; no language assets are added in the final patch. Gameplay/integration code and all item/recipe IDs remain unchanged.
+
+The existing LegacyStorageClientChecks logs each real displayed item name on the original NEI pages. No new gameplay tests are introduced for this text patch. Package comparison verifies unchanged gameplay code/assets and only the new client listener/proxy registration plus version. See docs/CHANGES-2.7.2.md and docs/TESTING.md.
+
+## Previous patch: original legacy HBM storage recipes (2.7.1)
+
+User requested the four Energy Storage Blocks made craftable through HBM config with their last original recipes, then selected exact crafting-grid restoration through our mod for necessary Spark parts and explicitly original NEI presentation. Historical source: ef2b20d357ce159f7c3861cfecf8169796023a83, parent of the battery rework. Original four block recipes use HBM's assembler JSON, with all installed template entries retained. No new NEI handler; HBM displays them natively.
+
+HBM X5771 actually removed four prerequisite Spark cell items, including their icons. LegacyHbmRecipes/LegacyHbmSparkBridge restore those ItemBattery items after bags, with original capacities, translated names and original historical PNGs under industrialtech. HBM is conditionally linked. `compatibility.restoreLegacyHbmSparkCellRecipes` defaults false; when true, five original shaped ore grids create empty Spark battery and 6/25/100/1000 cells. Existing modern Spark recipe remains. Original `ItemBattery.getEmptyBattery` returns null for the current Spark base item type, so a common empty(Item) helper writes identical zero-charge NBT without assuming an obsolete class.
+
+LegacyStorageServerChecks/HbmChecks generate exact JSON through the real HBM serializer, verify 617 untouched defaults plus four recipes, material resolution, actual assembler module crafting and HE/t, original grid outputs/empty NBT and capacities, then repeat after a genuine restart. HBM's own double progress can take 401 ticks for a 400-tick recipe; the config remains 400 and tests accept native rounding with actual per-tick HE. LegacyStorageClientChecks exercises all four native HBM assembler pages and five NEI shaped crafting pages. No-HBM native run checks enabled-option loading safely. Test fixtures use only fresh run-test-* worlds.
+
+Setup/recipes/source references: LEGACY_HBM_STORAGE.md. Exact deployment files/history: config-updates/hbm-legacy-storage-20261030. The installed game update must back up the old mod JAR and config outside mods, check Minecraft is closed, and leave saves untouched. Final evidence/deployment manifest is recorded with docs/test-results/2.7.1. Rebuild production after client QA.
+
+## Previous expansion: colored Storage Bags (2.7.0)
 
 User asked for bags/colors/capacity like ProjectE and explicitly original ProjectE textures. bag/ package adds BagRegistry, ItemStorageBag, BagData, BagInventory and BagContainer; client/GuiStorageBag uses the unchanged legacy atlas and 255x230 layout. Sixteen metadata variants follow wool order; 104 storage slots, 36 player slots; GUI 8. Registry additions follow consoles, no custom packet. Existing machines and ProjectE contents are not modified.
 

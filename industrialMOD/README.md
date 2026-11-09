@@ -1,4 +1,14 @@
-# Industrial Technology Р Р†Р вЂљРІР‚Сњ Minecraft 1.7.10
+# Industrial Technology Р В Р’В Р вЂ™Р’В Р В Р’В Р Р†Р вЂљР’В Р В Р’В Р вЂ™Р’В Р В Р вЂ Р В РІР‚С™Р РЋРІвЂћСћР В Р’В Р В РІР‚В Р В Р’В Р Р†Р вЂљРЎв„ўР В Р Р‹Р РЋРЎв„ў Minecraft 1.7.10
+
+Version **2.10.1** fixes a Survival right-click crash when equipping our amulet or ring and scopes Java proxy injection correctly in the combined OpenComputers JAR. Version **2.10.0** adds [standalone flight/nightvision accessories and the pictured ProjectE catalysts/lenses](ACCESSORIES_GUIDE.md), original art, alternative survival recipes and strictly coal-family fuel, including HBM Petroleum Coke. Keep Baubles for its equipment slots. ProjectE and Baublelicious are optional; Baubles supplies the required equipment slots.
+
+Version **2.9.0** includes [the complete original OpenComputers 1.8.10](OPENCOMPUTERS_GUIDE.md): computers, robots, drones, tablets, servers, OpenOS, all original hardware, recipes and textures in our single JAR. Find its OpenComputers creative tab or NEI entries. Do not install a separate OpenComputers JAR alongside this build.
+
+Version **2.8.0** adds [Green Stick battery energy and combined row monitoring](BATTERY_MONITOR_GUIDE.md), with green incoming HE/RF and red outgoing HE/RF.
+
+Version **2.7.2** removes the LEGACY name labels from the eight restored craftable HBM storage blocks/cells.
+
+Version **2.7.1** adds an optional [original HBM legacy storage recipe restoration](LEGACY_HBM_STORAGE.md), including the deleted Spark prerequisite cells and original NEI crafting grids.
 
 Version **2.7.0** adds [16 colored Storage Bags](BAG_GUIDE.md), each with 104 slots, original ProjectE bag/screen textures, and personal storage shared by color. ProjectE is optional.
 
@@ -30,7 +40,7 @@ precise chunk loader. Both share an extensible machine and ticket framework.
 ## Install
 
 Use **Minecraft 1.7.10, Forge 10.13.4.1614, and Java 8**. Put
-`IndustrialTechnology-1.7.10-2.7.0.jar` from `build/libs` into `mods` on both
+`IndustrialTechnology-1.7.10-2.10.1.jar` from `build/libs` into `mods` on both
 the client and dedicated server. Replace the older Industrial Technology JAR; keep only one version in `mods`. The sources JAR is for developers.
 No Thermal Expansion, HBM, BuildCraft, or CoFHCore installation is required.
 The small official CoFH RF API is bundled with its version annotation.
@@ -59,8 +69,8 @@ for 100 blocks/s at 20 TPS**, with its existing ore/protection behavior.
 
 ## HBM reactor monitoring and automation
 
-Version **1.6.0** adds real RBMK fuel depletion and core/skin temperatures in Р вЂ™Р’В°C,
-all 24 native ZIRNOX fuel positions with depletion and reactor temperature in Р вЂ™Р’В°C,
+Version **1.6.0** adds real RBMK fuel depletion and core/skin temperatures in Р В Р’В Р вЂ™Р’В Р В Р вЂ Р В РІР‚С™Р Р†РІР‚С›РЎС›Р В Р’В Р Р†Р вЂљРІвЂћСћР В РІР‚в„ўР вЂ™Р’В°C,
+all 24 native ZIRNOX fuel positions with depletion and reactor temperature in Р В Р’В Р вЂ™Р’В Р В Р вЂ Р В РІР‚С™Р Р†РІР‚С›РЎС›Р В Р’В Р Р†Р вЂљРІвЂћСћР В РІР‚в„ўР вЂ™Р’В°C,
 local slot-specific ZIRNOX fuel loading, and manual RBMK rod group controls.
 Every Wireless Terminal tab has local device search, clear, and filtered pages.
 Version **1.6.2** removes the device-count label and shows the complete 24-position
@@ -137,7 +147,7 @@ separately. The moved quarry starts stopped with a fresh scan at its new locatio
 RF, output items, progress and the previous owner/identity are not copied into it.
 See [the patch notes](docs/CHANGES-1.6.1.md) for large-NBT filter handling.
 
-Click cells in the 5 Р вЂњРІР‚вЂќ 5 map to draft a selection. The center remains selected.
+Click cells in the 5 Р В Р’В Р вЂ™Р’В Р В Р вЂ Р В РІР‚С™Р РЋРЎв„ўР В Р’В Р В РІР‚В Р В Р’В Р Р†Р вЂљРЎв„ўР В Р вЂ Р В РІР‚С™Р РЋРЎС™ 5 map to draft a selection. The center remains selected.
 **1**, **3x3**, **All**, and **R** select the center, central nine chunks, all
 permitted chunks, and reset back to center. **Apply** saves the draft on the
 server. Hover cells for exact chunk and block coordinates; hover the count for
@@ -420,7 +430,7 @@ For actual client GUI tests, run:
 .\tools\build.ps1 -Tasks @('runClient', '-PtestClient', '-PtestRunDir=run-test-client-new')
 ```
 
-Use a new test folder. The test client opens a 960 Р вЂњРІР‚вЂќ 720 window, creates a
+Use a new test folder. The test client opens a 960 Р В Р’В Р вЂ™Р’В Р В Р вЂ Р В РІР‚С™Р РЋРЎв„ўР В Р’В Р В РІР‚В Р В Р’В Р Р†Р вЂљРЎв„ўР В Р вЂ Р В РІР‚С™Р РЋРЎС™ 720 window, creates a
 disposable integrated world, exercises the actual controls/packets/slots, saves
 screenshots, and exits. The separate test harness JAR is never part of the
 release mod. See `docs/TESTING.md` for actual results and remaining integrations.

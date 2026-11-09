@@ -1,0 +1,19 @@
+{
+  "version": "2.7.1",
+  "sha256": "dc015deb60763603ea8898d9af215fbf0493761642252556e208fcaedbb5d881",
+  "bytes": 799566,
+  "nativeDirectories": [
+    "run-test-legacy-storage-final-2.7.1-hbm",
+    "run-test-legacy-storage-final-2.7.1-standalone"
+  ],
+  "clientDirectory": "run-test-legacy-storage-client-2.7.1-c",
+  "checks": {
+    "hbm-initial.txt": 11,
+    "hbm-restart.txt": 11,
+    "standalone-initial.txt": 1,
+    "standalone-restart.txt": 1,
+    "nei-client.txt": 9,
+    "JUnit": 125
+  },
+  "totalChecks": 158
+}

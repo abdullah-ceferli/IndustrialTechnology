@@ -1,0 +1,10 @@
+PASS: Original Assembly Machine NEI handler displays standard-assembler with original HBM icons and ingredient layout
+PASS: Original Assembly Machine NEI handler displays lithium-assembler with original HBM icons and ingredient layout
+PASS: Original Assembly Machine NEI handler displays schrabidium-assembler with original HBM icons and ingredient layout
+PASS: Original Assembly Machine NEI handler displays spark-assembler with original HBM icons and ingredient layout
+PASS: Original Shaped Crafting NEI handler displays spark-battery-grid with original HBM icons and ingredient layout
+PASS: Original Shaped Crafting NEI handler displays spark-cell-6-grid with original HBM icons and ingredient layout
+PASS: Original Shaped Crafting NEI handler displays spark-cell-25-grid with original HBM icons and ingredient layout
+PASS: Original Shaped Crafting NEI handler displays spark-cell-100-grid with original HBM icons and ingredient layout
+PASS: Original Shaped Crafting NEI handler displays spark-cell-1000-grid with original HBM icons and ingredient layout
+Failed: 0

@@ -1,0 +1,6 @@
+{
+  "file": "Baubles-1.7.10-1.0.1.10.jar",
+  "sha256": "05ae8f11b8f9012ebebbf179227b010829739c6284e30da5dd3db220ee682f8a",
+  "role": "Compile/development API; not embedded. Runtime uses the original separately installed Baubles mod.",
+  "source": "https://github.com/Azanor/Baubles"
+}

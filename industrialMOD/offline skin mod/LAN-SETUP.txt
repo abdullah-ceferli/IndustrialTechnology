@@ -1,0 +1,23 @@
+Offline Skins 1.2.0 - Open to LAN
+
+1. Install OfflineSkins-1.7.10-1.2.0.jar on BOTH the host and each guest.
+   Replace the old Offline Skins JAR. Keep your existing PNGs and config files.
+2. On each device, put that player's PNG in the game instance's folder:
+   config/offlineskins/skins/
+3. Choose your skin using F8, or type:
+   /offlineskin use char.png
+   Replace char.png with your own filename.
+4. The host opens the world to LAN. The guest joins its IP and shown game port.
+5. Both players' skins are shared automatically. Choosing another PNG or using
+   /offlineskin reload updates the other player too.
+
+No separate friends service, friend request, or extra skin-server port is needed.
+LAN sharing works even if Friends mode was previously selected. That preference
+is kept for ordinary multiplayer servers. Private single-player stays local.
+
+For Zalith: use the same Forge 1.7.10 mod JAR and put the PNG in the selected
+Minecraft instance's config/offlineskins/skins directory. Matching gameplay mods
+are still required. The skin mod does not change Minecraft's login settings.
+
+PNG: classic Steve / 4-pixel arms, 64x32 or 64x64, at most 24 KiB.
+Modern Alex arms and separate modern clothing overlays are not supported.

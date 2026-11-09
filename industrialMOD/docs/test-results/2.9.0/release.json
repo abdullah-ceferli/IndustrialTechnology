@@ -1,0 +1,21 @@
+{
+  "version": "2.9.0",
+  "openComputers": "1.8.10+667626d",
+  "sha256": "da90be83cdea3ba2572338ee75af861110df8b3728aacc91a069100f7adf59c8",
+  "bytes": 17477651,
+  "sourcesSha256": "0a0be5eb1db85f171c9c69f468aeed15ac36e5db2eb0494172ea8f83b335572a",
+  "junit": 130,
+  "nativeIncludingStockReferences": 44,
+  "graphical": 4,
+  "totalChecks": 178,
+  "reports": [
+    "combined-final-b-initial.txt",
+    "combined-final-b-restart.txt",
+    "pack-final-b-initial.txt",
+    "pack-final-b-restart.txt",
+    "reference-a-initial.txt",
+    "reference-pack-initial.txt",
+    "client.txt"
+  ],
+  "clientDirectory": ".toolchain\\oc-tests\\client-b"
+}

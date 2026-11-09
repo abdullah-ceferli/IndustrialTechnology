@@ -1,0 +1,12 @@
+[
+  {
+    "modid": "offlineskins",
+    "name": "Offline Skins",
+    "description": "Local PNG skins, automatic Open to LAN sharing, and optional accepted-friends sharing.",
+    "version": "${version}",
+    "mcversion": "1.7.10",
+    "authorList": ["Offline Skins contributors"],
+    "credits": "Built with Minecraft Forge. Independent mod; not affiliated with Mojang.",
+    "dependencies": []
+  }
+]

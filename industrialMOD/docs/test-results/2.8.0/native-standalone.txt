@@ -1,0 +1,2 @@
+PASS: Optional battery meter starts with HBM absent
+Failed: 0

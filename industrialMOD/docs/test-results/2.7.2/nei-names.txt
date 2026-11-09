@@ -1,0 +1,10 @@
+PASS: Original Assembly Machine NEI handler displays standard-assembler [Energy Storage Block] with original HBM icons and ingredient layout
+PASS: Original Assembly Machine NEI handler displays lithium-assembler [Li-Ion Energy Storage Block] with original HBM icons and ingredient layout
+PASS: Original Assembly Machine NEI handler displays schrabidium-assembler [Schrabidium Energy Storage Block] with original HBM icons and ingredient layout
+PASS: Original Assembly Machine NEI handler displays spark-assembler [Spark Energy Storage Block] with original HBM icons and ingredient layout
+PASS: Original Shaped Crafting NEI handler displays spark-battery-grid [Spark Battery] with original HBM icons and ingredient layout
+PASS: Original Shaped Crafting NEI handler displays spark-cell-6-grid [Spark Power Cell] with original HBM icons and ingredient layout
+PASS: Original Shaped Crafting NEI handler displays spark-cell-25-grid [Spark Arcane Car Battery] with original HBM icons and ingredient layout
+PASS: Original Shaped Crafting NEI handler displays spark-cell-100-grid [Spark Arcane Energy Storage Array] with original HBM icons and ingredient layout
+PASS: Original Shaped Crafting NEI handler displays spark-cell-1000-grid [Spark Arcane Mass-Energy Void] with original HBM icons and ingredient layout
+Failed: 0

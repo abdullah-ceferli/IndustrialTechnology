@@ -1,0 +1,20 @@
+{
+  "version": "2.10.0",
+  "sha256": "58c14ff4b4fc51186a4f0fb55055afdfecebf34ed175fc6acbfb3760708dd0fe",
+  "bytes": 17566597,
+  "sourcesSha256": "8736fc1a5e064280297a05c59edcb65468874dadd9eeb3d21bbd9f929acb3404",
+  "junit": 130,
+  "native": 49,
+  "graphical": 20,
+  "totalChecks": 199,
+  "reports": [
+    "standalone-final-b-initial.txt",
+    "standalone-final-b-restart.txt",
+    "coexist-final-b-initial.txt",
+    "coexist-final-b-restart.txt",
+    "client-a.txt",
+    "client-standalone.txt"
+  ],
+  "originalModsRemoved": false,
+  "savedWorldsAccessed": false
+}
